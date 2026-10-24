@@ -2,7 +2,7 @@
 
 用户指定展示名：**Victoria 3 Logistics System**。仓库名：`victoria3-logistics-system`，可见性：公开，使用用户 GitHub SSH 推送。
 
-2026-10-24 用户指定名称覆盖上一轮命名建议。SSH 已验证为 NoFires；本地已提交并设置 origin。目标远端返回 Repository not found，须先创建同名公开空仓库，再执行 git push -u origin main。
+2026-10-24 用户指定名称覆盖上一轮命名建议。已通过 NoFires 的 SSH 推送至 [公开仓库](https://github.com/NoFires/victoria3-logistics-system)，main 已跟踪 origin/main；GitHub API 已确认公开可见，远端提交与本地一致。
 
 仓库简介可用：
 

@@ -1,5 +1,13 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-10-24 — GitHub 公开仓库 SSH 上传成功
+
+- 用户创建空远端后，git push -u origin main 成功，189 个已整理文件经用户 SSH 上传至 https://github.com/NoFires/victoria3-logistics-system 。main 已跟踪 origin/main。
+- GitHub 未认证 API 确认 private=false / visibility=public / default_branch=main；git ls-remote 与本地 HEAD 6eadb085d3adba5389b0c46e36f5a92a0c779d8f 一致。本次追加发布结果再提交同步。
+- 未上传 dist/native/build/日志/缓存或外部私有证据，未改产品源码/部署/游戏状态；许可和派生数据事项仍保留于上传说明。
+
+
+
 ### 2026-10-24 — GitHub SSH 已恢复，等待创建空远端仓库
 
 - 用户添加公钥后，ssh -T 实际返回 Hi NoFires / successfully authenticated。用户指定使用 Git 命令，停止浏览器创建路径。
