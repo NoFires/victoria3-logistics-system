@@ -1,0 +1,12 @@
+0	desert	1.35
+1	forest	1.25
+2	hills	1.6
+3	jungle	1.6
+4	lakes	64.0
+5	mountain	2.4
+6	ocean	64.0
+7	plains	1.0
+8	savanna	1.1
+9	snow	2.2
+10	tundra	1.6
+11	wetland	1.8

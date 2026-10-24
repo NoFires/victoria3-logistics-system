@@ -1,0 +1,4 @@
+# Analysis helpers only; not required to run the reference-model tests.
+# Python 3.12, matching the source project's analysis runtime.
+numpy==1.26.4
+capstone==5.0.9

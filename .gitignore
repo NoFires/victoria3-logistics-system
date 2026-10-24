@@ -1,0 +1,21 @@
+# Reproducible local build / test products.
+/native/build/
+/dist/
+
+# Python analysis caches and local environments.
+__pycache__/
+*.py[cod]
+/.venv/
+
+# Raw game/reverse-engineering evidence belongs in the external private directory.
+*.dmp
+*.log
+
+# Local editor settings and credentials.
+/.vs/
+/.vscode/
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12

@@ -1,0 +1,199 @@
+types ironroad_logistics
+{
+    type ironroad_state_freight_cell = widget {
+        size = { 60 50 }
+        tooltip = "IRONROAD_STATE_WORK_TOOLTIP"
+        textbox = {
+            visible = "[And3(GetVariableSystem.Exists('ironroad_state_rows_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_rows_id_v1'), State.GetIDString), GetVariableSystem.Exists(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey)))))]"
+            raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey))))]"
+            size = { 60 50 }
+            align = center
+            using = elide_fontsize_min
+        }
+        textbox = {
+            visible = "[Not(And3(GetVariableSystem.Exists('ironroad_state_rows_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_rows_id_v1'), State.GetIDString), GetVariableSystem.Exists(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey))))))]"
+            raw_text = "--"
+            size = { 60 50 }
+            align = center
+        }
+    }
+    type ironroad_market_logistics_content = flowcontainer {
+        direction = vertical
+        using = default_list_position
+        spacing = 8
+
+        # Identity probe: let the GUI write what the engine itself computes for the
+        # market this panel shows. The DLL only reads the variables afterwards, so a
+        # literal-only Set keeps this harmless (nothing is written when the engine
+        # rejects the expression).
+
+        flowcontainer = {
+            spacing = 10
+            textbox = { text = "IRONROAD_FREIGHT_FLOWS" size = { 90 40 } multiline = yes }
+            button = {
+                using = default_button
+                size = { 210 40 }
+                enabled = "[GetVariableSystem.Exists('ironroad_hide_flows')]"
+                onclick = "[GetVariableSystem.Toggle('ironroad_hide_flows')]"
+                textbox = { text = "IRONROAD_SHOW" parentanchor = center }
+            }
+            button = {
+                using = default_button
+                size = { 210 40 }
+                enabled = "[Not(GetVariableSystem.Exists('ironroad_hide_flows'))]"
+                onclick = "[GetVariableSystem.Toggle('ironroad_hide_flows')]"
+                textbox = { text = "IRONROAD_HIDE" parentanchor = center }
+            }
+        }
+        default_header_2texts = {
+            blockoverride "text1" { text = "IRONROAD_LOGISTICS" }
+        }
+        widget = {
+            size = { 530 26 }
+            textbox = {
+                visible = "[And3(GetVariableSystem.Exists('ironroad_goods_context_v1'), GetVariableSystem.Exists('ironroad_hover_context_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_goods_context_v1'), GetVariableSystem.Get('ironroad_hover_context_v1')))]"
+                text = "IRONROAD_MODEL_ALLOCATION"
+                size = { 530 26 }
+            }
+            textbox = {
+                visible = "[Not(And3(GetVariableSystem.Exists('ironroad_goods_context_v1'), GetVariableSystem.Exists('ironroad_hover_context_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_goods_context_v1'), GetVariableSystem.Get('ironroad_hover_context_v1'))))]"
+                text = "IRONROAD_SNAPSHOT_PENDING"
+                size = { 530 26 }
+            }
+        }
+        textbox = {
+            visible = "[And(GetVariableSystem.Exists('ironroad_map_status_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_map_status_v1'), 'map-retired-state-v1'))]"
+            text = "IRONROAD_MAP_RETIRED"
+            size = { 530 52 }
+            multiline = yes
+        }
+        flowcontainer = {
+            spacing = 10
+            widget = {
+                size = { 260 100 }
+                background = { using = entry_bg }
+                tooltip = "IRONROAD_WORK_TOOLTIP"
+                textbox = { text = "IRONROAD_FREIGHT_WORK" position = { 12 15 } size = { 165 26 } }
+                textbox = { raw_text = "[GetVariableSystem.Get('ironroad_freight_v1')]" position = { 12 47 } size = { 165 35 } }
+                icon = {
+                    texture = "gfx/interface/icons/law_icons/law_icon_parts/crate.dds"
+                    position = { 190 21 }
+                    size = { 58 58 }
+                }
+            }
+            widget = {
+                size = { 260 100 }
+                background = { using = entry_bg }
+                icon = {
+                    texture = "gfx/interface/icons/building_icons/building_railway.dds"
+                    position = { 8 12 }
+                    size = { 75 75 }
+                }
+                textbox = { text = "IRONROAD_LAID_TRACK" position = { 90 18 } size = { 160 26 } }
+                textbox = { raw_text = "[GetVariableSystem.Get('ironroad_track_v1')]" position = { 90 50 } size = { 160 30 } }
+            }
+        }
+        default_header_2texts = {
+            blockoverride "text1" { text = "IRONROAD_GOODS" }
+        }
+        flowcontainer = {
+            sort_button = {
+                size = { 55 30 }
+                margin_left = 0
+                margin_right = 0
+                tooltip = "SORT_BY_MARKET_GOODS"
+                onclick = "[Market.Sort('name')]"
+                button = {
+                    texture = "gfx/interface/buttons/sort_button_icons/sort_icon_good.dds"
+                    size = { 25 25 }
+                    parentanchor = center
+                    alwaystransparent = yes
+                }
+            }
+            sort_button = { align = hcenter|nobaseline text = "concept_market_price" size = { 210 30 } margin_left = 0 margin_right = 0 onclick = "[Market.Sort('price')]" }
+            vertical_divider = {}
+            sort_button = {
+                tooltip = "SORT_BY_BALANCE_TOOLTIP"
+                align = hcenter|nobaseline
+                size = { 85 30 }
+                margin_left = 0
+                margin_right = 0
+                onclick = "[Market.Sort('balance')]"
+                button = {
+                    texture = "gfx/interface/buttons/sort_button_icons/sort_balance.dds"
+                    size = { 25 25 }
+                    parentanchor = center
+                    alwaystransparent = yes
+                }
+            }
+            vertical_divider = {}
+            sort_button = { align = hcenter|nobaseline text = "IRONROAD_FREIGHT_WORK" size = { 95 30 } margin_left = 0 margin_right = 0 tooltip = "IRONROAD_WORK_TOOLTIP" }
+            vertical_divider = {}
+            sort_button = { align = hcenter|nobaseline text = "IRONROAD_FREIGHT_SHARE" size = { 95 30 } margin_left = 0 margin_right = 0 tooltip = "IRONROAD_SHARE_TOOLTIP" }
+        }
+        flowcontainer = {
+            direction = vertical
+            spacing = 2
+            datamodel = "[Market.AccessMarketGoods( MarketPanel.GetFilters )]"
+            item = {
+                goods_entry_button = {
+                    onmousehierarchyenter = "[GetVariableSystem.Set(Concatenate('ironroad_market_hover_', Goods.GetKey), GetVariableSystem.Get('ironroad_hover_context_v1'))]"
+                    onmousehierarchyleave = "[GetVariableSystem.Clear(Concatenate('ironroad_market_hover_', Goods.GetKey))]"
+                    blockoverride "last_column" {
+                        __IRONROAD_NATIVE_MARKET_PRICE__
+                        vertical_divider = {}
+                        widget = {
+                            size = { 85 55 }
+                            tooltip = "MARKET_GOODS_BALANCE_TOOLTIP"
+                            textbox = { text = "MARKET_PANEL_BALANCE_GOLD" visible = "[GreaterThan_int32(FixedPointToInt(Goods.GetMarketBuyAndSellOrdersBalance), '(int32)0')]" size = { 85 55 } align = center using = elide_fontsize_min }
+                            textbox = { text = "MARKET_PANEL_BALANCE" visible = "[EqualTo_int32(FixedPointToInt(Goods.GetMarketBuyAndSellOrdersBalance), '(int32)0')]" size = { 85 55 } align = center using = elide_fontsize_min }
+                            textbox = { text = "MARKET_PANEL_BALANCE_BLUE" visible = "[LessThan_int32(FixedPointToInt(Goods.GetMarketBuyAndSellOrdersBalance), '(int32)0')]" size = { 85 55 } align = center using = elide_fontsize_min }
+                        }
+                        vertical_divider = {}
+                        widget = {
+                            size = { 190 55 }
+                            flowcontainer = {
+                                visible = "[And3(GetVariableSystem.Exists('ironroad_goods_context_v1'), GetVariableSystem.Exists('ironroad_hover_context_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_goods_context_v1'), GetVariableSystem.Get('ironroad_hover_context_v1')))]"
+                                widget = {
+                                    size = { 95 55 }
+                                    textbox = { visible = "[GetVariableSystem.Exists(Concatenate('ironroad_good_work_', Goods.GetKey))]" raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_good_work_', Goods.GetKey))]" size = { 95 55 } align = center tooltip = "IRONROAD_WORK_TOOLTIP" }
+                                    textbox = { visible = "[Not(GetVariableSystem.Exists(Concatenate('ironroad_good_work_', Goods.GetKey)))]" raw_text = "--" size = { 95 55 } align = center }
+                                }
+                                vertical_divider = {}
+                                widget = {
+                                    size = { 95 55 }
+                                    textbox = { visible = "[GetVariableSystem.Exists(Concatenate('ironroad_good_share_', Goods.GetKey))]" raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_good_share_', Goods.GetKey))]" size = { 95 55 } align = center tooltip = "IRONROAD_SHARE_TOOLTIP" }
+                                    textbox = { visible = "[Not(GetVariableSystem.Exists(Concatenate('ironroad_good_share_', Goods.GetKey)))]" raw_text = "--" size = { 95 55 } align = center }
+                                }
+                            }
+                            flowcontainer = {
+                                visible = "[Not(And3(GetVariableSystem.Exists('ironroad_goods_context_v1'), GetVariableSystem.Exists('ironroad_hover_context_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_goods_context_v1'), GetVariableSystem.Get('ironroad_hover_context_v1'))))]"
+                                textbox = { raw_text = "--" size = { 95 55 } align = center }
+                                vertical_divider = {}
+                                textbox = { raw_text = "--" size = { 95 55 } align = center }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        textbox = {
+            text = "IRONROAD_ORDERS_LEDGER"
+            size = { 530 26 }
+        }
+        textbox = {
+            raw_text = "[GetVariableSystem.Get('ironroad_target_v1')] / [GetVariableSystem.Get('ironroad_allocated_v1')] / [GetVariableSystem.Get('ironroad_unmet_v1')]"
+            size = { 530 30 }
+            using = elide_fontsize_min
+        }
+        textbox = {
+            text = "IRONROAD_FREIGHT_LEDGER"
+            size = { 530 26 }
+        }
+        textbox = {
+            raw_text = "[GetVariableSystem.Get('ironroad_demand_v1')]"
+            size = { 530 30 }
+            using = elide_fontsize_min
+        }
+    }
+}
