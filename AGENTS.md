@@ -121,6 +121,14 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-10-24 — GitHub SSH 已恢复，等待创建空远端仓库
+
+- 用户添加公钥后，ssh -T 实际返回 Hi NoFires / successfully authenticated。用户指定使用 Git 命令，停止浏览器创建路径。
+- 本地首次提交 2c81d8e，189 文件；origin 已设为 git@github.com:NoFires/victoria3-logistics-system.git。git ls-remote 仍返回 Repository not found；Git 协议不能创建 GitHub 仓库，需要先建立同名公开空仓库，再 git push -u origin main。
+- 当前未推送、未创建远端；不把 SSH 成功当作上传成功。产品源码/DLL/游戏未改。
+
+
+
 ### 2026-10-24 — GitHub 公开上传准备：用户指定仓库名与 SSH
 
 - 用户授权建立公开仓库 victoria3-logistics-system，并使用其 GitHub SSH；覆盖上一轮私有上传/命名建议。README 和上传说明同步名称；不修改内部 Ironroad 标识或产品行为。

@@ -2,7 +2,7 @@
 
 用户指定展示名：**Victoria 3 Logistics System**。仓库名：`victoria3-logistics-system`，可见性：公开，使用用户 GitHub SSH 推送。
 
-2026-10-24 用户指定名称覆盖上一轮命名建议。当前尚未创建远端：本机默认 id_rsa 被 GitHub 拒绝，需要恢复 SSH 身份并确认账户。
+2026-10-24 用户指定名称覆盖上一轮命名建议。SSH 已验证为 NoFires；本地已提交并设置 origin。目标远端返回 Repository not found，须先创建同名公开空仓库，再执行 git push -u origin main。
 
 仓库简介可用：
 
