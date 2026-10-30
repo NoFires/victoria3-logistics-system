@@ -1,5 +1,7 @@
 # GitHub 上传说明
 
+2026-10-30：已按用户最新要求将当前物流开发更新推送到现有main，源码提交 `a688e34`（90文件），远端完整SHA已核对一致。后续完成更新后继续核对测试／范围并提交推送；功能状态与未完成项以STATUS为准。DLL、构建目录、日志和外部私有证据仍不提交，当前同步不代表完整功能验收。
+
 用户指定展示名：**Victoria 3 Logistics System**。仓库名：`victoria3-logistics-system`，可见性：公开，使用用户 GitHub SSH 推送。
 
 2026-10-24 用户指定名称覆盖上一轮命名建议。已通过 NoFires 的 SSH 推送至 [公开仓库](https://github.com/NoFires/victoria3-logistics-system)，main 已跟踪 origin/main；GitHub API 已确认公开可见，远端提交与本地一致。
