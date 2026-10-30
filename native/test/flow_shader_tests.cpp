@@ -175,8 +175,9 @@ VS_OUTPUT main(uint id:SV_VertexID) {
   arrowData[4]=1;arrowData[3]=50;flip[0]=0;
   context->UpdateSubresource(arrowBuffer,0,nullptr,arrowData,0,0);
   context->UpdateSubresource(flipBuffer,0,nullptr,flip,0,0);
-  for(const auto& palette:palettes) {
-    auto compiled=Compile(prefix+"\n#define IRONROAD_"+palette.define+"\n"+body,"ps_5_0");
+  for(const auto& palette:palettes) for(unsigned balanced=0;balanced<2;++balanced) {
+    if(balanced && (std::string(palette.define)=="YELLOW" || std::string(palette.define)=="BLUE"))continue;
+    auto compiled=Compile(prefix+"\n#define IRONROAD_"+palette.define+"\n"+(balanced?"#define IRONROAD_BALANCED\n":"")+body,"ps_5_0");
     ID3D11PixelShader* coloured=nullptr;
     Check(device->CreatePixelShader(compiled->GetBufferPointer(),compiled->GetBufferSize(),nullptr,&coloured),"palette pixel shader");
     compiled->Release();context->PSSetShader(coloured,nullptr,0);context->Draw(3,0);
@@ -192,7 +193,28 @@ VS_OUTPUT main(uint id:SV_VertexID) {
             std::abs(peak[2]-palette.blue)<.03f,"actual GPU palette must match expected colour");
     coloured->Release();
   }
-  std::puts("PASS: all eight consumption widths preserve arrowhead proportions/direction; all nine GPU palettes verified");
+  auto balancedCode=Compile(prefix+"\n#define IRONROAD_BALANCED\n"+body,"ps_5_0");
+  ID3D11PixelShader* balancedShader=nullptr;
+  Check(device->CreatePixelShader(balancedCode->GetBufferPointer(),balancedCode->GetBufferSize(),nullptr,&balancedShader),"balanced shader");
+  balancedCode->Release();
+  auto image=[&](ID3D11PixelShader* shader,uint32_t reverse){
+    flip[0]=reverse;context->UpdateSubresource(flipBuffer,0,nullptr,flip,0,0);
+    context->PSSetShader(shader,nullptr,0);context->Draw(3,0);context->CopyResource(staging,target);
+    D3D11_MAPPED_SUBRESOURCE mapped{};Check(context->Map(staging,0,D3D11_MAP_READ,0,&mapped),"balanced readback");
+    std::vector<float> pixels(800*128*4);
+    for(int y=0;y<128;++y)std::memcpy(pixels.data()+y*800*4,(const char*)mapped.pData+y*mapped.RowPitch,800*4*sizeof(float));
+    context->Unmap(staging,0);return pixels;
+  };
+  const auto forward=image(pixelShader,0),reverse=image(pixelShader,1),both=image(balancedShader,0);
+  size_t forwardOnly=0,reverseOnly=0;
+  for(size_t i=0;i<both.size();++i){
+    Require(std::abs(both[i]-std::max(forward[i],reverse[i]))<.03f,"balanced flow must display both directions on one ribbon");
+    forwardOnly+=both[i]>reverse[i]+.1f;reverseOnly+=both[i]>forward[i]+.1f;
+  }
+  Require(forwardOnly>100 && reverseOnly>100,"balanced flow must retain distinct opposing arrowheads");
+  balancedShader->Release();
+  std::puts("PASS: equal opposing flow renders both directions on one physical ribbon without doubled brightness");
+  std::puts("PASS: all eight consumption widths preserve arrowhead proportions/direction; nine normal and seven balanced GPU palettes verified");
   std::puts("PASS: actual building-flow pixel shader renders centred, forward and reverse arrowheads with native 0..1 ribbon UVs");
   CheckSurfaceHeight(device,context,source);
   context->ClearState();flipBuffer->Release();timeBuffer->Release();arrowBuffer->Release();sampler->Release();rtv->Release();staging->Release();target->Release();maskView->Release();textureView->Release();mask->Release();texture->Release();pixelShader->Release();vertexShader->Release();context->Release();device->Release();

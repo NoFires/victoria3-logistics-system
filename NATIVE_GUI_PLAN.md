@@ -1,5 +1,21 @@
 # Native game UI integration — current user requirement
 
+### 2026-10-28 — R134完成：正式颜色／八档线宽图例、双语居中及编辑GUI校验
+
+当前9afd正式市场／地区提供Business、单商品稳定色及Native建筑绿；单商品未选时地图为空且给出原版控件操作提示，统计保持。市场color与地区color键值带当前scope，owner／视图cache包含颜色，统计发布忽略纯地图颜色；hover继承当前模式，重开重置Business。
+
+业务色保持地区输入绿／输出橙，市场热度使用完整市场固定区段商品数量尺度；单商品模式按原生商品ID取既有稳定五色，未选或移出为空地图，原生外观统一已验证建筑绿。颜色只改视图，不改国际原版记录、国内最终模型分配、需求账、完整行／卡片／市场分母、路径或宽度。八档图例显示实际宽度比例2:3:4:6:8:12:16:24及数量阈值10／50／200／500／2000／5000／20000，提示比例示意、非像素／容量／距离工作量；0不画、未知--。
+
+四个必需GUI类型按真实type声明计数，跳过注释／字符串；缺失或重名拒绝整个扩展挂载、记录明确原因并保留玩家修改，提示对照freight/native-gui/.defaults。当前9afd实际坏GUI67464中，注释伪声明不能冒充类型，原版四页签／frame0、修改字节保持，正常退出后严格恢复；后续63460重新加载完整GUI通过。16个按钮文字框改为100%边界／居中／鼠标透传，中英截图及实际点击验证通过。
+
+当前中英21项及居中截图／实际点击、缺类型拒绝与恢复通过；首长文案和无界锚点失败保留。原玩家GUI缺少新必需类型时明确拒绝扩展并提示.defaults，不能静默覆盖编辑或挂载半套类型。完整最终交付矩阵仍待。证据及R133回滚：E:/Code/v3-analysis/checkpoints/2026-10-28-r134-native-legend/{legend-audit.json,live,logs,before,NEXT.md}。
+
+### 2026-10-28 — R133完成：地区商品／方向／运输方式地图筛选
+
+State Local Prices now includes two native control rows for map direction and transport mode; clicking the new Trade cell selects that good, while the original goods icon still opens native details. All goods resets the good selection. Complete per-good state quantities remain visible. Sea includes original port approaches; a mixed route keeps its original segments and only the chosen mode is painted. Tooltip explains green imports/orange exports and the map-only semantics.
+
+Three fixed variable keys carry a world/state/reopen context in their values. Ready identity is published last; native polling reads exact keys in the existing sample, owns copied selections only, and old contexts cannot authorize the new panel. Native cache keys include direction/mode; statistics checks deliberately ignore map-only fields. Closing/switching resets the controls. Current Chinese live19case evidence and full50checks are in E:/Code/v3-analysis/checkpoints/2026-10-28-r133-state-filters/state-filter-audit.json. New controls English/layout polish, formal color modes/width legend and older edited-resource upgrade contract remain incomplete. Older sections below describe historical layers, not the sole current status.
+
 ## R93c checked native-pool recovery
 
 The world gate now compares nativePoolWorld with economyWorld. Once a current real frame is ready, the verified arrow pass checks the current asset style/type binding, constructor callback membership, retained arrow/path/point/VB/CB identity, original graphics/device identity and stable copies. It clears old active requests and marks only that exact world ready. There is no reconstruction/destruction or simulation lock. Device/graphics changes also retire cache hits; a swapchain replacement compares devices before releasing the old reference, so a recycled COM address cannot authorize the old pool.

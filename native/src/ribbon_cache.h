@@ -64,10 +64,17 @@ inline RibbonBatch PrepareRibbonBatch(RibbonBatch batch) {
 // for the process lifetime. A recycled slot MUST have the same native style.
 class RibbonCache {
  public:
+  struct Statistics {
+    uint64_t attempts=0, hits=0, failures=0, dropped=0, repeats=0, overrunFrames=0;
+    double seconds=0, peakFrameSeconds=0, peakStepSeconds=0;
+    unsigned peakFrameAttempts=0;
+  };
   explicit RibbonCache(size_t capacity = 8192) : m_capacity(std::min<size_t>(8192, capacity)) {}
   bool Request(RibbonBatch prepared) {
     if (prepared.size() == m_requested.size() && std::equal(prepared.begin(), prepared.end(),
-        m_requested.begin(), [](const Ribbon& a, const Ribbon& b) { return SameRibbon(*a,*b); })) return false;
+        m_requested.begin(), [](const Ribbon& a, const Ribbon& b) { return SameRibbon(*a,*b); })) {
+      ++m_repeats; m_hits+=m_requested.size()-Pending(); return false;
+    }
     m_requested = std::move(prepared); ++m_epoch;
     m_active.clear(); m_todo.clear(); m_next = 0;
     // Pin ALL cached entries first. Missing ribbons must not evict a requested
@@ -107,7 +114,7 @@ class RibbonCache {
         if (index != npos) EraseIndex(index);
       }
       if (index == npos) {
-        ++m_dropped; m_frameSeconds += std::max(0.0, clock() - started); continue;
+        ++m_dropped; RecordStep(std::max(0.0, clock() - started)); continue;
       }
       auto& entry = m_entries[index];
       entry.ribbon = std::move(ribbon); entry.epoch = m_epoch; entry.valid = false;
@@ -117,7 +124,7 @@ class RibbonCache {
       // frame. Superseding views can reuse this slot for different geometry.
       entry.valid = upload(index, *entry.ribbon);
       if (entry.valid) m_active.push_back(index); else ++m_failures;
-      m_frameSeconds += std::max(0.0, clock() - started);
+      RecordStep(std::max(0.0, clock() - started));
     }
   }
   const std::vector<size_t>& Active() const { return m_active; }
@@ -128,7 +135,20 @@ class RibbonCache {
   uint64_t Failures() const { return m_failures; }
   uint64_t Dropped() const { return m_dropped; }
   double FrameSeconds() const { return m_frameSeconds; }
+  size_t Requested() const { return m_requested.size(); }
+  Statistics Stats() const {
+    return {m_attempts,m_hits,m_failures,m_dropped,m_repeats,m_overrunFrames,
+            m_buildSeconds,m_peakFrameSeconds,m_peakStepSeconds,m_peakFrameAttempts};
+  }
  private:
+  void RecordStep(double seconds) {
+    const bool overrun=m_frameSeconds>.002;
+    m_frameSeconds+=seconds; m_buildSeconds+=seconds;
+    if(!overrun && m_frameSeconds>.002)++m_overrunFrames;
+    m_peakFrameSeconds=std::max(m_peakFrameSeconds,m_frameSeconds);
+    m_peakStepSeconds=std::max(m_peakStepSeconds,seconds);
+    m_peakFrameAttempts=std::max(m_peakFrameAttempts,m_frameAttempts);
+  }
   static constexpr size_t npos = size_t(-1);
   struct Entry { Ribbon ribbon; uint64_t epoch = 0; bool valid = false; };
   size_t Find(const RibbonGeometry& ribbon) const {
@@ -144,8 +164,11 @@ class RibbonCache {
   size_t m_capacity, m_next = 0;
   uint64_t m_epoch = 0, m_budgetFrame = UINT64_MAX;
   uint64_t m_hits = 0, m_attempts = 0, m_failures = 0, m_dropped = 0;
+  uint64_t m_repeats = 0, m_overrunFrames = 0;
   unsigned m_frameAttempts = 0;
+  unsigned m_peakFrameAttempts = 0;
   double m_frameSeconds = 0;
+  double m_buildSeconds = 0, m_peakFrameSeconds = 0, m_peakStepSeconds = 0;
   std::vector<Entry> m_entries;
   std::unordered_multimap<uint64_t, size_t> m_index;
   RibbonBatch m_requested, m_todo;

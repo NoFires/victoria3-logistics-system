@@ -147,7 +147,18 @@ bool ReadMsvcString(uintptr_t address, std::string* out) {
 }
 // The variable system and the research target share this map header/entry
 // layout (0x48-byte entries, MsvcStrings for key and value).
-bool ReadMapObject(const void* object, GuiVariableProbe* probe) {
+bool ReadMapObject(const void* object, GuiVariableProbe* probe,
+                   const std::vector<std::string>* keys=nullptr) {
+  std::vector<uint32_t> hashes;
+  if(keys){
+    if(keys->size()>4096){probe->error="too many requested GUI variable keys";return false;}
+    hashes.reserve(keys->size());
+    for(const auto& key:*keys){
+      if(key.empty() || key.size()>kMaxString){probe->error="invalid requested GUI variable key";return false;}
+      hashes.push_back(Murmur3(key.data(),key.size()));
+    }
+    std::sort(hashes.begin(),hashes.end());
+  }
   probe->object = const_cast<void*>(object);
   if (!Readable(object, 0x28)) {
     probe->error = "string map header unreadable";
@@ -173,7 +184,11 @@ bool ReadMapObject(const void* object, GuiVariableProbe* probe) {
     if (entry[4] == 0) continue;
     GuiVariableEntry value;
     value.hash = *reinterpret_cast<const uint32_t*>(entry);
+    if(keys && !std::binary_search(hashes.begin(),hashes.end(),value.hash))continue;
+    // A diagnostic truncated key must never become an exact-key match.
+    if(keys && *reinterpret_cast<const uint64_t*>(entry+0x18)>kMaxString)continue;
     if (!ReadMsvcString(reinterpret_cast<uintptr_t>(entry) + 0x08, &value.key)) continue;
+    if(keys && std::find(keys->begin(),keys->end(),value.key)==keys->end())continue;
     if (!ReadMsvcString(reinterpret_cast<uintptr_t>(entry) + 0x28, &value.value)) continue;
     probe->entries.push_back(std::move(value));
   }
@@ -182,7 +197,7 @@ bool ReadMapObject(const void* object, GuiVariableProbe* probe) {
 }
 }  // namespace
 
-GuiVariableProbe ProbeGuiVariables(uint8_t* base) {
+static GuiVariableProbe ReadGuiVariables(uint8_t* base,const std::vector<std::string>* keys) {
   GuiVariableProbe probe;
   if (!base) {
     probe.error = "no module base";
@@ -199,9 +214,17 @@ GuiVariableProbe ProbeGuiVariables(uint8_t* base) {
   }
   using Getter = void* (__fastcall*)(void);
   void* object = reinterpret_cast<Getter>(getter)();
-  if (!ReadMapObject(object, &probe) && probe.error.empty())
+  if (!ReadMapObject(object, &probe,keys) && probe.error.empty())
     probe.error = "variable-system object unreadable";
   return probe;
+}
+
+GuiVariableProbe ProbeGuiVariables(uint8_t* base) {
+  return ReadGuiVariables(base,nullptr);
+}
+
+GuiVariableProbe ProbeGuiVariableKeys(uint8_t* base,const std::vector<std::string>& keys) {
+  return ReadGuiVariables(base,&keys);
 }
 
 GuiVariableProbe ProbeGlobalStringMap(uint8_t* base) {

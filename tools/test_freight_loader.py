@@ -20,7 +20,7 @@ EXPORTS = ("GetFileVersionInfoA GetFileVersionInfoW GetFileVersionInfoSizeA "
            "GetFileVersionInfoByHandle").split()
 
 
-def child(stage, available):
+def child(stage, available, expected_error=None):
     kernel = ctypes.WinDLL("kernel32", use_last_error=True)
     kernel.GetModuleHandleW.argtypes = [w.LPCWSTR]
     kernel.GetModuleHandleW.restype = w.HMODULE
@@ -50,6 +50,8 @@ def child(stage, available):
         time.sleep(0.02)
     else:
         raise AssertionError("loader did not finish or report failure")
+    if expected_error is not None:
+        assert f"(error={expected_error})" in log.read_text(), log.read_text()
     module = kernel.GetModuleHandleW(str(stage / "freight/freight.dll"))
     if available:
         assert module, "payload was not loaded from freight subdirectory"
@@ -123,17 +125,25 @@ def run():
         decoy = base / "cwd"
         decoy.mkdir()
         (decoy / "freight.dll").write_bytes(b"invalid decoy must not be loaded")
-        for name in ["valid space 中文", "missing", "corrupt"]:
-            stage = base / name
-            (stage / "freight").mkdir(parents=True)
-            shutil.copy2(proxy, stage / "version.dll")
-            if name.startswith("valid"):
-                shutil.copy2(payload, stage / "freight/freight.dll")
-            elif name == "corrupt":
-                (stage / "freight/freight.dll").write_bytes(b"invalid DLL")
-            subprocess.run([sys.executable, str(Path(__file__).resolve()), "--child", str(stage),
-                            "--available" if name.startswith("valid") else "--unavailable"],
-                           cwd=decoy, check=True, timeout=12)
+        proxies = [("compiled", proxy)]
+        delivered = ROOT / "dist/version.dll"
+        if delivered.is_file():
+            proxies.append(("delivered", delivered))
+        for kind, candidate in proxies:
+            for name, error in [("valid space 中文", 0), ("missing", 126), ("corrupt", 193)]:
+                stage = base / kind / name
+                stage.mkdir(parents=True)
+                # The bootstrap must create its runtime directory when it is absent.
+                if name != "missing":
+                    (stage / "freight").mkdir()
+                shutil.copy2(candidate, stage / "version.dll")
+                if name.startswith("valid"):
+                    shutil.copy2(payload, stage / "freight/freight.dll")
+                elif name == "corrupt":
+                    (stage / "freight/freight.dll").write_bytes(b"invalid DLL")
+                subprocess.run([sys.executable, str(Path(__file__).resolve()), "--child", str(stage),
+                                "--available" if name.startswith("valid") else "--unavailable",
+                                "--expected-error", str(error)], cwd=decoy, check=True, timeout=12)
 
 
 if __name__ == "__main__":
@@ -141,6 +151,7 @@ if __name__ == "__main__":
     parser.add_argument("--child", type=Path)
     parser.add_argument("--available", action="store_true")
     parser.add_argument("--unavailable", action="store_true")
+    parser.add_argument("--expected-error", type=int)
     parser.add_argument("--runtime", action="store_true")
     parser.add_argument("--runtime-child", type=Path)
     parser.add_argument("--current-child", type=Path)
@@ -152,6 +163,6 @@ if __name__ == "__main__":
     elif args.runtime:
         runtime()
     elif args.child:
-        child(args.child, args.available)
+        child(args.child, args.available, args.expected_error)
     else:
         run()

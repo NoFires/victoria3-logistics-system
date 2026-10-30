@@ -39,6 +39,13 @@ def main():
         result = subprocess.run([str(output), str(submerged), str(raw)], capture_output=True, text=True)
         assert result.returncode != 0 and 'ribbon must stay above the terrain/water surface at every zoom' in result.stdout, result.stdout + result.stderr
         print('PASS: negative control reproduces submerged close-zoom sea routes and is rejected.')
+        one_way = Path(directory) / 'one_way_balanced.shader'
+        union = 'diffuse = max( diffuse, PdxTex2D( DiffuseTexture, reverseUV ) );'
+        assert union in shader
+        one_way.write_text(shader.replace(union, 'diffuse = diffuse;'), encoding='utf-8')
+        result = subprocess.run([str(output), str(one_way), str(raw)], capture_output=True, text=True)
+        assert result.returncode != 0 and 'balanced flow must display both directions' in result.stdout, result.stdout + result.stderr
+        print('PASS: negative control rejects a false one-way arrow for equal opposing trade.')
 
 
 if __name__ == '__main__':

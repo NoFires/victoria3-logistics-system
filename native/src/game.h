@@ -47,6 +47,10 @@ class Game {
   const std::string& Hash() const { return m_hash; }
   uint8_t* Base() const { return m_base; }
 
+  // Adapter only: CopyNativeSnapshot already owns the native access scope and
+  // validates the original live vector/strait handles before this read-only call.
+  uint64_t SelectTradePath(uint64_t candidates) const;
+
   void* ResolveArrowType(const char* name, std::string* error);
   void ForgetArrowTypes() { m_typeCache.clear(); } // render side, after verified world recovery
   bool TypeSane(void* type, std::string* error);

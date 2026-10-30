@@ -17,6 +17,8 @@ inline unsigned FlowWidthBand(double allocatedOrders) {
 inline std::string FlowWidthStyle(const std::string& palette, double allocatedOrders) {
   if (!std::isfinite(allocatedOrders) || allocatedOrders <= 0) return {};
   std::string base = palette;
+  const bool balanced=base.ends_with("Balanced");
+  if(balanced)base.resize(base.size()-8);
   if (base == "ironroadGreen") base = "ironroadBuildingOutput";
   if (base == "ironroadRed") base = "ironroadBuildingInput";
   if (base == "ironroadYellow") base = "ironroadBuildingYellow";
@@ -25,6 +27,7 @@ inline std::string FlowWidthStyle(const std::string& palette, double allocatedOr
       base != "ironroadBuildingYellow" && base != "ironroadBlue" && base != "ironroadTan" &&
       base != "ironroadTrafficGreen" && base != "ironroadTrafficLime" && base != "ironroadTrafficYellow" &&
       base != "ironroadTrafficOrange" && base != "ironroadTrafficRed") return {};
-  return base + "W" + std::to_string(FlowWidthBand(allocatedOrders));
+  if(balanced && base!="ironroadBuildingOutput" && base!="ironroadBuildingInput" && !base.starts_with("ironroadTraffic"))return {};
+  return base + (balanced?"Balanced":"") + "W" + std::to_string(FlowWidthBand(allocatedOrders));
 }
 } // namespace v3

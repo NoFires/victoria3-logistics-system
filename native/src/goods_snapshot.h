@@ -38,7 +38,8 @@ inline GoodsCatalog DecodeThreadGoodsCatalog(const GoodsMemoryReader& reader,
   return catalog;
 }
 
-// Populate observed goods by verified native ID. No file-ordinal lookup or goodN
+// Populate the full current catalog by verified native ID, including goods with
+// trade records but no production/consumption orders. No file-ordinal or goodN
 // fallback. An unknown good rejects the whole candidate snapshot, never zeroes
 // its orders. Weight/Freight conversion retain explicit model defaults (1).
 inline bool PopulateSnapshotGoods(EconomySnapshot& snapshot, const GoodsCatalog& catalog,
@@ -54,15 +55,12 @@ inline bool PopulateSnapshotGoods(EconomySnapshot& snapshot, const GoodsCatalog&
   for(const auto& g:catalog.goods)
     if(g.key.empty() || g.category>=4 || !byId.emplace(g.id,&g).second || !keys.insert(g.key).second)
       return fail("invalid goods metadata");
-  std::set<uint32_t> observed;
   for(const auto& order:snapshot.orders){
     if(!byId.count(order.good))return fail("economy order has unknown good ID");
-    observed.insert(order.good);
   }
-  if(observed.empty())return fail("economy orders unavailable");
   std::vector<FreightGood> goods;
-  for(uint32_t id:observed){
-    const auto& m=*byId.at(id); FreightGood g;
+  for(const auto& [id,metadata]:byId){
+    const auto& m=*metadata; FreightGood g;
     g.id=id; g.key=m.key; g.name=m.key; g.category=categories[m.category];
     g.localOnly=m.localOnly; g.tradeable=m.tradeable;
     goods.push_back(std::move(g));

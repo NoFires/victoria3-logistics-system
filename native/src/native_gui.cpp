@@ -1,7 +1,9 @@
 #include "native_gui.h"
 #include "stored_zip.h"
+#include "editable_resources.h"
 #include "util.h"
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <filesystem>
 #include <map>
@@ -47,6 +49,30 @@ std::vector<uint8_t> Resource(HMODULE self,int id) {
   const auto size=resource?SizeofResource(self,resource):0;
   if(!bytes || !size)throw std::runtime_error("native GUI resource missing: "+std::to_string(id));
   return {bytes,bytes+size};
+}
+// Count real declarations, not names inside player comments or quoted text.
+std::map<std::string,size_t> GuiTypes(const std::string& text) {
+  std::map<std::string,size_t> result;std::string name;
+  bool quote=false,comment=false,escaped=false;unsigned pending=0;
+  for(size_t i=0;i<text.size();){
+    const unsigned char c=text[i++];
+    if(comment){if(c=='\n')comment=false;continue;}
+    if(quote){if(escaped)escaped=false;else if(c=='\\')escaped=true;else if(c=='"')quote=false;continue;}
+    if(c=='#'){comment=true;continue;}
+    if(c=='"'){quote=true;pending=0;continue;}
+    if(std::isspace(c))continue;
+    if(std::isalpha(c) || c=='_'){
+      const auto start=i-1;
+      while(i<text.size() && (std::isalnum(static_cast<unsigned char>(text[i])) || text[i]=='_'))++i;
+      const auto token=text.substr(start,i-start);
+      if(pending==1){name=token;pending=2;}
+      else pending=token=="type"?1:0;
+      continue;
+    }
+    if(c=='=' && pending==2)++result[name];
+    pending=0;
+  }
+  return result;
 }
 } // namespace
 
@@ -158,6 +184,7 @@ bool PatchNativeStateGui(const std::vector<uint8_t>& original,std::string* patch
     header+="sort_button = { align = hcenter|nobaseline text = \"IRONROAD_FREIGHT_COLUMN\" size = { 60 20 } margin_left = 0 margin_right = 0 tooltip = \"IRONROAD_STATE_WORK_TOOLTIP\" }\n";
     section.replace(rowStart,rowEnd-rowStart+1,row);
     section.replace(headerStart,headerEnd-headerStart,header);
+    section.insert(headerStart,"ironroad_state_filters = {}\n");
     text.replace(start,end-start+1,section);
     Braces(text);*patched=std::move(text);return true;
   } catch(const std::exception& ex){if(error)*error=ex.what();return false;}
@@ -188,12 +215,21 @@ bool PrepareNativeGui(HMODULE self,const std::wstring& gameRoot,const std::wstri
     const std::string marker="__IRONROAD_NATIVE_MARKET_PRICE__";
     logistics.replace(Unique(logistics,marker),marker.size(),source.substr(price.first+1,price.second-price.first-1));
     Braces(logistics);
-    const auto zip=BuildStoredZip({
+    const auto files=EditableResources(cacheRoot+L"\\native-gui",{
       {"gui/market_panel.gui",{patched.begin(),patched.end()}},
       {"gui/states_panel.gui",{stateGui.begin(),stateGui.end()}},
       {"gui/ironroad_logistics.gui",{logistics.begin(),logistics.end()}},
       {"localization/english/ironroad_l_english.yml",Resource(self,302)},
       {"localization/simp_chinese/ironroad_l_simp_chinese.yml",Resource(self,303)}});
+    std::map<std::string,size_t> types;
+    for(const auto& file:files)if(file.name.ends_with(".gui")){
+      const std::string text(file.bytes.begin(),file.bytes.end());Braces(text);
+      for(const auto& [name,count]:GuiTypes(text))types[name]+=count;
+    }
+    for(const char* required:{"ironroad_state_freight_cell","ironroad_state_filters","ironroad_market_logistics_content","ironroad_flow_legend"})
+      if(types[required]!=1)throw std::runtime_error(std::string("native GUI required type missing or repeated: ")+required+
+          "; player files retained, compare freight/native-gui/.defaults");
+    const auto zip=BuildStoredZip(files);
     std::filesystem::create_directories(cacheRoot);
     const auto path=cacheRoot+L"\\native-gui-"+Widen(Sha256Bytes(zip.data(),zip.size()))+L".zip";
     std::vector<uint8_t> previous;

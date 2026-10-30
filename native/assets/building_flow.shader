@@ -85,6 +85,10 @@ PixelShader =
                 float2 uv = float2( Input.vTexCoord.y * ( 0.08f / max( Width, 0.01f ) ) - GlobalTime * 0.4f,
                                    Input.vTexCoord.x );
                 float4 diffuse = PdxTex2D( DiffuseTexture, uv );
+            #if defined( IRONROAD_BALANCED )
+                float2 reverseUV = float2( -Input.vTexCoord.y * ( 0.08f / max( Width, 0.01f ) ) - GlobalTime * 0.4f, uv.y );
+                diffuse = max( diffuse, PdxTex2D( DiffuseTexture, reverseUV ) );
+            #endif
                 float2 maskUV = float2( Input.vTexCoord.y * 0.03f, uv.y );
                 float2 dx = ddx( maskUV );
                 float2 dy = ddy( maskUV );
@@ -214,4 +218,74 @@ Effect IronroadBuildingTrafficRed
     RasterizerState = "BuildingFlowRasterizer"
     DepthStencilState = "BuildingFlowDepth"
     Defines = { "IRONROAD_TRAFFIC_RED" }
+}
+
+Effect IronroadBuildingOutputBalanced
+{
+    VertexShader = "VertexShader"
+    PixelShader = "PixelShader"
+    BlendState = "BuildingFlowBlend"
+    RasterizerState = "BuildingFlowRasterizer"
+    DepthStencilState = "BuildingFlowDepth"
+    Defines = { "IRONROAD_BALANCED" }
+}
+
+Effect IronroadBuildingInputBalanced
+{
+    VertexShader = "VertexShader"
+    PixelShader = "PixelShader"
+    BlendState = "BuildingFlowBlend"
+    RasterizerState = "BuildingFlowRasterizer"
+    DepthStencilState = "BuildingFlowDepth"
+    Defines = { "IRONROAD_INPUT" "IRONROAD_BALANCED" }
+}
+
+Effect IronroadBuildingTrafficGreenBalanced
+{
+    VertexShader = "VertexShader"
+    PixelShader = "PixelShader"
+    BlendState = "BuildingFlowBlend"
+    RasterizerState = "BuildingFlowRasterizer"
+    DepthStencilState = "BuildingFlowDepth"
+    Defines = { "IRONROAD_TRAFFIC_GREEN" "IRONROAD_BALANCED" }
+}
+
+Effect IronroadBuildingTrafficLimeBalanced
+{
+    VertexShader = "VertexShader"
+    PixelShader = "PixelShader"
+    BlendState = "BuildingFlowBlend"
+    RasterizerState = "BuildingFlowRasterizer"
+    DepthStencilState = "BuildingFlowDepth"
+    Defines = { "IRONROAD_TRAFFIC_LIME" "IRONROAD_BALANCED" }
+}
+
+Effect IronroadBuildingTrafficYellowBalanced
+{
+    VertexShader = "VertexShader"
+    PixelShader = "PixelShader"
+    BlendState = "BuildingFlowBlend"
+    RasterizerState = "BuildingFlowRasterizer"
+    DepthStencilState = "BuildingFlowDepth"
+    Defines = { "IRONROAD_TRAFFIC_YELLOW" "IRONROAD_BALANCED" }
+}
+
+Effect IronroadBuildingTrafficOrangeBalanced
+{
+    VertexShader = "VertexShader"
+    PixelShader = "PixelShader"
+    BlendState = "BuildingFlowBlend"
+    RasterizerState = "BuildingFlowRasterizer"
+    DepthStencilState = "BuildingFlowDepth"
+    Defines = { "IRONROAD_TRAFFIC_ORANGE" "IRONROAD_BALANCED" }
+}
+
+Effect IronroadBuildingTrafficRedBalanced
+{
+    VertexShader = "VertexShader"
+    PixelShader = "PixelShader"
+    BlendState = "BuildingFlowBlend"
+    RasterizerState = "BuildingFlowRasterizer"
+    DepthStencilState = "BuildingFlowDepth"
+    Defines = { "IRONROAD_TRAFFIC_RED" "IRONROAD_BALANCED" }
 }

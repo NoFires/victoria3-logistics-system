@@ -1,4 +1,5 @@
 #include "logistics_ui.h"
+#include "native_trade_view.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -19,6 +20,18 @@ uint8_t Category(const std::string& name) {
   return 0;
 }
 } // namespace
+std::string FormatNativeTradeQuantity(int64_t quantity,bool compact) {
+  if(quantity<0)return "--";
+  if(compact && quantity>=1000*kNativeTradeQuantityScale){
+    char text[64];const bool millions=quantity>=1000000*kNativeTradeQuantityScale;
+    std::snprintf(text,sizeof(text),"%.1f%s",double(quantity)/kNativeTradeQuantityScale/(millions?1000000:1000),millions?"M":"k");
+    return text;
+  }
+  char fraction[8];std::snprintf(fraction,sizeof(fraction),"%05lld",(long long)(quantity%kNativeTradeQuantityScale));
+  std::string value=std::to_string(quantity/kNativeTradeQuantityScale)+"."+fraction;
+  while(value.back()=='0' && value.size()-value.find('.')>3)value.pop_back();
+  return value;
+}
 std::string FormatFreightDemand(const LogisticsDocument* document) {
   if (!document || !document->world || document->synthetic ||
       document->freightDemandRevision != kFreightDemandRevision || !document->intermediaryDemand)
@@ -32,12 +45,25 @@ std::string FormatFreightDemand(const LogisticsDocument* document) {
   return buffer;
 }
 std::string FormatFreightWork(const LogisticsDocument* document) {
+  if(document && document->world && !document->synthetic && document->nativeTrade){
+    const auto& value=*document->nativeTrade;
+    if(value.marketQuantity<0 || value.scopeQuantity<0 || value.scopeDrawable<0 || value.selectionQuantity<0 ||
+       value.scopeQuantity>value.marketQuantity || value.scopeDrawable>value.scopeQuantity || value.selectionQuantity>value.scopeQuantity)return "--";
+    return FormatNativeTradeQuantity(value.selectionQuantity);
+  }
   if (!document || !document->world || document->synthetic ||
       !std::isfinite(document->allFreight) || document->allFreight < 0 ||
       !std::isfinite(document->selectionFreight) || document->selectionFreight < 0 ||
       document->selectionFreight > document->allFreight) return "--";
   char buffer[64];
   std::snprintf(buffer, sizeof(buffer), "%.2f", document->selectionFreight);
+  return buffer;
+}
+std::string FormatLaidTrack(const LogisticsDocument* document) {
+  if(!document || !document->world || document->synthetic)return "--";
+  const auto value=document->railKilometres?document->railKilometres:document->railMapUnits;
+  if(!value || !std::isfinite(*value) || *value<0)return "--";
+  char buffer[64];std::snprintf(buffer,sizeof(buffer),"%.2f %s",*value,document->railKilometres?"km":"MU");
   return buffer;
 }
 static std::vector<std::pair<std::string,std::string>> FreightGoodsVariables(const LogisticsDocument* document,bool compact) {
@@ -47,6 +73,16 @@ static std::vector<std::pair<std::string,std::string>> FreightGoodsVariables(con
   for (const auto& good:document->goods) {
     if (good.key.empty() || good.key.size()>128 || std::any_of(good.key.begin(),good.key.end(),[](char c){
         return !((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='_');})) return {};
+    if(document->nativeTrade){
+      const int64_t total=document->nativeTrade->marketQuantity;
+      const bool valid=total>=0 && good.tradeQuantity && *good.tradeQuantity>=0 && *good.tradeQuantity<=total;
+      const auto quantity=valid?FormatNativeTradeQuantity(*good.tradeQuantity,compact):"--";
+      char share[64];
+      if(valid && total>0)std::snprintf(share,sizeof(share),"%.1f%%",double(*good.tradeQuantity)/double(total)*100);
+      else std::strcpy(share,"--");
+      if(!values.emplace("ironroad_good_work_"+good.key,quantity).second)return {};
+      values.emplace("ironroad_good_share_"+good.key,share);continue;
+    }
     const bool valid=std::isfinite(good.freight) && good.freight>=0 && good.freight<=document->allFreight;
     char work[64],share[64];
     if (valid && compact && good.freight>=1000000) std::snprintf(work,sizeof(work),"%.1fM",good.freight/1000000);
@@ -60,6 +96,40 @@ static std::vector<std::pair<std::string,std::string>> FreightGoodsVariables(con
     values.emplace("ironroad_good_share_"+good.key,share);
   }
   return {values.begin(),values.end()};
+}
+
+LogisticsDocument BuildLogisticsDocument(const EconomySnapshot& snapshot,const NativeTradeView& view,const FreightFilter& filter) {
+  LogisticsDocument document;
+  if(!snapshot.nativeTrade || !snapshot.world || view.world!=snapshot.world || view.revision!=snapshot.revision)return document;
+  document.world=snapshot.world;document.revision=snapshot.revision;document.market=filter.market;
+  document.kind=filter.kind;document.state=filter.kind==FreightViewKind::State?filter.state:UINT32_MAX;
+  document.nativeTrade=NativeTradeSummary{view.marketQuantity,view.scopeQuantity,view.scopeDrawable,view.selectionQuantity,view.filteredQuantity};
+  document.nativeTrade->domesticMarketQuantity=view.domesticMarketQuantity;
+  document.nativeTrade->domesticScopeQuantity=view.domesticScopeQuantity;
+  document.nativeTrade->domesticSelectionQuantity=view.domesticSelectionQuantity;
+  document.railMapUnits=view.builtRailMapLength;
+  if(document.railMapUnits)document.builtRailLength=*document.railMapUnits;
+  document.targetImport=double(view.domesticTarget)/kQuantityScale;
+  document.allocatedImport=double(view.domesticAllocated)/kQuantityScale;
+  document.unmetDemand=double(view.domesticUnmet)/kQuantityScale;
+  document.intermediaryDemand=view.domesticDemand;
+  if(view.domesticDemand)document.freightDemandRevision=kFreightDemandRevision;
+  document.heatReference=double(view.heatReference)/kNativeTradeQuantityScale;document.heatScaleRevision=kHeatScaleRevision;
+  std::set<uint32_t> markets;
+  for(const auto& state:snapshot.nativeTrade->states){
+    document.states.push_back({state.id,state.market,"State "+std::to_string(state.id)});markets.insert(state.market);
+  }
+  for(uint32_t market:markets)document.markets.push_back({market,"Market "+std::to_string(market)});
+  std::map<uint32_t,int64_t> quantities;
+  for(const auto& row:view.goods)quantities.emplace(row.good,row.quantity);
+  for(const auto& good:snapshot.goods){
+    LogisticsGood row;row.id=good.id;row.key=good.key;row.name=good.name.empty()?good.key:good.name;row.category=good.category;
+    const auto quantity=quantities.find(good.id);
+    if(quantity!=quantities.end())row.tradeQuantity=quantity->second;
+    if(row.tradeQuantity && view.marketQuantity>0)row.share=double(*row.tradeQuantity)/double(view.marketQuantity);
+    document.goods.push_back(std::move(row));
+  }
+  return document;
 }
 std::vector<std::pair<std::string,std::string>> FormatFreightGoods(const LogisticsDocument* document) {
   return FreightGoodsVariables(document,false);
@@ -102,6 +172,8 @@ FreightFilter LogisticsSelection::Filter() const {
   FreightFilter filter;
   filter.kind=kind;filter.market=market;filter.state=state;filter.search=search;
   filter.hoverGood=hoverGood>=0?hoverGood:selectedGood;
+  filter.mapDirection=mapDirection;filter.mapTransport=mapTransport;
+  filter.colorMode=colorMode;
   filter.restrictCategories=categories!=15;
   filter.restrictGoods=restrictGoods;
   if(restrictGoods){

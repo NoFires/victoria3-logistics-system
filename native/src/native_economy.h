@@ -42,7 +42,41 @@ inline uint64_t ReadNativeStateObject(const GoodsMemoryReader& read,uint64_t mod
      !field(object,0,type) || type!=module+0x044de308 || !field(object,8,actual) || actual!=id)return 0;
   return object;
 }
+// region is a legacy derived-map index, never an engine definition/geo ID.
+// The native trade roster leaves it UINT32_MAX; current definitions and geo
+// anchors are copied separately into NativeSeaGeography::states.
 struct NativeStateEconomy {uint32_t id=0,region=0,market=0;};
+inline std::optional<std::vector<NativeStateEconomy>> DecodeNativeTradeStates(
+    const GoodsMemoryReader& reader,uint64_t module,const std::function<bool()>& current,
+    std::string* error=nullptr) {
+  auto fail=[&](const char* why)->std::optional<std::vector<NativeStateEconomy>>{if(error)*error=why;return {};};
+  if(!reader || !module || module>UINT64_MAX-0x05964ef8 || !current || !current())
+    return fail("missing native state roster identity");
+  EconomyReadWindow window(reader);
+  GoodsMemoryReader read=[&](uint64_t a,void* p,size_t n){return window.Read(a,p,n);};
+  uint64_t db=0,entries=0;uint32_t slots=0;
+  if(!read(module+0x05964ef0,&db,8) || !db || db>UINT64_MAX-0x30 ||
+     !read(db+0x20,&entries,8) || !read(db+0x2c,&slots,4) || !slots || slots>65536)
+    return fail("invalid native state roster bounds");
+  std::vector<uint64_t> roster(size_t(slots)*2);
+  if(!read(entries,roster.data(),roster.size()*8))return fail("unreadable native state roster");
+  std::vector<NativeStateEconomy> result;std::unordered_set<uint64_t> objects;
+  for(uint32_t slot=0;slot<slots;++slot){
+    if(!current())return fail("native state roster retired");
+    const uint64_t object=roster[size_t(slot)*2+1];if(!object)continue;
+    uint32_t id=UINT32_MAX;
+    if(object>UINT64_MAX-0xc || !objects.insert(object).second || !read(object+8,&id,4) ||
+       id==UINT32_MAX || (id&0xffffff)!=slot || ReadNativeStateObject(read,module,id)!=object)
+      return fail("invalid native state type or full handle");
+    auto market=DecodeNativeStateMarket(read,module,object,id);
+    if(!market)return fail("native state market unavailable");
+    result.push_back({id,UINT32_MAX,*market});
+  }
+  if(result.empty())return fail("empty native state roster");
+  if(!window.Unchanged())return fail("native state roster changed during copy");
+  if(!current())return fail("native state roster retired");
+  if(error)error->clear();return result;
+}
 struct NativeEconomyCopy {
   std::vector<NativeStateEconomy> states;
   std::vector<StateOrders> orders;

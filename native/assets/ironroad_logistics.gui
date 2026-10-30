@@ -2,19 +2,271 @@ types ironroad_logistics
 {
     type ironroad_state_freight_cell = widget {
         size = { 60 50 }
-        tooltip = "IRONROAD_STATE_WORK_TOOLTIP"
-        textbox = {
-            visible = "[And3(GetVariableSystem.Exists('ironroad_state_rows_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_rows_id_v1'), State.GetIDString), GetVariableSystem.Exists(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey)))))]"
-            raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey))))]"
+        tooltip = "IRONROAD_STATE_GOOD_TOOLTIP"
+        button = {
+            using = default_button
             size = { 60 50 }
-            align = center
+            enabled = "[And3(GetVariableSystem.Exists('ironroad_state_controls_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_controls_id_v1'), State.GetIDString), Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_good_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), Concatenate(':', Goods.GetKey)))))]"
+            onclick = "[GetVariableSystem.Set('ironroad_state_good_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), Concatenate(':', Goods.GetKey)))]"
+            textbox = {
+                visible = "[And3(GetVariableSystem.Exists('ironroad_state_rows_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_rows_id_v1'), State.GetIDString), GetVariableSystem.Exists(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey)))))]"
+                raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey))))]"
+                size = { 60 50 }
+                align = center
+                using = elide_fontsize_min
+            }
+            textbox = {
+                visible = "[Not(And3(GetVariableSystem.Exists('ironroad_state_rows_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_rows_id_v1'), State.GetIDString), GetVariableSystem.Exists(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey))))))]"
+                raw_text = "--"
+                size = { 60 50 }
+                align = center
+            }
+        }
+    }
+    type ironroad_state_filters = flowcontainer {
+        using = default_list_position
+        direction = vertical
+        spacing = 4
+        visible = "[And3(GetVariableSystem.Exists('ironroad_state_context_v1'), GetVariableSystem.Exists('ironroad_state_controls_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_controls_id_v1'), State.GetIDString))]"
+        tooltip = "IRONROAD_STATE_FILTER_TOOLTIP"
+        flowcontainer = {
+            spacing = 6
+            textbox = { text = "IRONROAD_MAP" size = { 55 32 } align = center }
+            button = {
+                using = default_button
+                size = { 95 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_direction_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':all')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_direction_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':all'))]"
+                textbox = { text = "IRONROAD_BOTH_DIRECTIONS" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            button = {
+                using = default_button
+                size = { 95 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_direction_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':imports')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_direction_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':imports'))]"
+                textbox = { text = "IRONROAD_IMPORTS" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            button = {
+                using = default_button
+                size = { 95 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_direction_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':exports')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_direction_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':exports'))]"
+                textbox = { text = "IRONROAD_EXPORTS" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            button = {
+                using = default_button
+                size = { 160 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_good_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':all')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_good_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':all'))]"
+                textbox = { text = "IRONROAD_ALL_GOODS" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+        }
+        flowcontainer = {
+            spacing = 6
+            textbox = { text = "IRONROAD_SEGMENTS" size = { 55 32 } align = center }
+            button = {
+                using = default_button
+                size = { 95 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_transport_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':all')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_transport_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':all'))]"
+                textbox = { text = "IRONROAD_ALL_TRANSPORT" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            button = {
+                using = default_button
+                size = { 95 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_transport_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':land')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_transport_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':land'))]"
+                textbox = { text = "IRONROAD_LAND" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            button = {
+                using = default_button
+                size = { 95 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_transport_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':sea')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_transport_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':sea'))]"
+                textbox = { text = "IRONROAD_SEA" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            textbox = { text = "IRONROAD_PICK_GOOD" size = { 160 32 } align = center using = elide_fontsize_min }
+        }
+        flowcontainer = {
+            spacing = 6
+            textbox = { text = "IRONROAD_COLOR" size = { 55 32 } align = center }
+            button = {
+                using = default_button
+                size = { 95 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':all')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_color_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':all'))]"
+                textbox = { text = "IRONROAD_COLOR_STATE" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            button = {
+                using = default_button
+                size = { 95 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':goods')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_color_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':goods'))]"
+                textbox = { text = "IRONROAD_COLOR_GOODS" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            button = {
+                using = default_button
+                size = { 95 32 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_state_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':native')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_state_color_v1', Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':native'))]"
+                textbox = { text = "IRONROAD_COLOR_NATIVE" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            textbox = { text = "IRONROAD_COLOR_MODES" size = { 160 32 } align = center using = elide_fontsize_min }
+        }
+        ironroad_flow_legend = {}
+    }
+    type ironroad_flow_legend = flowcontainer {
+        direction = vertical
+        spacing = 2
+        textbox = {
+            text = "IRONROAD_LEGEND_STATE"
+            visible = "[And(InformationPanel.IsTabSelected('local_goods'), EqualTo_string(GetVariableSystem.Get('ironroad_state_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':all')))]"
+            size = { 530 26 }
+            tooltip = "IRONROAD_LEGEND_STATE_TOOLTIP"
             using = elide_fontsize_min
         }
         textbox = {
-            visible = "[Not(And3(GetVariableSystem.Exists('ironroad_state_rows_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_rows_id_v1'), State.GetIDString), GetVariableSystem.Exists(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey))))))]"
-            raw_text = "--"
-            size = { 60 50 }
-            align = center
+            text = "IRONROAD_LEGEND_MARKET"
+            visible = "[And(InformationPanel.IsTabSelected('ironroad_logistics'), EqualTo_string(GetVariableSystem.Get('ironroad_market_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_hover_context_v1'), ':all')))]"
+            size = { 530 26 }
+            tooltip = "IRONROAD_LEGEND_MARKET_TOOLTIP"
+            using = elide_fontsize_min
+        }
+        textbox = {
+            text = "IRONROAD_LEGEND_GOODS"
+            visible = "[Or(And(InformationPanel.IsTabSelected('local_goods'), EqualTo_string(GetVariableSystem.Get('ironroad_state_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':goods'))), And(InformationPanel.IsTabSelected('ironroad_logistics'), EqualTo_string(GetVariableSystem.Get('ironroad_market_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_hover_context_v1'), ':goods'))))]"
+            size = { 530 26 }
+            tooltip = "IRONROAD_LEGEND_GOODS_TOOLTIP"
+            using = elide_fontsize_min
+        }
+        textbox = {
+            text = "IRONROAD_LEGEND_NATIVE"
+            visible = "[Or(And(InformationPanel.IsTabSelected('local_goods'), EqualTo_string(GetVariableSystem.Get('ironroad_state_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_state_context_v1'), ':native'))), And(InformationPanel.IsTabSelected('ironroad_logistics'), EqualTo_string(GetVariableSystem.Get('ironroad_market_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_hover_context_v1'), ':native'))))]"
+            size = { 530 26 }
+            tooltip = "IRONROAD_LEGEND_NATIVE_TOOLTIP"
+            using = elide_fontsize_min
+        }
+        flowcontainer = {
+            spacing = 10
+            textbox = { text = "IRONROAD_WIDTH_LEGEND" size = { 390 32 } tooltip = "IRONROAD_WIDTH_TOOLTIP" using = elide_fontsize_min }
+            button = {
+                using = default_button
+                size = { 130 32 }
+                onclick = "[GetVariableSystem.Toggle('ironroad_legend_open_v1')]"
+                textbox = { text = "IRONROAD_LEGEND" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+        }
+        flowcontainer = {
+            direction = vertical
+            visible = "[GetVariableSystem.Exists('ironroad_legend_open_v1')]"
+            flowcontainer = {
+                spacing = 2
+                widget = {
+                    size = { 64 48 }
+                    tooltip = "IRONROAD_WIDTH_0"
+                    widget = {
+                        size = { 64 30 }
+                        widget = {
+                            size = { 40 2 }
+                            parentanchor = center
+                            background = { texture = "gfx/interface/tooltip/tooltip_title_bg.dds" color = { .95 .85 .6 1 } }
+                        }
+                    }
+                    textbox = { raw_text = "1" position = { 0 30 } size = { 64 18 } align = center }
+                }
+                widget = {
+                    size = { 64 48 }
+                    tooltip = "IRONROAD_WIDTH_1"
+                    widget = {
+                        size = { 64 30 }
+                        widget = {
+                            size = { 40 3 }
+                            parentanchor = center
+                            background = { texture = "gfx/interface/tooltip/tooltip_title_bg.dds" color = { .95 .85 .6 1 } }
+                        }
+                    }
+                    textbox = { raw_text = "2" position = { 0 30 } size = { 64 18 } align = center }
+                }
+                widget = {
+                    size = { 64 48 }
+                    tooltip = "IRONROAD_WIDTH_2"
+                    widget = {
+                        size = { 64 30 }
+                        widget = {
+                            size = { 40 4 }
+                            parentanchor = center
+                            background = { texture = "gfx/interface/tooltip/tooltip_title_bg.dds" color = { .95 .85 .6 1 } }
+                        }
+                    }
+                    textbox = { raw_text = "3" position = { 0 30 } size = { 64 18 } align = center }
+                }
+                widget = {
+                    size = { 64 48 }
+                    tooltip = "IRONROAD_WIDTH_3"
+                    widget = {
+                        size = { 64 30 }
+                        widget = {
+                            size = { 40 6 }
+                            parentanchor = center
+                            background = { texture = "gfx/interface/tooltip/tooltip_title_bg.dds" color = { .95 .85 .6 1 } }
+                        }
+                    }
+                    textbox = { raw_text = "4" position = { 0 30 } size = { 64 18 } align = center }
+                }
+                widget = {
+                    size = { 64 48 }
+                    tooltip = "IRONROAD_WIDTH_4"
+                    widget = {
+                        size = { 64 30 }
+                        widget = {
+                            size = { 40 8 }
+                            parentanchor = center
+                            background = { texture = "gfx/interface/tooltip/tooltip_title_bg.dds" color = { .95 .85 .6 1 } }
+                        }
+                    }
+                    textbox = { raw_text = "5" position = { 0 30 } size = { 64 18 } align = center }
+                }
+                widget = {
+                    size = { 64 48 }
+                    tooltip = "IRONROAD_WIDTH_5"
+                    widget = {
+                        size = { 64 30 }
+                        widget = {
+                            size = { 40 12 }
+                            parentanchor = center
+                            background = { texture = "gfx/interface/tooltip/tooltip_title_bg.dds" color = { .95 .85 .6 1 } }
+                        }
+                    }
+                    textbox = { raw_text = "6" position = { 0 30 } size = { 64 18 } align = center }
+                }
+                widget = {
+                    size = { 64 48 }
+                    tooltip = "IRONROAD_WIDTH_6"
+                    widget = {
+                        size = { 64 30 }
+                        widget = {
+                            size = { 40 16 }
+                            parentanchor = center
+                            background = { texture = "gfx/interface/tooltip/tooltip_title_bg.dds" color = { .95 .85 .6 1 } }
+                        }
+                    }
+                    textbox = { raw_text = "7" position = { 0 30 } size = { 64 18 } align = center }
+                }
+                widget = {
+                    size = { 64 48 }
+                    tooltip = "IRONROAD_WIDTH_7"
+                    widget = {
+                        size = { 64 30 }
+                        widget = {
+                            size = { 40 24 }
+                            parentanchor = center
+                            background = { texture = "gfx/interface/tooltip/tooltip_title_bg.dds" color = { .95 .85 .6 1 } }
+                        }
+                    }
+                    textbox = { raw_text = "8" position = { 0 30 } size = { 64 18 } align = center }
+                }
+            }
+            textbox = { text = "IRONROAD_WIDTH_EXPLANATION" size = { 530 42 } multiline = yes using = elide_fontsize_min }
         }
     }
     type ironroad_market_logistics_content = flowcontainer {
@@ -35,16 +287,42 @@ types ironroad_logistics
                 size = { 210 40 }
                 enabled = "[GetVariableSystem.Exists('ironroad_hide_flows')]"
                 onclick = "[GetVariableSystem.Toggle('ironroad_hide_flows')]"
-                textbox = { text = "IRONROAD_SHOW" parentanchor = center }
+                textbox = { text = "IRONROAD_SHOW" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
             }
             button = {
                 using = default_button
                 size = { 210 40 }
                 enabled = "[Not(GetVariableSystem.Exists('ironroad_hide_flows'))]"
                 onclick = "[GetVariableSystem.Toggle('ironroad_hide_flows')]"
-                textbox = { text = "IRONROAD_HIDE" parentanchor = center }
+                textbox = { text = "IRONROAD_HIDE" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
             }
         }
+        flowcontainer = {
+            spacing = 10
+            textbox = { text = "IRONROAD_COLOR" size = { 80 40 } align = center }
+            button = {
+                using = default_button
+                size = { 140 40 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_market_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_hover_context_v1'), ':all')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_market_color_v1', Concatenate(GetVariableSystem.Get('ironroad_hover_context_v1'), ':all'))]"
+                textbox = { text = "IRONROAD_COLOR_MARKET" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            button = {
+                using = default_button
+                size = { 140 40 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_market_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_hover_context_v1'), ':goods')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_market_color_v1', Concatenate(GetVariableSystem.Get('ironroad_hover_context_v1'), ':goods'))]"
+                textbox = { text = "IRONROAD_COLOR_GOODS" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+            button = {
+                using = default_button
+                size = { 140 40 }
+                enabled = "[Not(EqualTo_string(GetVariableSystem.Get('ironroad_market_color_v1'), Concatenate(GetVariableSystem.Get('ironroad_hover_context_v1'), ':native')))]"
+                onclick = "[GetVariableSystem.Set('ironroad_market_color_v1', Concatenate(GetVariableSystem.Get('ironroad_hover_context_v1'), ':native'))]"
+                textbox = { text = "IRONROAD_COLOR_NATIVE" parentanchor = center size = { 100% 100% } align = center alwaystransparent = yes using = elide_fontsize_min }
+            }
+        }
+        ironroad_flow_legend = {}
         default_header_2texts = {
             blockoverride "text1" { text = "IRONROAD_LOGISTICS" }
         }
@@ -89,6 +367,7 @@ types ironroad_logistics
                     position = { 8 12 }
                     size = { 75 75 }
                 }
+                tooltip = "IRONROAD_TRACK_TOOLTIP"
                 textbox = { text = "IRONROAD_LAID_TRACK" position = { 90 18 } size = { 160 26 } }
                 textbox = { raw_text = "[GetVariableSystem.Get('ironroad_track_v1')]" position = { 90 50 } size = { 160 30 } }
             }
@@ -186,10 +465,7 @@ types ironroad_logistics
             size = { 530 30 }
             using = elide_fontsize_min
         }
-        textbox = {
-            text = "IRONROAD_FREIGHT_LEDGER"
-            size = { 530 26 }
-        }
+        textbox = { text = "IRONROAD_FREIGHT_LEDGER" size = { 530 26 } }
         textbox = {
             raw_text = "[GetVariableSystem.Get('ironroad_demand_v1')]"
             size = { 530 30 }

@@ -90,10 +90,15 @@ int main(){
   Check(!contextChanged.ok && contextChanged.goods.empty(),"context token change invalidates completed catalog");
   EconomySnapshot snapshot;snapshot.world=9;snapshot.revision=7;
   snapshot.orders={{10,1,2,2,0,5000},{11,2,2,1,0,7000},{12,3,2,0,9000,0}};
-  std::string error;Check(PopulateSnapshotGoods(snapshot,current,&error),"native IDs resolve observed goods regardless of order");
-  Check(snapshot.goods.size()==3 && snapshot.goods[0].id==0 && snapshot.goods[0].key=="grain" && snapshot.goods[0].category=="industrial","copied key/category replace goodN");
+  std::string error;Check(PopulateSnapshotGoods(snapshot,current,&error),"native IDs resolve the full goods catalog regardless of order");
+  Check(snapshot.goods.size()==4 && snapshot.goods[0].id==0 && snapshot.goods[0].key=="grain" && snapshot.goods[0].category=="industrial","copied key/category replace goodN");
+  Check(snapshot.goods[3].id==3 && snapshot.goods[3].key=="long_example_goods_key",
+      "a native trade good without production or consumption remains available for filtering");
   Check(snapshot.goods[1].localOnly && !snapshot.goods[1].tradeable && !snapshot.goods[2].localOnly && !snapshot.goods[2].tradeable,"local and non-local nontradeable classifications reach snapshot");
   Check(snapshot.orders[0].consumption==5000 && snapshot.orders[1].consumption==7000 && snapshot.world==9 && snapshot.revision==7,"metadata merge preserves raw orders and snapshot identity");
+  EconomySnapshot noOrders;noOrders.world=9;noOrders.revision=8;
+  Check(PopulateSnapshotGoods(noOrders,current,&error) && noOrders.goods.size()==4 && noOrders.orders.empty(),
+      "known zero production/consumption does not suppress the current native trade catalog");
   snapshot.orders[0].good=99;Check(!PopulateSnapshotGoods(snapshot,current,&error) && snapshot.goods.empty() && !error.empty(),"unknown order ID rejects snapshot without goodN fallback");
   Check(snapshot.orders[0].consumption==5000,"unavailable metadata does not zero demand");
   snapshot.orders[0].good=2;current.goods[0].category=4;

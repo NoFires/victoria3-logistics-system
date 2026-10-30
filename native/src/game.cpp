@@ -51,6 +51,7 @@ using FnSetPath = void(__fastcall*)(void*, ArrowPath*);
 using FnOne = void(__fastcall*)(void*);
 using FnSubmit = void(__fastcall*)(void*, void*);
 using FnAlloc = void*(__fastcall*)(void*, size_t, size_t);
+using FnSelectTradePath = uint64_t(__fastcall*)(uint64_t);
 
 }  // namespace
 
@@ -105,6 +106,11 @@ bool Game::Initialize(const std::wstring& exePath, std::string* error) {
   m_ready = true;
   V3_INFO("native profile ready: Victoria 3 %s sha256=%s", kGameVersion, m_hash.c_str());
   return true;
+}
+
+uint64_t Game::SelectTradePath(uint64_t candidates) const {
+  if (!m_ready || !candidates) return 0;
+  return Fn<FnSelectTradePath>(kRvaSelectTradePath)(candidates);
 }
 
 void* Game::ResolveArrowType(const char* name, std::string* error) {

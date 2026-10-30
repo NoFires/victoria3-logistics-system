@@ -7,6 +7,8 @@
 #include <string>
 
 namespace v3 {
+struct NativeTradeFacts;
+struct NativeTradeView;
 // Immutable result of one market/state view. Produced on a worker, consumed by
 // the native-UI bridge and the render update. Holds no engine pointer and no
 // mutable native object; the renderer only ever sees `ribbons`.
@@ -15,6 +17,8 @@ struct FreightFrame {
   FreightFilter filter;
   std::shared_ptr<const FreightResult> allocation;
   std::shared_ptr<const FreightView> view;
+  std::shared_ptr<const NativeTradeFacts> nativeFacts;
+  std::shared_ptr<const NativeTradeView> nativeView;
   RibbonBatch ribbons;
   bool allocationReused = false, viewReused = false;
   double computeMs = 0;
@@ -59,12 +63,14 @@ class FreightEngine {
   struct AllocationEntry {
     uint64_t world = 0, revision = 0, fingerprint = 0, epoch = 0;
     std::shared_ptr<const FreightResult> value;
+    std::shared_ptr<const NativeTradeFacts> nativeFacts;
   };
   struct ViewEntry {
     uint64_t world = 0, revision = 0, fingerprint = 0, epoch = 0, graphRevision = 0;
     FreightFilter filter;
     float coordScale = 1, heightScale = 0, heightOffset = 0;
     std::shared_ptr<const FreightView> view;
+    std::shared_ptr<const NativeTradeView> nativeView;
     RibbonBatch ribbons;
   };
   AllocationEntry& TouchAllocation(const AllocationEntry& key);

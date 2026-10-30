@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <thread>
+#include <map>
 using namespace v3;
 void Check(bool ok,const char* why){if(!ok){std::printf("FAIL: %s\n",why);std::exit(1);}}
 int main(){
@@ -77,8 +78,62 @@ int main(){
   Check(worlds.BindSource(source,epoch)==3,"same native identity does not repeatedly advance epoch");
   ++source.machine;Check(worlds.BindSource(source,epoch)==4,"machine identity replacement also binds a new epoch");
   source.world=0;Check(!worlds.BindSource(source,epoch) && epoch.load()==4,"unavailable identity does not fabricate a world change");
+  {
+    NativeSnapshotMailbox lifetime;std::atomic<uint64_t> generation{1};const auto same=result->identity;
+    lifetime.BindSource(same,generation);lifetime.Ensure(a);Check(lifetime.Publish(a,result),"old source has an undrained result before destruction");
+    Check(!lifetime.RetireWorld(0,generation) && !lifetime.RetireWorld(same.world+1,generation) && lifetime.Ready(),
+        "foreign or absent native world destruction cannot retire the bound source");
+    Check(lifetime.RetireWorld(same.world,generation)==2 && generation.load()==2 && !lifetime.Ready() && !lifetime.Take(),
+        "native destruction retires epoch and undrained data before any replacement identity is observed");
+    Check(!lifetime.RetireWorld(same.world,generation) && generation.load()==2,"the same destruction event cannot retire twice");
+    bool lateAccepted=true;std::thread lateSource([&]{lateAccepted=lifetime.Publish(a,result);});lateSource.join();
+    Check(!lateAccepted,"late completed old-world result cannot reappear after the destructor event");
+    const auto pending=lifetime.Pending();
+    Check(pending && pending!=a && pending->world==2 && pending->revision==a->revision,
+        "destruction keeps a new-generation resident request for the first paused replacement command");
+    Check(lifetime.BindSource(same,generation)==2,"exactly reused machine/world/database addresses still belong to the new epoch");
+    auto fresh=std::make_shared<NativeCaptureResult>(*result);auto freshSnapshot=std::make_shared<EconomySnapshot>(*snapshot);
+    freshSnapshot->world=2;freshSnapshot->revision=3;fresh->snapshot=freshSnapshot;
+    Check(lifetime.Publish(pending,fresh) && lifetime.Take()==fresh,"first paused replacement result is publishable without waiting for another UI request");
+    generation.store(3);
+    Check(lifetime.RetireWorld(same.world,generation)==3 && generation.load()==3,
+        "UI-first retirement and original destructor event advance the same epoch only once");
+    Check(lifetime.BindSource(same,generation)==3 && lifetime.RetireWorld(same.world,generation)==4,
+        "a later real destruction after address reuse retires the later object lifetime too");
+  }
   std::string why;unsigned reads=0;
-  Check(!CopyNativeSnapshot([&](auto,auto,auto){++reads;return false;},1,1,0xcd2bc1,*a,a->revision,[]{return false;},&why) && !reads,
+  const auto forbidden=[](uint64_t){Check(false,"retired or unleased source cannot invoke native selector");return uint64_t(0);};
+  const auto forbiddenAccess=[](uint64_t,uint64_t)->std::optional<bool>{Check(false,"retired or unleased source cannot invoke strait access");return {};};
+  Check(!CopyNativeSnapshot([&](auto,auto,auto){++reads;return false;},1,1,0xcd2bc1,*a,a->revision,[]{return false;},&why,forbidden,forbiddenAccess) && !reads,
         "retired request performs no engine reads");
+  {
+    constexpr uint64_t module=0x140000000,tlsArray=0x10000,tls=0x20000,
+        root=0x30000,machine=0x40000,world=0x50000,db=0x60000,idler=0x70000;
+    std::map<uint64_t,uint8_t> bytes;
+    auto put=[&](uint64_t at,auto value){for(size_t i=0;i<sizeof(value);++i)bytes[at+i]=((uint8_t*)&value)[i];};
+    GoodsMemoryReader memory=[&](uint64_t at,void* out,size_t n){
+      for(size_t i=0;i<n;++i){auto f=bytes.find(at+i);if(f==bytes.end())return false;((uint8_t*)out)[i]=f->second;}return true;
+    };
+    put(tlsArray,tls);put(tls+0x5ae0,uint8_t(1));put(tls+0x92c,uint32_t(1));
+    put(module+0x0514e580,uint32_t(2));put(module+0x0514e570,uint32_t(0));
+    put(module+0x0592d0e0,idler);put(idler,module+0x04431500);put(idler+0x20,uint8_t(1));
+    put(module+0x0592d128,root);put(root,module+0x04430800);put(root+0x588,uint32_t(4));put(root+0x608,machine);
+    put(machine+8,uint32_t(59883360));put(machine+0x120,world);put(module+0x05964ef0,db);
+    // A formal native request needs no embedded map/rail graph. Even its access
+    // rejection must be reached without those former prerequisites.
+    auto valid=bytes;auto request=*a;
+    auto rejected=[&](uint64_t caller){
+      Check(!CopyNativeSnapshot(memory,module,tlsArray,caller,request,request.revision,[]{return true;},&why,forbidden,forbiddenAccess) &&
+          why=="outside completed command scope","selector cannot run outside the verified completed-command access scope");
+    };
+    rejected(0xcd2bc2);
+    for(auto [at,value]:{std::pair{tls+0x92c,uint32_t(0)},std::pair{module+0x0514e580,uint32_t(1)},
+                       std::pair{module+0x0514e570,uint32_t(1)},std::pair{root+0x588,uint32_t(3)}}){
+      put(at,value);rejected(0xcd2bc1);bytes=valid;
+    }
+    put(tls+0x5ae0,uint8_t(0));rejected(0xcd2bc1);bytes=valid;
+    Check(!CopyNativeSnapshot(memory,module,tlsArray,0xcd2bc1,request,request.revision,[]{return true;},&why) &&
+        why=="native trade selector unavailable","missing native selector is unavailable, never a first-candidate fallback");
+  }
   std::puts("PASS: completed command gate, owned snapshot mailbox and stale/world rejection");
 }

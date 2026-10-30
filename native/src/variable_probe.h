@@ -22,6 +22,9 @@ struct GuiVariableProbe {
 // pointers with VirtualQuery and never writes to the map. Gated behind an
 // explicit debug setting; see DECISIONS.md D17.
 GuiVariableProbe ProbeGuiVariables(uint8_t* base);
+// Formal UI polling: copy only exact requested keys, resolving hash collisions
+// by the full key. Same verified getter/map layout and UI-thread ownership.
+GuiVariableProbe ProbeGuiVariableKeys(uint8_t* base,const std::vector<std::string>& keys);
 // Reads a second instance of the same string-map template at a static address.
 // Used only to validate the entry layout/hash on populated maps; read-only.
 GuiVariableProbe ProbeGlobalStringMap(uint8_t* base);

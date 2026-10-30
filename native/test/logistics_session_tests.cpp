@@ -1,6 +1,7 @@
 #include "logistics_session.h"
 #include "native_market_owner.h"
 #include "native_state_owner.h"
+#include "native_trade_identity.h"
 #include <cstdio>
 #include <cstdlib>
 #include <functional>
@@ -35,6 +36,91 @@ std::shared_ptr<const LogisticsDocument> Await(LogisticsSession& session,
   return {};
 }
 int main() {
+  {
+    LogisticsSession nativeSession(Geo());
+    auto native=std::make_shared<NativeWorldTradeSnapshot>();
+    native->states={{10,1,7},{30,3,7},{40,4,7}};native->centers={{10,10},{30,30},{40,30}};
+    NativeTradeDestination destination;destination.state=30;destination.selected=1;
+    destination.candidates={{{{1,2}},{0x7f000001},100001},{{{3,4}},{},200003}};
+    native->groups={{10,{10},{destination}},{30,{30,40},{}}};
+    native->statePairs={{10,30,{{1,100001}}},{30,10,{{1,200003},{2,300007}}}};native->groupPairs=native->statePairs;
+    native->straits={{0x7f000001,{1,2},{0,1},0},{0x88000002,{3,4},{1,2},1}};
+    NativeSplineNetwork geometry;geometry.width=100;geometry.height=50;
+    geometry.points={{1,{1,2}},{2,{3,4}},{3,{5,6}}};geometry.strips={{0x100000002,{1,2,3}}};
+    geometry.connections={{0x1000000400000002,{0x100000002}},{0x2000000400000002,{}}};
+    NativeSeaGeography sea;sea.definitions={{0,{1,2}},{1,{3,4}}};
+    sea.provinces={{1,{{101,11},{2,3}}},{2,{{102,12},{1}}}};
+    sea.states={{10,{101,11}},{30,{102,12}}};sea.stateHubs={{10,true},{30,false}};
+    native->geometry=std::make_shared<const NativeSplineNetwork>(geometry);
+    native->seaGeography=std::make_shared<const NativeSeaGeography>(sea);
+    auto snapshot=Snapshot();snapshot.nativeTrade=native;
+    Check(nativeSession.SetSnapshot(std::make_shared<const EconomySnapshot>(snapshot)),"native handoff baseline accepted");
+    auto repeated=snapshot;++repeated.revision;
+    auto clone=std::make_shared<NativeWorldTradeSnapshot>(*native);
+    clone->geometry=std::make_shared<const NativeSplineNetwork>(geometry);
+    clone->seaGeography=std::make_shared<const NativeSeaGeography>(sea);repeated.nativeTrade=clone;
+    Check(nativeSession.HasEquivalentSnapshot(repeated),"identical owned native contents retain accepted identity despite new allocations/revision");
+    auto reordered=std::make_shared<NativeWorldTradeSnapshot>(*clone);
+    std::reverse(reordered->states.begin(),reordered->states.end());
+    std::reverse(reordered->groups.begin(),reordered->groups.end());
+    std::reverse(reordered->groups.front().states.begin(),reordered->groups.front().states.end());
+    std::reverse(reordered->statePairs.begin(),reordered->statePairs.end());
+    std::reverse(reordered->groupPairs.begin(),reordered->groupPairs.end());
+    std::reverse(reordered->statePairs.front().goods.begin(),reordered->statePairs.front().goods.end());
+    std::reverse(reordered->groupPairs.front().goods.begin(),reordered->groupPairs.front().goods.end());
+    std::reverse(reordered->straits.begin(),reordered->straits.end());
+    auto reorderedSea=sea;std::reverse(reorderedSea.definitions.begin(),reorderedSea.definitions.end());
+    reordered->seaGeography=std::make_shared<const NativeSeaGeography>(reorderedSea);
+    auto resorted=repeated;resorted.nativeTrade=reordered;
+    Check(nativeSession.HasEquivalentSnapshot(resorted),"irrelevant native enumeration order cannot blank a stable view or cancel its caches");
+    auto changed=[&](auto edit,const char* why){
+      auto trade=*native;auto lines=geometry;auto geography=sea;edit(trade,lines,geography);
+      trade.geometry=std::make_shared<const NativeSplineNetwork>(lines);
+      trade.seaGeography=std::make_shared<const NativeSeaGeography>(geography);
+      auto candidate=repeated;candidate.nativeTrade=std::make_shared<const NativeWorldTradeSnapshot>(trade);
+      Check(!nativeSession.HasEquivalentSnapshot(candidate),why);
+    };
+    changed([](auto& t,auto&,auto&){t.straits.clear();},"closed native canal refreshes even when every economy order is unchanged");
+    changed([](auto& t,auto&,auto&){++t.straits[0].id;},"full strait generation changes refresh");
+    changed([](auto& t,auto&,auto&){++t.straits[0].definition;},"native strait definition changes refresh");
+    changed([](auto& t,auto&,auto&){++t.straits[0].tariffModes[0];},"current native passage cost changes refresh");
+    changed([](auto& t,auto&,auto&){++t.straits[0].seaProvinces[0];},"current strait endpoints refresh");
+    changed([](auto& t,auto&,auto&){t.groups[0].destinations[0].selected=0;},"changed original route choice refreshes without legacy-order changes");
+    changed([](auto& t,auto&,auto&){t.groups[0].destinations[0].selected.reset();},"unselected native route cannot retain a selected frame");
+    changed([](auto& t,auto&,auto&){std::reverse(t.groups[0].destinations[0].candidates.begin(),t.groups[0].destinations[0].candidates.end());},
+        "native alternative order affects current index and tie behavior, unlike container enumeration");
+    changed([](auto& t,auto&,auto&){++t.groups[0].destinations[0].candidates[0].distanceFixed;},"native alternative cost changes refresh");
+    changed([](auto& t,auto&,auto&){++t.groups[0].destinations[0].candidates[1].provinces[0].last;},"native selected ProvinceSet changes refresh");
+    changed([](auto& t,auto&,auto&){t.groups[0].destinations[0].candidates[0].straits.clear();},"native alternative passages refresh");
+    changed([](auto& t,auto&,auto&){++t.groups[0].anchor;},"native cached representative changes refresh");
+    changed([](auto& t,auto&,auto&){t.groups[1].states.pop_back();},"native cached membership changes refresh");
+    changed([](auto& t,auto&,auto&){++t.groups[0].destinations[0].state;},"native cached destination changes refresh");
+    changed([](auto& t,auto&,auto&){t.centers[40]=10;},"current native center changes refresh even with identical orders");
+    changed([](auto& t,auto&,auto&){++t.states[0].market;},"owned native market scope changes refresh");
+    changed([](auto& t,auto&,auto&){++t.states[0].region;},"owned native region changes refresh");
+    changed([](auto& t,auto&,auto&){++t.states[0].id;},"owned full native state identity changes refresh");
+    changed([](auto& t,auto&,auto&){++t.statePairs[0].goods[0].valueFixed;},"single native1e-5 detailed export change refreshes");
+    changed([](auto& t,auto&,auto&){++t.groupPairs[0].goods[0].valueFixed;},"independent grouped evidence changes refresh");
+    changed([](auto& t,auto&,auto&){std::swap(t.statePairs[0].source,t.statePairs[0].destination);},"native export direction changes refresh");
+    changed([](auto& t,auto&,auto&){++t.statePairs[0].goods[0].good;},"native good identity changes refresh");
+    changed([](auto&,auto& g,auto&){g.points.at(2).x+=.25f;},"same-key native control geometry changes refresh");
+    changed([](auto&,auto& g,auto&){std::reverse(g.strips.begin()->second.begin(),g.strips.begin()->second.end());},"original native control order changes refresh");
+    changed([](auto&,auto& g,auto&){g.connections.begin()->second.clear();},"native connection becoming known empty refreshes");
+    changed([](auto&,auto& g,auto&){g.connections.erase(0x2000000400000002);},"missing and known-empty native connection are distinct");
+    changed([](auto&,auto& g,auto&){++g.height;},"current native map dimensions refresh");
+    changed([](auto&,auto&,auto& g){++g.definitions[0].seaProvinces[0];},"closed/unbuilt canal definition changes refresh");
+    changed([](auto&,auto&,auto& g){++g.states.at(10).geo;},"same native state with changed map anchor refreshes");
+    changed([](auto&,auto&,auto& g){++g.provinces.at(1).region.definition;},"native province region-definition changes refresh");
+    changed([](auto&,auto&,auto& g){std::reverse(g.provinces.at(1).adjacent.begin(),g.provinces.at(1).adjacent.end());},"original native adjacency tie order changes refresh");
+    changed([](auto&,auto&,auto& g){g.stateHubs.at(10)=false;},"current native port eligibility changes refresh");
+    auto missing=repeated;auto incomplete=std::make_shared<NativeWorldTradeSnapshot>(*native);incomplete->geometry.reset();missing.nativeTrade=incomplete;
+    Check(!nativeSession.HasEquivalentSnapshot(missing),"missing native geometry cannot retain prior loaded frame");
+    incomplete=std::make_shared<NativeWorldTradeSnapshot>(*native);incomplete->seaGeography.reset();missing.nativeTrade=incomplete;
+    Check(!nativeSession.HasEquivalentSnapshot(missing),"missing native geography cannot retain prior loaded frame");
+    repeated.nativeTrade.reset();Check(!nativeSession.HasEquivalentSnapshot(repeated),"native-to-model source transition is never equivalent");
+    LogisticsSession modelSession(Geo());modelSession.SetSnapshot(std::make_shared<const EconomySnapshot>(Snapshot()));
+    Check(!modelSession.HasEquivalentSnapshot(snapshot),"model-to-native source transition cannot be hidden by unchanged orders");
+  }
   LogisticsSession session(Geo(), FreightPolicy{});
   std::string reason;
   Check(!session.SetSnapshot(nullptr, &reason) && reason == "missing economy snapshot",

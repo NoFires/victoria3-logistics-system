@@ -25,14 +25,35 @@ class NativeMarketOwner {
     const bool contextChanged=!m_active || market!=m_market || panel.market!=m_panelMarket || status.world!=m_world;
     if(!contextChanged && goods==m_goods)return {};
     if(m_hover>=0){session.Close(kOwnerHover);m_hover=-1;}
+    if(contextChanged)m_color=FreightColorMode::Business;
     if(contextChanged)m_context="ironroad-hover-"+std::to_string(++m_epoch)+"-"+
                                   std::to_string(status.world)+"-"+std::to_string(panel.market);
     LogisticsSelection selection;selection.kind=FreightViewKind::Market;
     selection.market=market;selection.flowsVisible=true;
     selection.explicitMarket=true;
+    selection.colorMode=m_color;
     selection.restrictGoods=true;selection.allowedGoods=goods;
     session.SetSelection(kOwnerNativePanel,kOwnerNativePanel,std::move(selection));
     m_active=true;m_market=market;m_panelMarket=panel.market;m_world=status.world;m_goods=std::move(goods);return {true,false};
+  }
+  bool UpdateColor(LogisticsSession& session,const GuiVariableProbe& variables) {
+    if(!m_active || !variables.ok || session.Status().world!=m_world)return false;
+    FreightColorMode color=FreightColorMode::Business;bool seen=false;
+    for(const auto& entry:variables.entries){
+      if(entry.key!="ironroad_market_color_v1" || !entry.value.starts_with(m_context+":"))continue;
+      if(seen)return false;seen=true;
+      const auto value=entry.value.substr(m_context.size()+1);
+      if(value=="goods")color=FreightColorMode::Goods;
+      else if(value=="native")color=FreightColorMode::Native;
+      else if(value!="all")return false;
+    }
+    if(color==m_color)return false;
+    m_color=color;LogisticsSelection selection;selection.kind=FreightViewKind::Market;
+    selection.market=m_market;selection.explicitMarket=true;selection.restrictGoods=true;
+    selection.allowedGoods=m_goods;selection.colorMode=m_color;
+    session.SetSelection(kOwnerNativePanel,kOwnerNativePanel,selection);
+    if(m_hover>=0){selection.hoverGood=m_hover;session.SetSelection(kOwnerHover,kOwnerHover,std::move(selection));}
+    return true;
   }
   // Each row has its own key, so a late leave from A cannot erase an enter on B.
   // Context changes reject entries retained after panel destruction/reopening.
@@ -55,6 +76,7 @@ class NativeMarketOwner {
     else {
       LogisticsSelection selection;selection.kind=FreightViewKind::Market;
       selection.market=m_market;selection.explicitMarket=true;selection.hoverGood=good;
+      selection.colorMode=m_color;
       selection.restrictGoods=true;selection.allowedGoods=m_goods;
       session.SetSelection(kOwnerHover,kOwnerHover,std::move(selection));
     }
@@ -66,7 +88,7 @@ class NativeMarketOwner {
     if(m_active)session.Close(kOwnerNativePanel);
     Reset();
   }
-  void Reset(){m_active=false;m_market=0;m_world=0;m_goods.clear();m_hover=-1;m_context="ironroad-hover-inactive";}
+  void Reset(){m_active=false;m_market=0;m_world=0;m_goods.clear();m_hover=-1;m_context="ironroad-hover-inactive";m_color=FreightColorMode::Business;}
  private:
   bool m_active=false;
   uint32_t m_market=0,m_panelMarket=UINT32_MAX;
@@ -74,5 +96,6 @@ class NativeMarketOwner {
   int64_t m_hover=-1;
   std::string m_context="ironroad-hover-inactive";
   std::vector<uint32_t> m_goods;
+  FreightColorMode m_color=FreightColorMode::Business;
 };
 } // namespace v3

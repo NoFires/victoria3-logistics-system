@@ -3,6 +3,11 @@
 #include <optional>
 
 namespace v3 {
+struct NativeTradeView;
+struct NativeTradeSummary {
+  int64_t marketQuantity=0,scopeQuantity=0,scopeDrawable=0,selectionQuantity=0,filteredQuantity=0;
+  int64_t domesticMarketQuantity=0,domesticScopeQuantity=0,domesticSelectionQuantity=0;
+};
 enum class GoodsCategory : uint8_t { Staple=1, Industrial=2, Luxury=4, Military=8 };
 struct LogisticsOrders { std::string name; double quantity=0; };
 struct LogisticsGood {
@@ -12,6 +17,7 @@ struct LogisticsGood {
   double freight=0,share=0,sellOrders=0,buyOrders=0;
   std::vector<LogisticsOrders> sellers,buyers;
   std::optional<FreightDemand> intermediaryDemand;
+  std::optional<int64_t> tradeQuantity; // original1e5 units, distinct from model work
 };
 struct LogisticsMarket { uint32_t id=0; std::string name; };
 struct LogisticsState { uint32_t id=0,market=0; std::string name; };
@@ -44,7 +50,11 @@ struct LogisticsDocument {
   double heatReference=0;
   uint32_t heatScaleRevision=0;
   std::optional<double> railKilometres;
+  std::optional<double> railMapUnits; // authored 2D polyline length; no kilometre calibration implied
+  std::optional<NativeTradeSummary> nativeTrade;
 };
+LogisticsDocument BuildLogisticsDocument(const EconomySnapshot&,const NativeTradeView&,const FreightFilter&);
+std::string FormatNativeTradeQuantity(int64_t quantity,bool compact=false);
 LogisticsDocument BuildLogisticsDocument(const EconomySnapshot&, const FreightResult&,
     const FreightFilter&, const std::vector<LogisticsQuote>& quotes={},
     const std::vector<LogisticsMarket>& markets={}, const std::vector<LogisticsState>& states={},
@@ -53,6 +63,7 @@ LogisticsDocument BuildLogisticsDocument(const EconomySnapshot&, const FreightRe
 std::string FormatFreightDemand(const LogisticsDocument*);
 // Native card work for the current filters; hover does not change this total.
 std::string FormatFreightWork(const LogisticsDocument*);
+std::string FormatLaidTrack(const LogisticsDocument*);
 // Canonical per-good native variable payload; missing/synthetic input clears it.
 std::vector<std::pair<std::string,std::string>> FormatFreightGoods(const LogisticsDocument*);
 // State work uses separate keys; a market document or different state is refused.
@@ -72,6 +83,9 @@ struct LogisticsSelection {
   std::string search;
   bool flowsVisible=true;
   int64_t selectedGood=-1,hoverGood=-1;
+  int mapDirection=0;
+  FreightTransport mapTransport=FreightTransport::All;
+  FreightColorMode colorMode=FreightColorMode::Business;
   FreightViewKind kind=FreightViewKind::Market;
   bool restrictGoods=false;
   std::vector<uint32_t> allowedGoods;

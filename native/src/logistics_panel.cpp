@@ -15,6 +15,9 @@ std::string Number(double value) {
   else std::snprintf(buffer,sizeof(buffer),"%.2f",value);
   return buffer;
 }
+std::string TradeOrWork(const LogisticsGood& row,bool native){
+  return native?(row.tradeQuantity?FormatNativeTradeQuantity(*row.tradeQuantity,true):"--"):Number(row.freight);
+}
 void Header(const char* title) {
   ImGui::Spacing();
   ImGui::PushStyleColor(ImGuiCol_ChildBg,ImVec4(.09f,.15f,.19f,1));
@@ -85,6 +88,7 @@ void LogisticsPanel::DrawFilters() {
 }
 
 void LogisticsPanel::DrawGoods(const LogisticsDocument& doc) {
+  const bool native=bool(doc.nativeTrade);
   Header("Goods");
   auto flags=ImGuiTableFlags_RowBg|ImGuiTableFlags_BordersInnerH|ImGuiTableFlags_Resizable|
       ImGuiTableFlags_Sortable|ImGuiTableFlags_ScrollY;
@@ -92,8 +96,8 @@ void LogisticsPanel::DrawGoods(const LogisticsDocument& doc) {
   ImGui::TableSetupColumn("Goods",ImGuiTableColumnFlags_WidthStretch,1.5f,0);
   ImGui::TableSetupColumn("Market price",ImGuiTableColumnFlags_WidthFixed,90,1);
   ImGui::TableSetupColumn("vs base",ImGuiTableColumnFlags_WidthFixed,65,2);
-  ImGui::TableSetupColumn("Freight",ImGuiTableColumnFlags_WidthFixed|ImGuiTableColumnFlags_DefaultSort|ImGuiTableColumnFlags_PreferSortDescending,80,3);
-  ImGui::TableSetupColumn("% all freight",ImGuiTableColumnFlags_WidthFixed,85,4);
+  ImGui::TableSetupColumn(native?"Trade qty":"Freight",ImGuiTableColumnFlags_WidthFixed|ImGuiTableColumnFlags_DefaultSort|ImGuiTableColumnFlags_PreferSortDescending,80,3);
+  ImGui::TableSetupColumn(native?"% all trade":"% all freight",ImGuiTableColumnFlags_WidthFixed,85,4);
   ImGui::TableSetupScrollFreeze(0,1);ImGui::TableHeadersRow();
   if (auto* sort=ImGui::TableGetSortSpecs();sort && sort->SpecsCount) {
     m_sortColumn=sort->Specs[0].ColumnUserID;
@@ -102,12 +106,14 @@ void LogisticsPanel::DrawGoods(const LogisticsDocument& doc) {
   }
   std::vector<const LogisticsGood*> rows;
   for (const auto& row:doc.goods) if (m_selection.Matches(row)) rows.push_back(&row);
-  std::stable_sort(rows.begin(),rows.end(),[this](const auto* a,const auto* b) {
+  std::stable_sort(rows.begin(),rows.end(),[this,native](const auto* a,const auto* b) {
     if (m_sortColumn==0) return m_sortDescending?a->name>b->name:a->name<b->name;
-    auto value=[this](const LogisticsGood* row)->std::optional<double> {
+    auto value=[this,native](const LogisticsGood* row)->std::optional<double> {
       if (m_sortColumn==1) return row->price;
       if (m_sortColumn==2) return row->priceDeviation;
-      return m_sortColumn==4?row->share:row->freight;
+      if(m_sortColumn==4)return row->share;
+      if(native)return row->tradeQuantity?std::optional<double>(double(*row->tradeQuantity)):std::nullopt;
+      return row->freight;
     };
     const auto av=value(a),bv=value(b);
     if (av.has_value()!=bv.has_value()) return av.has_value();
@@ -121,23 +127,27 @@ void LogisticsPanel::DrawGoods(const LogisticsDocument& doc) {
     }
     if (ImGui::IsItemHovered()) {
       m_hover=row->id;
-      ImGui::SetTooltip("%s\nFreight %s (%.2f%% of all market freight)\nHover: show this good's routes. Click: open details.",
-          row->name.c_str(),Number(row->freight).c_str(),row->share*100);
+      ImGui::SetTooltip("%s\n%s %s (%.2f%% of all market %s)\nHover: show this good's routes. Click: open details.",
+          row->name.c_str(),native?"Trade qty":"Freight",TradeOrWork(*row,native).c_str(),row->share*100,native?"trade":"freight");
     }
     ImGui::TableSetColumnIndex(1);Price(*row);
     ImGui::TableSetColumnIndex(2);Deviation(*row);
-    ImGui::TableSetColumnIndex(3);ImGui::TextUnformatted(Number(row->freight).c_str());
+    ImGui::TableSetColumnIndex(3);ImGui::TextUnformatted(TradeOrWork(*row,native).c_str());
     ImGui::TableSetColumnIndex(4);ImGui::Text("%.2f%%",row->share*100);ImGui::PopID();
   }
   ImGui::EndTable();
   if (rows.empty()) ImGui::TextDisabled("No goods match these filters.");
 }
 
-void LogisticsPanel::DrawDetail(const LogisticsDocument&,const LogisticsGood& row) {
+void LogisticsPanel::DrawDetail(const LogisticsDocument& doc,const LogisticsGood& row) {
   if (ImGui::Button("< Logistics")) {m_selection.Back();m_changed=true;}
   ImGui::SameLine();ImGui::TextColored(gold,"%s",row.name.c_str());
   Header("Market details");
   Price(row);ImGui::SameLine(150);Deviation(row);ImGui::Spacing();
+  if(doc.nativeTrade){
+    ImGui::Text("Original trade quantity %s    %.2f%% of all market trade",TradeOrWork(row,true).c_str(),row.share*100);
+    ImGui::TextDisabled("Game quantity units. Original order details remain in the game's goods panel.");return;
+  }
   ImGui::Text("Freight %s    %.2f%% of all market freight",Number(row.freight).c_str(),row.share*100);
   ImGui::Text("Sell orders %s    Buy orders %s",Number(row.sellOrders).c_str(),Number(row.buyOrders).c_str());
   ImGui::TextDisabled("Orders are game quantities. Routed quantities are model allocations.");
@@ -194,9 +204,12 @@ bool LogisticsPanel::Draw(const LogisticsDocument* doc,FreightViewKind kind) {
     if (m_selection.selectedGood>=0) {m_selection.Back();m_changed=true;}
     DrawFilters();Header("Logistics");
     const float half=(ImGui::GetContentRegionAvail().x-ImGui::GetStyle().ItemSpacing.x)/2;
-    Card("Freight",ready?Number(doc->filteredFreight):"--",half);ImGui::SameLine();
-    Card("Laid track",!ready?"--":(doc->railKilometres?Number(*doc->railKilometres)+" km":Number(doc->builtRailLength)+" map units"),half);
-    if (ready) {
+    Card(ready && doc->nativeTrade?"Trade + domestic model quantity":"Freight",ready?(doc->nativeTrade?FormatFreightWork(doc):Number(doc->filteredFreight)):"--",half);ImGui::SameLine();
+    Card("Laid track",!ready?"--":doc->nativeTrade?FormatLaidTrack(doc):(doc->railKilometres?Number(*doc->railKilometres)+" km":Number(doc->builtRailLength)+" map units"),half);
+    if(ready && doc->nativeTrade){
+      ImGui::Text("Original %s   Domestic model %s",FormatNativeTradeQuantity(doc->nativeTrade->scopeQuantity-doc->nativeTrade->domesticScopeQuantity).c_str(),
+          FormatNativeTradeQuantity(doc->nativeTrade->domesticScopeQuantity).c_str());
+    }else if (ready) {
       ImGui::Text("Target import %s   Allocated %s   Unmet %s  (orders, model)",
                   Number(doc->targetImport).c_str(),Number(doc->allocatedImport).c_str(),
                   Number(doc->unmetDemand).c_str());
@@ -212,17 +225,17 @@ bool LogisticsPanel::Draw(const LogisticsDocument* doc,FreightViewKind kind) {
   }
   if (m_selection.hoverGood!=m_hover) {m_selection.hoverGood=m_hover;m_changed=true;}
   ImGui::Spacing();
-  ImGui::TextDisabled("Width: allocated quantity. Share: all market freight.");
+  ImGui::TextDisabled(ready && doc->nativeTrade?"Width: original trade + allocated domestic model quantity. Share: all-market total.":"Width: allocated quantity. Share: all market freight.");
   if (kind==FreightViewKind::Market) {
     const ImVec4 colours[]={{.08f,.85f,.35f,1},{.55f,.9f,.12f,1},{1,.9f,.05f,1},{1,.53f,.03f,1},{.95f,.04f,.12f,1}};
     for (int i=0;i<5;++i) {if(i) ImGui::SameLine();ImGui::ColorButton(("##Intensity"+std::to_string(i)).c_str(),colours[i],ImGuiColorEditFlags_NoTooltip,ImVec2(25,9));}
     ImGui::SameLine();ImGui::TextDisabled("Low -> high throughput");
     if (ready) {
       if (doc->heatReference>0)
-        ImGui::TextDisabled("Reference %.0f weighted orders (heat statistic rev %u)",
+        ImGui::TextDisabled(ready && doc->nativeTrade?"Reference %.5f original quantity units (heat rev %u)":"Reference %.0f weighted orders (heat statistic rev %u)",
                             doc->heatReference,doc->heatScaleRevision);
       else
-        ImGui::TextDisabled("No freight in this market; no heat scale.");
+        ImGui::TextDisabled(doc->nativeTrade?"No mapped sea geometry in this market; no heat scale.":"No freight in this market; no heat scale.");
     }
   } else ImGui::TextDisabled("Green: incoming. Orange: outgoing.");
   return m_changed;

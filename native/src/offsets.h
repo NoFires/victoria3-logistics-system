@@ -33,6 +33,15 @@ constexpr uint32_t kRvaScriptRegister     = 0x03AB6D00;
 constexpr uint32_t kRvaPartialDailyTick   = 0x0139E220;
 constexpr uint32_t kRvaAccessScopeEnd     = 0x033BD750;
 constexpr uint32_t kRvaCommandScopeReturn = 0x00CD2BC1;
+// Native world aggregate destructor; machine+120 owns this exact object.
+// Called before any contained manager (including state DB at world+1C10).
+constexpr uint32_t kRvaDestroyNativeWorld = 0x00811660;
+// Original current world-market candidate selection. Read-only borrowed input;
+// call only inside CopyNativeSnapshot's completed-command access scope.
+constexpr uint32_t kRvaSelectTradePath     = 0x013BDBE0;
+constexpr uint32_t kRvaTradePathCost       = 0x013BD930;
+constexpr uint32_t kRvaTradeStraitCost     = 0x013BD840;
+constexpr uint32_t kRvaTradeStraitLookup   = 0x00CF6B70;
 // R71 static + R72 live catalog/TLS validation; read-only, never call the
 // singleton getter (it may initialize TLS and lock). Context-selected slot only.
 constexpr uint32_t kRvaGoodsDatabaseSlots = 0x0514E0D8;
@@ -78,7 +87,12 @@ constexpr uint32_t kOffTotalLength        = 0xA8;
 // First bytes of each entry point, verified against the running image.
 struct Sig { uint32_t rva; uint8_t bytes[8]; const char* name; };
 constexpr Sig kSigs[] = {
+    {kRvaSelectTradePath,   {0x40,0x55,0x56,0x48,0x83,0xEC,0x28,0x83}, "select-trade-path"},
+    {kRvaTradePathCost,     {0x48,0x89,0x5C,0x24,0x10,0x48,0x89,0x6C}, "trade-path-cost"},
+    {kRvaTradeStraitCost,   {0x48,0x89,0x5C,0x24,0x10,0x48,0x89,0x74}, "trade-strait-cost"},
+    {kRvaTradeStraitLookup, {0x48,0x83,0xEC,0x58,0x48,0x8B,0x05,0x7D}, "trade-strait-lookup"},
     {kRvaAccessScopeEnd,    {0x40,0x53,0x48,0x83,0xEC,0x20,0x48,0x8B}, "access-scope-end"},
+    {kRvaDestroyNativeWorld,{0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x74}, "native-world-destructor"},
     {kRvaPartialDailyTick,   {0x40,0x55,0x53,0x56,0x57,0x41,0x54,0x41}, "partial-daily-tick"},
     {kRvaPreEnumerateAssets,{0x44,0x89,0x4C,0x24,0x20,0x4C,0x89,0x44}, "pre-enumerate-assets"},
     {kRvaMountData,         {0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x74}, "mount-data"},

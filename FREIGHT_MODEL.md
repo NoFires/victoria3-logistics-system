@@ -1,5 +1,118 @@
 # Freight allocation model (work in progress)
 
+### 2026-10-28 — R134完成：正式颜色／八档线宽图例、双语居中及编辑GUI校验
+
+业务色保持地区输入绿／输出橙，市场热度使用完整市场固定区段商品数量尺度；单商品模式按原生商品ID取既有稳定五色，未选或移出为空地图，原生外观统一已验证建筑绿。颜色只改视图，不改国际原版记录、国内最终模型分配、需求账、完整行／卡片／市场分母、路径或宽度。八档图例显示实际宽度比例2:3:4:6:8:12:16:24及数量阈值10／50／200／500／2000／5000／20000，提示比例示意、非像素／容量／距离工作量；0不画、未知--。
+
+正式市场热度为区段商品数量q／完整市场最大区段量，固定20%边界；旧模型加权work不承担正式热度。宽度阈值以商品数量表示，内部1e5，国内milli-orders乘100与国际原生精度精确相容；并列UI标签区分来源。Goods高亮仅抽取所选贡献；Native只换构造时样式，方向／宽度保持，不改路或重跑分配。
+
+当前9afd英文67696与中文63460各21项颜色／商品／方向／关页重开检查通过；市场218、单商品等待0／谷物hover123／移出0，州433全部248／输入107／输出141，原生绿与业务色恢复原段数。市场量25963.19216／510.99MU、州433量3548.63121全程保持。英文原版首行Artillery为66段，中文所选第二行加工食品为22段；这是原版本地化排序，不把两次选择当同商品对照。中文额外显示／隐藏实际截图与日志通过，数量不变。每个正常会话仅一次国内分配918陆／93海／9038笔，三处partialSea仍保留已知数量及可确认片段。
+
+当前两语言数量保持及同facts回归通过；缺端点与缺数量继续分开，不将三partialSea缺几何改成未知运量。证据及R133回滚：E:/Code/v3-analysis/checkpoints/2026-10-28-r134-native-legend/{legend-audit.json,live,logs,before,NEXT.md}。
+
+### 2026-10-28 — R133完成：地区商品／方向／运输方式地图筛选
+
+正式地区筛选只提取现有最终货流，不重新分配：商品与相对当前州的输入／输出限制地图货流；运输方式按当前原生陆连接／港口lane来源限制所画区段，海路包括进出港部分。混合路线可同时贡献两种方式；每种视图都只计整笔货量一次，不改变路线、供需、目标／满足／未满足、完整商品列、scope／市场分母、热尺度或铁路长度。原生量保留1e5，国内最终milli-orders仍精确乘100，口径分开。
+
+MapDirection／MapTransport进入视图缓存，不进入分配内容身份；旧非原生模型没有确证交通来源时拒绝这项新能力，不猜几何类型。缺几何保持已知量，某商品或筛选合法零为空地图而非未知。当前中文实机一次国内分配918陆／93海／9038笔，19项切换检查及源码混合路线回归通过；三处partial port末端仍未完整补画。证据E:/Code/v3-analysis/checkpoints/2026-10-28-r133-state-filters/state-filter-audit.json。
+
+### R128：已铺铁路基础设施统计（2026-10-27）
+
+正式原生视图的已铺铁路与货流账分开：从当前已建type4连接复制独立owned builtRails，含州内／跨市场；模型可用land仍只含原有同市场州间连接。按两端同属当前市场的连接，对完整56位物理strip取并集，再按当前作者二维控制点折线累计hypot(Δx,Δz)。单位MU是地图单位，不是已标定公里、三维曲线弧长或运输容量。跨市场记录不计入任一市场内部长度；反向／重叠物理段只计一次。统计与实际货量、商品筛选、搜索、hover及选择州无关。
+
+已知空铁路集合为0.00 MU，缺原生国内来源为--；native公里值仍未知。当前连接及几何进入指纹和精确比较，变更／退休触发重算。实际原存档510.9929662664673 MU→原版拆除387.7629690309868 MU→重载恢复；独立原坐标Python并集核算及正式卡片通过。此字段没有改变国内物流模型量、国际原版量或其标签。证据见STATUS R128及rail-audit.json。
+
+## R118 domestic connectivity and rendering separation (2026-10-26)
+
+A current nonempty original kind0 port lane grants domestic model connectivity
+even when its endpoint graphics key is missing. The solver uses its verified
+`CShippingLane+60` travel distance, fixed1e5, rather than requiring a complete
+drawn spline length. Zero is a valid original within-region distance; negative
+values are rejected. This is the original travel-distance unit, not verified
+kilometres. Land retains current spline distance, so combined model distance,
+work and tariff cost are model metrics, not a physical-distance measurement.
+
+Quantity, complete drawable quantity and partial geometry remain separate. A
+single witnessed port can orient a unique chain of existing original strips;
+the missing shore connection is never fabricated. Without either witnessed port,
+the known model allocation still exists but no uncertain line is drawn. Empty
+original paths grant no connection. Original international routes retain the
+strict complete-endpoint requirement. Supply/demand, final quantity and Freight
+target/fulfilled/unmet remain the model values described below. The R117 figures
+below describe the previous build; current validation is recorded in STATUS.
+
+R118 coreaff98195… is installed and live-verified with93 current sea links,
+918 land links and9038 model shipments. The three partial links carry final
+edge quantities0.586,418.679 and0 in the independent owned replay, matching
+production's global model count. Their complete shore geometry remains absent;
+their individual screen views have not been accepted. The British market still
+shows23098.111 domestic model quantity separately from2865.08116 original trade.
+Current GUI/filter/state,20 reopen cycles and66s stable upload checks pass;
+this is not full map-mod, lifecycle or P95 acceptance.
+
+## R117 current domestic model (2026-10-26, default-save baseline verified)
+
+Latest user instruction restores **domestic model allocation** alongside original
+international trade. Original records retain native integer 1e5 precision;
+domestic allocations retain milli-orders and are converted exactly by ×100 for
+the common goods-quantity display. These are separate fields, not one claimed
+original statistic. The market/state UI explicitly labels the domestic estimate;
+the ledger shows total / original / domestic model quantity, then domestic
+Freight target / fulfilled / unmet. Earlier original-only or model-work labels
+below are historical where inconsistent with this section.
+
+The adapter copies current local production `state+C8` and consumption `state+78`,
+typed country-referenced domestic `CShippingLane` kind0, and current usable
+`CTravelConnection` land links. Runtime province ownership resolves land endpoints
+to full current state handles; definition keys and geometry bind directly to the
+current native spline tables. No saved ID→key lookup, embedded vanilla map,
+nearest-coast bridge, or newly solved ocean route enters this network. Land
+categories2/3 are ground transport; category4 alone uses the built-rail tariff.
+Unbuilt authored rail geometry is never given the built-rail tariff. Port lane
+geometry retains the original province membership, rejects unavailable canal
+definitions and requires a unique original endpoint chain.
+
+For each state/good, aggregate original incoming/outgoing records at native
+precision, then divide each aggregate by100 once to milli-orders:
+
+```
+effective supply = local production + original incoming quantity
+effective demand = local consumption + original outgoing quantity
+surplus = max(effective supply - effective demand, 0)
+target domestic import = max(effective demand - effective supply, 0)
+```
+
+Only the remaining surplus/target is allocated by the existing min-cost maximum
+flow solver, independently per current market/good. This avoids allocating the
+already recorded native transfers again. The model aggregates within a state;
+it does not locate individual buildings or estimate intra-state transport costs.
+An original land/port connection is a model edge, and final edge references map
+back to its exact current native strips. Cross-market model edges are excluded.
+Default distance tariffs remain explicit model assumptions: ground1, current
+rail0.4, sea0.25. There are no guessed tonnages, capacities or monetary prices.
+No game orders, prices, MAPI, buildings or populations are written.
+
+Freight revision1 demand remains separate, with default conversion coefficient1
+explicitly a model assumption. Targets are computed before routing; final imports
+fulfill them; shortages and missing/disconnected paths leave unmet demand.
+Goods filtering/hover only extract final shipment contributions. The card follows
+search/category before hover; shares retain the whole-market original+domestic
+quantity denominator. Original quantities whose geometry is missing remain known;
+missing domestic paths cannot fabricate transported quantity or a straight line.
+
+Source adapter and domestic allocation/geometry/cache/document regression tests
+pass. An external read-only paused-save replay (after closing its process handle)
+read25396 local orders,93 country port lanes,918 land links;90 port shapes were
+available,3 lacked original endpoint geometry. It produced8974 modeled shipments,
+including8272 using land and2083 using sea (a shipment can use both). Production now matches this replay: installed/dist core87b6d408… shows
+original2865.08116 + domestic23098.111 =25963.19216,218sea/land ribbons and
+state433 logistics values/248direction ribbons. Domestic Freight ledger reads
+30585.31/23098.11/7487.20; localized filters/empty/hover/hide and20actual reopen
+cycles pass.46native checks pass on the same code; final resource/GUI/GPU-loader
+checks pass.145s stable state view has zero new uploads. Three original port
+destination shapes still require work; actual modified maps, complete lifetime,
+rail units and full performance/final acceptance remain. See STATUS R117.
+
 The user confirmed that the ZIP contains no existing allocation model and asked
 for one to be implemented. `native/src/freight.cpp` now provides the native model
 and immutable view builder. It is not yet wired to a verified live economy

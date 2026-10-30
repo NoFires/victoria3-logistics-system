@@ -29,6 +29,8 @@ for _base, _effect in (('ironroadBuildingOutput', 'Output'), ('ironroadBuildingI
                        ('ironroadTrafficOrange', 'TrafficOrange'), ('ironroadTrafficRed', 'TrafficRed')):
     for _band in range(len(WIDTHS)):
         STYLES[f'{_base}W{_band}'] = _effect
+        if _base in ('ironroadBuildingOutput', 'ironroadBuildingInput') or _base.startswith('ironroadTraffic'):
+            STYLES[f'{_base}BalancedW{_band}'] = _effect + 'Balanced'
 
 
 def asset_text():

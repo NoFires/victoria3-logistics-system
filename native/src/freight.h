@@ -2,11 +2,12 @@
 #include "route_data.h"
 #include <array>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <unordered_set>
 
 namespace v3 {
-// All quantities are integer milli-orders. This is a copied numeric snapshot;
+// Model quantities are integer milli-orders. This is a copied numeric snapshot;
 // no engine pointer, CPdxVector, or mutable game-owned container may enter it.
 constexpr int64_t kQuantityScale = 1000;
 // Freight is a model-owned intermediary commodity, not an engine goods ID.
@@ -34,6 +35,7 @@ struct StateOrders {
   int64_t production = 0, consumption = 0;
   bool operator==(const StateOrders&) const = default;
 };
+struct NativeWorldTradeSnapshot;
 struct EconomySnapshot {
   uint64_t world = 0, revision = 0;
   std::vector<FreightGood> goods;
@@ -41,6 +43,12 @@ struct EconomySnapshot {
   std::unordered_set<uint32_t> builtRailEdges;
   // Market the formal panel is scoped to (0 = derive from the orders).
   uint32_t primaryMarket = 0;
+  // Owned original trade facts, including exact 1e5 fixed values and selected
+  // path indices. These snapshots are never eligible for the legacy solver.
+  std::shared_ptr<const NativeWorldTradeSnapshot> nativeTrade;
+  // Explicit current-state terminals for a model graph built from original
+  // runtime connections. Values are owned node indices, not native map IDs.
+  std::unordered_map<uint32_t,uint32_t> stateTerminals;
 };
 struct FreightPolicy {
   uint64_t graphRevision = 1;
@@ -82,11 +90,17 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
                              const std::function<bool()>& cancelled = {});
 
 enum class FreightViewKind { Market, State };
+enum class FreightTransport { All, Land, Sea };
+enum class FreightColorMode { Business, Goods, Native };
 struct FreightFilter {
   FreightViewKind kind = FreightViewKind::Market;
   uint32_t market = 0, state = 0;
   std::string search, category;
   int64_t hoverGood = -1;
+  // Map-only filters. Full scope quantities/demand and goods rows stay fixed.
+  int mapDirection = 0; // +1 imports, -1 exports, 0 both (relative to state)
+  FreightTransport mapTransport = FreightTransport::All;
+  FreightColorMode colorMode = FreightColorMode::Business;
   bool restrictCategories = false;
   std::vector<std::string> categories;
   bool restrictGoods = false;

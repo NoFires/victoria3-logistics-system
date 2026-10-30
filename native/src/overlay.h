@@ -107,6 +107,7 @@ class Overlay {
   void OnUiThreadPublish();
   bool UploadRibbon(size_t slot, const RibbonGeometry& geometry);
   void DeactivateRibbons();
+  void ReportRibbonBatch(const char* state);
   void LoadSettings();
   void SaveSettings();
   void DrawStatus();
@@ -115,6 +116,7 @@ class Overlay {
   void DebugReadbackOnce();
   bool IsMainSwapchain(IDXGISwapChain* swap);
   void ReinitForSwapchain(IDXGISwapChain* swap);
+  void RecordFrameTiming(IDXGISwapChain* swap,UINT flags);
 
   static HRESULT WINAPI PresentThunk(IDXGISwapChain* self, UINT sync, UINT flags);
   static HRESULT WINAPI Present1Thunk(IDXGISwapChain1* self, UINT sync, UINT flags,
@@ -123,6 +125,7 @@ class Overlay {
   static void __fastcall SetPathThunk(void* arrow, void* path);
   static void __fastcall AppendThunk(void* arrow, void* ctx);
   static void __fastcall AccessScopeEndThunk(void* scope);
+  static void __fastcall DestroyNativeWorldThunk(void* world);
   static LRESULT CALLBACK WndProcThunk(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
   // D3D
@@ -139,6 +142,8 @@ class Overlay {
   bool m_presentHooked = false;
   bool m_emptyUi = false;
   bool m_noRender = false;
+  bool m_frameTiming = false; // diagnostic IRONROAD_FRAME_TIMING=1, default off
+  uint64_t m_frameTimingFrequency = 0;
   uint32_t m_debugFrames = 0;
   D3D11_VIEWPORT m_viewport{0.f, 0.f, 0.f, 0.f, 0.f, 1.f};
   bool m_initializing = false;
@@ -156,6 +161,7 @@ class Overlay {
   void* m_origSetPath = nullptr;
   void* m_origAppend = nullptr;
   void* m_origAccessScopeEnd = nullptr;
+  void* m_origDestroyNativeWorld = nullptr;
   std::atomic<bool> m_nativeCaptureHooked{false};
   bool m_inAppend = false;
   bool m_piggyback = false;
@@ -188,6 +194,9 @@ class Overlay {
   std::string m_nativeRecoveryError;
   bool RecoverNativeWorld();
   RibbonCache m_ribbons;
+  RibbonCache::Statistics m_ribbonBatchStart;
+  bool m_ribbonBatchOpen = false;
+  uint64_t m_ribbonBatchKey = 0, m_ribbonBatchWorld = 0, m_ribbonBatchRevision = 0;
   NativeSlot* m_slot = nullptr;
   std::string m_renderStyle;
   uint64_t m_cacheHits = 0;
@@ -269,6 +278,7 @@ class Overlay {
   std::string m_nativePanelError; // UI thread only; errors logged on change
   std::unordered_set<uint32_t> m_realMarketIds; // UI thread only, latest accepted collection
   std::unordered_map<std::string,uint32_t> m_realGoodsByKey; // copied metadata, UI thread only
+  std::vector<std::string> m_hoverVariableKeys; // exact keys from that same current catalog
   std::string m_hoverContext; // last attempted native hover context, UI thread only
   bool m_hoverContextReady=false;
   void PollNativeMarketPanel();

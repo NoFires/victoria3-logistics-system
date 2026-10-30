@@ -1,4 +1,5 @@
 #include "logistics_session.h"
+#include "native_trade_identity.h"
 #include <algorithm>
 
 namespace v3 {
@@ -6,6 +7,7 @@ namespace {
 bool SameFilter(const FreightFilter& a, const FreightFilter& b, bool includeHover = true) {
   return a.kind == b.kind && a.market == b.market && a.state == b.state &&
       a.search == b.search && a.category == b.category && (!includeHover || a.hoverGood == b.hoverGood) &&
+      (!includeHover || (a.mapDirection == b.mapDirection && a.mapTransport == b.mapTransport && a.colorMode == b.colorMode)) &&
       a.restrictCategories == b.restrictCategories && a.categories == b.categories &&
       a.restrictGoods == b.restrictGoods && a.allowedGoods == b.allowedGoods;
 }
@@ -75,12 +77,18 @@ bool LogisticsSession::HasEquivalentSnapshot(const EconomySnapshot& snapshot) co
   return m_snapshot && !m_worldRetired && !m_synthetic &&
       snapshot.world==m_snapshot->world && snapshot.revision>=m_lastRevision &&
       snapshot.primaryMarket==m_snapshot->primaryMarket && snapshot.goods==m_snapshot->goods &&
-      snapshot.orders==m_snapshot->orders && snapshot.builtRailEdges==m_snapshot->builtRailEdges;
+      ((snapshot.nativeTrade && m_snapshot->nativeTrade)
+          ? NativeTradeEquivalent(*snapshot.nativeTrade,*m_snapshot->nativeTrade)
+          : !snapshot.nativeTrade && !m_snapshot->nativeTrade &&
+              snapshot.orders==m_snapshot->orders && snapshot.builtRailEdges==m_snapshot->builtRailEdges &&
+              snapshot.stateTerminals==m_snapshot->stateTerminals);
 }
 
 bool LogisticsSession::StatisticsAreCurrent(const std::shared_ptr<const FreightFrame>& frame) const {
   LockGuard lock(m_mutex);
-  if (!frame || !m_frame || !frame->allocation || frame->allocation!=m_frame->allocation ||
+  if (!frame || !m_frame ||
+      (!(frame->allocation && frame->allocation==m_frame->allocation) &&
+       !(frame->nativeFacts && frame->nativeFacts==m_frame->nativeFacts)) ||
       !m_snapshot || m_snapshotDirty || m_synthetic ||
       frame->world!=m_snapshot->world || frame->economyRevision!=m_snapshot->revision) return false;
   const auto owner=m_owners.find(m_effectiveOwner);
@@ -243,13 +251,14 @@ std::shared_ptr<const LogisticsDocument> LogisticsSession::Poll() {
     return {};
   }
   auto frame = reply->value.frame;
-  if (!frame || !frame->allocation || !frame->view) return {};
+  if (!frame || (!(frame->allocation && frame->view) && !(frame->nativeFacts && frame->nativeView))) return {};
   // Discard a generation produced for a superseded snapshot, filter or owner.
   if (reply->value.owner != effective || frame->world != snapshot->world ||
       frame->economyRevision != snapshot->revision || !SameFilter(frame->filter, filter))
     return {};
-  auto document = std::make_shared<LogisticsDocument>(
-      BuildLogisticsDocument(*snapshot, *frame->allocation, *frame->view, frame->filter));
+  auto document = std::make_shared<LogisticsDocument>(frame->nativeView
+      ? BuildLogisticsDocument(*snapshot,*frame->nativeView,frame->filter)
+      : BuildLogisticsDocument(*snapshot,*frame->allocation,*frame->view,frame->filter));
   document->synthetic = synthetic;
   {
     LockGuard lock(m_mutex);

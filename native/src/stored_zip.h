@@ -38,4 +38,26 @@ inline std::vector<uint8_t> BuildStoredZip(const std::vector<ArchiveFile>& files
   put32(out,uint32_t(central.size()));put32(out,offset);put16(out,0);
   return out;
 }
+// Our embedded adapters use stored ZIP entries only. Decode those local records
+// without an external unpacker; edited files are subsequently packed afresh.
+inline std::vector<ArchiveFile> ReadStoredZip(const std::vector<uint8_t>& zip) {
+  auto u16=[&](size_t at){if(at>zip.size() || zip.size()-at<2)throw std::runtime_error("truncated stored ZIP");return uint16_t(zip[at]|uint16_t(zip[at+1])<<8);};
+  auto u32=[&](size_t at){return uint32_t(u16(at))|uint32_t(u16(at+2))<<16;};
+  std::vector<ArchiveFile> files;size_t at=0;
+  while(u32(at)==0x04034b50){
+    const auto flags=u16(at+6),method=u16(at+8),name=u16(at+26),extra=u16(at+28);
+    const auto size=u32(at+18),unpacked=u32(at+22),checksum=u32(at+14);
+    const size_t data=at+30+name+extra;
+    if((flags&~0x800) || method || size!=unpacked || data>zip.size() || size>zip.size()-data || files.size()>=128)
+      throw std::runtime_error("invalid embedded stored ZIP entry");
+    ArchiveFile file{std::string(zip.begin()+at+30,zip.begin()+at+30+name),{zip.begin()+data,zip.begin()+data+size}};
+    uint32_t crc=0xffffffffu;
+    for(uint8_t b:file.bytes){crc^=b;for(unsigned bit=0;bit<8;++bit)crc=(crc>>1)^(0xedb88320u&(0u-(crc&1)));}
+    if(~crc!=checksum)throw std::runtime_error("embedded stored ZIP CRC mismatch");
+    files.push_back(std::move(file));at=data+size;
+  }
+  if(u32(at)!=0x02014b50)throw std::runtime_error("missing embedded ZIP directory");
+  BuildStoredZip(files); // same bounded, unique, relative path policy as writing
+  return files;
+}
 } // namespace v3

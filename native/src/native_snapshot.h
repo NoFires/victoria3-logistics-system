@@ -1,9 +1,12 @@
 #pragma once
 #include "native_access.h"
 #include "native_economy.h"
-#include "native_rail.h"
+#include "native_world_trade.h"
+#include "native_splines.h"
+#include "native_sea_geography.h"
+#include "native_ports.h"
+#include "native_domestic.h"
 #include "goods_snapshot.h"
-#include "route_geography.h"
 #include <mutex>
 #include <atomic>
 
@@ -20,15 +23,12 @@ struct NativeCaptureRequest {
   // revision is the minimum version allocated for this resident request;
   // each completed-command copy receives its own newer snapshot revision.
   uint64_t world=0,revision=0;
-  std::shared_ptr<const RouteGeography> geography;
-  std::unordered_map<std::string,uint32_t> regions;
   uint32_t marketOverride=0;
 };
 struct NativeCaptureResult {
   std::shared_ptr<const EconomySnapshot> snapshot;
   std::vector<NativeStateEconomy> states;
   GoodsCatalog catalog;
-  NativeRailSnapshot rails;
   // Adapter-only identity witnesses; never dereferenced or passed to workers.
   NativeAccessObservation identity;
   uint64_t anchor=0;
@@ -42,6 +42,22 @@ inline bool NativeCaptureMatches(const NativeCaptureResult& copy,const NativeAcc
 }
 class NativeSnapshotMailbox {
  public:
+  // Called by the verified native world destructor BEFORE any owned manager
+  // is destroyed. Compare owned identity only; never dereference this pointer.
+  uint64_t RetireWorld(uint64_t nativeWorld,std::atomic<uint64_t>& world) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if(!nativeWorld || !m_sourceWorld || nativeWorld!=m_source.world)return 0;
+    uint64_t expected=m_sourceWorld;
+    world.compare_exchange_strong(expected,m_sourceWorld+1);
+    const auto epoch=world.load();
+    // Replace the resident request, so late old-source publications are
+    // rejected while the first paused command can still capture the new world.
+    if(m_request && m_request->world<epoch) {
+      auto next=std::make_shared<NativeCaptureRequest>(*m_request);next->world=epoch;m_request=std::move(next);
+    }
+    m_result.reset();m_error.clear();m_revision=0;m_source={};m_sourceWorld=0;
+    return epoch;
+  }
   // Bind before copying a replacement source. A UI-detected change may already
   // have advanced the epoch; CAS avoids advancing it for the same change twice.
   uint64_t BindSource(const NativeAccessObservation& source,std::atomic<uint64_t>& world) {
@@ -110,30 +126,52 @@ class NativeSnapshotMailbox {
   NativeAccessObservation m_source;
   uint64_t m_sourceWorld=0;
 };
-// Caller already owns the verified completed-command scope. No engine call,
-// simulation lock acquisition, GUI access, allocation model or routing runs here.
+// Caller already owns the verified completed-command scope. The only engine
+// calls are separately injected adapters, after validating their live inputs.
+// The optional strait adapter is unbound in production until its ABI and
+// access window are validated. No GUI access or allocation solver runs here.
 inline std::shared_ptr<const NativeCaptureResult> CopyNativeSnapshot(
     const GoodsMemoryReader& memory,uint64_t module,uint64_t tlsArray,uint64_t caller,
-    const NativeCaptureRequest& request,uint64_t revision,const std::function<bool()>& current,std::string* error=nullptr) {
+    const NativeCaptureRequest& request,uint64_t revision,const std::function<bool()>& current,std::string* error=nullptr,
+    const std::function<uint64_t(uint64_t)>& select={},
+    const std::function<std::optional<bool>(uint64_t,uint64_t)>& selectAccess={}) {
   auto fail=[&](const std::string& why)->std::shared_ptr<const NativeCaptureResult>{if(error)*error=why;return {};};
-  if(!current || !current() || !request.world || !request.revision || revision<request.revision || !request.geography || request.regions.empty())
+  if(!current || !current() || !request.world || !request.revision || revision<request.revision)
     return fail("missing current snapshot request");
   const auto before=ObserveNativeAccess(memory,module,tlsArray);
   if(!before || !IsNativeCapturePoint(caller,*before))return fail("outside completed command scope");
+  if(!select)return fail("native trade selector unavailable");
   EconomyReadWindow window(memory);
   const GoodsMemoryReader read=[&](uint64_t a,void* p,size_t n){return window.Read(a,p,n);};
   auto catalog=DecodeThreadGoodsCatalog(read,module,tlsArray);
   if(!catalog.ok)return fail(catalog.error);
   std::string why;
-  auto economy=DecodeNativeEconomy(read,module,request.regions,uint32_t(catalog.goods.size()),current,&why);
-  if(!economy)return fail(why);
+  auto states=DecodeNativeTradeStates(read,module,current,&why);
+  if(!states)return fail(why);
   auto snapshot=std::make_shared<EconomySnapshot>();snapshot->world=request.world;snapshot->revision=revision;
-  snapshot->orders=std::move(economy->orders);
   if(!PopulateSnapshotGoods(*snapshot,catalog,&why))return fail(why);
-  auto rails=DecodeNativeRails(read,module,request.geography->splines,current,&why);
-  if(!rails)return fail(why);
+  auto trade=DecodeNativeWorldTrade(read,module,*states,uint32_t(catalog.goods.size()),current,select,&why);
+  if(!trade)return fail(why);
+  auto geometry=DecodeNativeSplineNetwork(read,module,current,&why);
+  if(!geometry)return fail(why);
+  auto domestic=DecodeNativeDomesticSources(read,module,*states,uint32_t(catalog.goods.size()),*geometry,current,&why);
+  if(!domestic)return fail(why);
+  if(selectAccess){
+    auto access=DecodeDomesticStraitAccess(read,module,*domestic,*trade,current,selectAccess,&why);
+    if(!access)return fail(why);
+    domestic->straitAccess=std::move(*access);
+  }
+  trade->domestic=std::make_shared<const NativeDomesticSources>(std::move(*domestic));
+  auto sea=DecodeNativeSeaGeography(read,module,tlsArray,*states,*trade,current,&why);
+  if(!sea)return fail(why);
+  auto hubs=DecodeNativePortHubs(read,module,sea->states,current,&why);
+  if(!hubs)return fail(why);
+  sea->stateHubs=std::move(*hubs);
+  trade->seaGeography=std::make_shared<const NativeSeaGeography>(std::move(*sea));
+  trade->geometry=std::make_shared<const NativeSplineNetwork>(std::move(*geometry));
+  snapshot->nativeTrade=std::make_shared<const NativeWorldTradeSnapshot>(std::move(*trade));
   auto result=std::make_shared<NativeCaptureResult>();
-  result->anchorId=economy->states.front().id;
+  result->anchorId=states->front().id;
   result->anchor=ReadNativeStateObject(read,module,result->anchorId);
   if(!result->anchor || !window.Unchanged())return fail("combined snapshot changed during copy");
   const auto after=ObserveNativeAccess(memory,module,tlsArray);
@@ -141,13 +179,12 @@ inline std::shared_ptr<const NativeCaptureResult> CopyNativeSnapshot(
      before->world!=after->world || before->stateDb!=after->stateDb || before->date!=after->date || !current())
     return fail("completed command identity changed during copy");
   std::map<uint32_t,size_t> markets;
-  for(const auto& state:economy->states)++markets[state.market];
+  for(const auto& state:*states)++markets[state.market];
   size_t largest=0;
   for(const auto& [market,count]:markets)if(count>largest){largest=count;snapshot->primaryMarket=market;}
   if(request.marketOverride && markets.count(request.marketOverride))snapshot->primaryMarket=request.marketOverride;
-  snapshot->builtRailEdges=rails->builtEdges;
-  result->snapshot=std::move(snapshot);result->states=std::move(economy->states);
-  result->catalog=std::move(catalog);result->rails=std::move(*rails);result->identity=*after;
+  result->snapshot=std::move(snapshot);result->states=std::move(*states);
+  result->catalog=std::move(catalog);result->identity=*after;
   if(error)error->clear();return result;
 }
 } // namespace v3

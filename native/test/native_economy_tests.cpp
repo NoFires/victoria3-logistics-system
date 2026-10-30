@@ -42,6 +42,7 @@ struct Fixture {
     for(size_t i=0;i<n;++i){auto f=bytes.find(at+i);if(f==bytes.end())return false;((uint8_t*)out)[i]=f->second;}return true;
   }
   auto Decode(){return DecodeNativeEconomy([&](auto a,auto p,auto n){return Read(a,p,n);},module,regions,2,[]{return true;},&error);}
+  auto TradeStates(){return DecodeNativeTradeStates([&](auto a,auto p,auto n){return Read(a,p,n);},module,[]{return true;},&error);}
 };
 int main(){
   Fixture f;auto original=f.bytes;auto copy=f.Decode();
@@ -50,6 +51,42 @@ int main(){
         "full recycled handle and independent region/market zero preserved");
   Check(copy->orders[0].production==3001 && copy->orders[1].consumption==1000 && copy->orders[2].consumption==2500,
         "native fixed-point converts to milli-orders once with truncation");
+  {
+    auto states=f.TradeStates();
+    Check(states && states->size()==2 && states->back().id==Fixture::lastId &&
+        states->front().region==UINT32_MAX && states->back().region==UINT32_MAX && states->back().market==0,
+        "native roster preserves full runtime handles and explicit market zero without inventing derived-map IDs");
+    auto oldRegions=f.regions;f.regions.clear();
+    Check(!f.Decode() && f.TradeStates().has_value(),
+        "reproduced legacy embedded-map prerequisite is absent from native trade roster");
+    f.regions=oldRegions;
+    const char modKey[]="MOD_REGION";
+    for(size_t i=0;i<sizeof(modKey);++i)f.bytes[Fixture::region+0x18+i]=modKey[i];
+    Check(!f.Decode() && f.TradeStates().has_value(),
+        "a current definition key unknown to the embedded map cannot block native trade");
+    f.bytes=original;f.bytes.erase(0xb0000);
+    Check(!f.Decode() && f.TradeStates().has_value(),
+        "native trade does not read irrelevant legacy production counters");
+    f.bytes=original;
+    for(auto [at,value]:{std::pair{Fixture::db+0x2c,uint32_t(65537)},
+                       std::pair{Fixture::last+8,uint32_t(0xab000800)},
+                       std::pair{Fixture::country+0xa24,UINT32_MAX}}){
+      f.Put(at,value);Check(!f.TradeStates(),"native roster still rejects bounds, recycled full handles and unavailable markets");f.bytes=original;
+    }
+    f.Put(Fixture::entries+16+8,Fixture::first);Check(!f.TradeStates(),"duplicate native state cannot be silently coalesced");f.bytes=original;
+    f.Put(Fixture::last,uint64_t(1));Check(!f.TradeStates(),"native state type remains mandatory without legacy map gate");f.bytes=original;
+    bool changed=false;
+    auto unstable=DecodeNativeTradeStates([&](auto a,auto p,auto n){
+      if(a==Fixture::last+8 && !changed){changed=true;f.Put(Fixture::first+8,uint32_t(0xff000000));}
+      return f.Read(a,p,n);
+    },Fixture::module,[]{return true;});
+    Check(!unstable,"whole native roster reread rejects an earlier handle changing during a later copy");f.bytes=original;
+    unsigned currentCalls=0;
+    Check(!DecodeNativeTradeStates([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,[&]{return ++currentCalls<4;}),
+        "native roster retirement during enumeration prevents publication");
+    Check(!DecodeNativeTradeStates({},Fixture::module,[]{return true;}),"missing native roster reader rejected");
+    Check(!DecodeNativeTradeStates([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,{}),"missing current native roster request rejected");
+  }
   EconomyReadWindow window([&](auto a,auto p,auto n){return f.Read(a,p,n);});
   auto combined=DecodeNativeEconomy([&](auto a,auto p,auto n){return window.Read(a,p,n);},
       Fixture::module,f.regions,2,[]{return true;});

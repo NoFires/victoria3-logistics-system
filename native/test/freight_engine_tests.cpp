@@ -1,5 +1,6 @@
 #include "freight_engine.h"
 #include "freight_worker.h"
+#include "native_sea_geography.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -33,6 +34,105 @@ bool HasEdge(const FreightView& view, uint32_t edge, uint8_t* band = nullptr) {
   return false;
 }
 int main() {
+  {
+    // Content identity must cover native facts even before the formal adapter
+    // is enabled. Same revision/key/handle can have different route geometry.
+    NativeWorldTradeSnapshot original;
+    original.states={{10,1,7},{30,3,8},{40,4,8}};
+    original.centers={{10,10},{30,30},{40,30}};
+    NativeTradeDestination dest;dest.state=30;dest.selected=1;
+    dest.candidates={{{{1,2}},{0x7f000001},100001},{{{3,4}},{0x88000002},200003}};
+    original.groups={{10,{10,40},{dest}},{30,{30},{}}};
+    original.statePairs={{10,30,{{1,100001},{2,200003}}},{30,10,{{1,400007}}}};
+    original.groupPairs=original.statePairs;
+    original.straits={{0x7f000001,{1,2},{0,1},0},{0x88000002,{3,4},{2,3},1}};
+    NativeSplineNetwork geometry;geometry.width=100;geometry.height=50;
+    geometry.points={{1,{1,2}},{2,{3,4}},{3,{5,6}}};
+    geometry.strips={{0x100000007,{1,2}},{0x200000007,{2,3}}};
+    geometry.connections={{0x1000000400000002,{0x100000007,0x200000007}},{0x2000000400000002,{}}};
+    NativeSeaGeography sea;sea.definitions={{0,{1,2}},{1,{3,4}}};
+    sea.provinces={{1,{{101,11},{2,3}}},{2,{{102,12},{1}}}};
+    sea.states={{10,{101,11}},{30,{102,12}}};
+    sea.stateHubs={{10,true},{30,false}};
+    original.geometry=std::make_shared<const NativeSplineNetwork>(geometry);
+    original.seaGeography=std::make_shared<const NativeSeaGeography>(sea);
+    FreightEngine identity(Geo());auto snapshot=Snapshot();
+    auto set=[&](const auto& trade){snapshot.nativeTrade=std::make_shared<const NativeWorldTradeSnapshot>(trade);
+      Check(identity.SetSnapshot(snapshot),"same-revision native content accepted");return identity.SnapshotFingerprint();};
+    Check(identity.SetSnapshot(snapshot),"model-only identity accepted");
+    const auto model=identity.SnapshotFingerprint(),baseline=set(original);
+    Check(baseline!=model,"native input cannot inherit model cache identity");
+    auto reordered=original;
+    std::reverse(reordered.states.begin(),reordered.states.end());
+    std::reverse(reordered.groups.begin(),reordered.groups.end());
+    std::reverse(reordered.groups.back().states.begin(),reordered.groups.back().states.end());
+    std::reverse(reordered.statePairs.begin(),reordered.statePairs.end());
+    std::reverse(reordered.statePairs.back().goods.begin(),reordered.statePairs.back().goods.end());
+    std::reverse(reordered.groupPairs.begin(),reordered.groupPairs.end());
+    std::reverse(reordered.groupPairs.back().goods.begin(),reordered.groupPairs.back().goods.end());
+    std::reverse(reordered.straits.begin(),reordered.straits.end());
+    auto reverseSea=sea;std::reverse(reverseSea.definitions.begin(),reverseSea.definitions.end());
+    reordered.geometry=std::make_shared<const NativeSplineNetwork>(geometry);
+    reordered.seaGeography=std::make_shared<const NativeSeaGeography>(reverseSea);
+    Check(set(reordered)==baseline,"native container iteration order and allocation addresses are not cache identity");
+    auto changed=[&](auto edit,const char* why){
+      auto trade=original;auto lines=geometry;auto geography=sea;
+      edit(trade,lines,geography);
+      trade.geometry=std::make_shared<const NativeSplineNetwork>(std::move(lines));
+      trade.seaGeography=std::make_shared<const NativeSeaGeography>(std::move(geography));
+      Check(set(trade)!=baseline,why);Check(set(original)==baseline,"original owned content restores its original identity");
+    };
+    changed([](auto& t,auto&,auto&){++t.statePairs[0].goods[0].valueFixed;},"one native 1e-5 quantity change invalidates cached statistics");
+    changed([](auto& t,auto&,auto&){++t.groupPairs[0].goods[0].valueFixed;},"independent grouped export evidence participates in identity");
+    changed([](auto& t,auto&,auto&){t.centers[40]=10;},"current area center change invalidates old cached route association");
+    changed([](auto& t,auto&,auto&){std::swap(t.statePairs[0].source,t.statePairs[0].destination);},"native flow direction participates in identity");
+    changed([](auto& t,auto&,auto&){++t.statePairs[0].goods[0].good;},"native goods association participates in identity");
+    changed([](auto& t,auto&,auto&){t.groups[0].destinations[0].selected=0;},"native selected alternative invalidates cached geometry");
+    changed([](auto& t,auto&,auto&){t.groups[0].destinations[0].selected.reset();},"unavailable selection cannot reuse a selected route");
+    changed([](auto& t,auto&,auto&){std::reverse(t.groups[0].destinations[0].candidates.begin(),t.groups[0].destinations[0].candidates.end());},"native candidate order remains significant for stable ties");
+    changed([](auto& t,auto&,auto&){++t.groups[0].destinations[0].candidates[1].distanceFixed;},"native path distance participates in identity");
+    changed([](auto& t,auto&,auto&){++t.groups[0].destinations[0].candidates[1].provinces[0].last;},"selected province set participates in identity");
+    changed([](auto& t,auto&,auto&){t.groups[0].destinations[0].candidates[1].straits.clear();},"native path passage constraints participate in identity");
+    changed([](auto& t,auto&,auto&){t.groups[0].states.pop_back();},"native group membership participates in identity");
+    changed([](auto& t,auto&,auto&){++t.groups[0].anchor;},"native route representative participates in identity");
+    changed([](auto& t,auto&,auto&){++t.groups[0].destinations[0].state;},"native destination participates in identity");
+    changed([](auto& t,auto&,auto&){++t.states[0].market;},"state market reassignment invalidates scoped totals");
+    changed([](auto& t,auto&,auto&){++t.states[0].region;},"state region reassignment invalidates geometry identity");
+    changed([](auto& t,auto&,auto&){t.states[0].id+=0x1000000;},"full state generation participates in identity");
+    changed([](auto& t,auto&,auto&){t.straits.pop_back();},"closing a native canal invalidates cached geometry");
+    changed([](auto& t,auto&,auto&){t.straits[0].id+=0x1000000;},"full strait generation cannot reuse the prior route");
+    changed([](auto& t,auto&,auto&){++t.straits[0].definition;},"runtime strait definition association participates in identity");
+    changed([](auto& t,auto&,auto&){++t.straits[0].tariffModes[0];},"native tariffs invalidate selection-dependent results");
+    changed([](auto& t,auto&,auto&){++t.straits[0].seaProvinces[0];},"native passage endpoints participate in identity");
+    changed([](auto&,auto& g,auto&){g.points[2].x+=.25f;},"same native keys and endpoints with changed controls invalidate geometry");
+    changed([](auto&,auto& g,auto&){g.points[2].z+=.25f;},"native second map coordinate participates in identity");
+    changed([](auto&,auto& g,auto&){++g.width;},"current map width participates in identity");
+    changed([](auto&,auto& g,auto&){++g.height;},"current map height participates in identity");
+    changed([](auto&,auto& g,auto&){std::reverse(g.strips.begin()->second.begin(),g.strips.begin()->second.end());},"authored control orientation participates in identity");
+    changed([](auto&,auto& g,auto&){g.strips[0x300000007]=g.strips.at(0x100000007);g.strips.erase(0x100000007);},"native segment ID upper bits are not truncated");
+    changed([](auto&,auto& g,auto&){std::reverse(g.connections.begin()->second.begin(),g.connections.begin()->second.end());},"native ordered segment membership participates in identity");
+    changed([](auto&,auto& g,auto&){g.connections.erase(std::next(g.connections.begin()));},"known empty connection differs from absent connection");
+    changed([](auto&,auto&,auto& s){++s.definitions[0].seaProvinces[0];},"unbuilt canal definition endpoints invalidate passability geometry");
+    changed([](auto&,auto&,auto& s){++s.provinces[1].region.geo;},"same province with a new map anchor cannot reuse old keys");
+    changed([](auto&,auto&,auto& s){++s.provinces[1].region.definition;},"province region definition participates in identity");
+    changed([](auto&,auto&,auto& s){std::reverse(s.provinces[1].adjacent.begin(),s.provinces[1].adjacent.end());},"native adjacency enumeration order stays significant");
+    changed([](auto&,auto&,auto& s){++s.states[10].geo;},"state naval anchor participates in identity");
+    changed([](auto&,auto&,auto& s){++s.states[10].definition;},"state region definition participates in identity");
+    changed([](auto&,auto&,auto& s){s.stateHubs[10]=false;},"current hub eligibility invalidates native port geometry");
+    changed([](auto&,auto&,auto& s){s.stateHubs.erase(30);},"unknown hub eligibility differs from a known ineligible endpoint");
+    auto missing=original;missing.geometry.reset();Check(set(missing)!=baseline,"missing geometry cannot hit copied native geometry");
+    missing=original;missing.seaGeography.reset();Check(set(missing)!=baseline,"missing passability identity cannot hit copied native constraints");
+    Check(identity.Stats().allocations==0 && identity.Stats().views==0,"native fingerprinting does not run an allocation or publish a view");
+  }
+  {
+    FreightEngine nativeOnly(Geo());auto original=Snapshot();
+    original.nativeTrade=std::make_shared<const NativeWorldTradeSnapshot>();
+    Check(nativeOnly.SetSnapshot(original),"owned original trade snapshot handed to worker engine");
+    FreightFilter scope;scope.market=7;auto pending=nativeOnly.Build(scope);
+    Check(pending->error=="native trade geometry unavailable" && !pending->allocation && !pending->view &&
+        pending->ribbons.empty() && nativeOnly.Stats().allocations==0,
+        "incomplete original trade adapter cannot fall back to model routes or model statistics");
+  }
   {
     FreightEngine nativeRows(Geo());nativeRows.SetSnapshot(Snapshot());
     FreightFilter all;all.market=7;auto full=nativeRows.Build(all);

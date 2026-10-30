@@ -1,9 +1,12 @@
 #include "overlay.h"
+#include "native_trade_view.h"
 #include "state_market.h"
 #include "arrow_lease.h"
 #include "native_rail.h"
 #include "native_economy.h"
 #include "native_access.h"
+#include "native_strait_probe.h"
+#include "frame_timing.h"
 
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
@@ -20,6 +23,8 @@
 #include <fstream>
 #include <mutex>
 #include <sstream>
+#include <set>
+#include <tuple>
 #include <unordered_set>
 
 #include "log.h"
@@ -40,6 +45,7 @@ namespace {
 
 using FnPresent = HRESULT(WINAPI*)(IDXGISwapChain*, UINT, UINT);
 using FnPresent1 = HRESULT(WINAPI*)(IDXGISwapChain1*, UINT, UINT, const DXGI_PRESENT_PARAMETERS*);
+thread_local unsigned g_frameTimingDepth=0;
 using FnSetPath = void(__fastcall*)(void*, void*);
 using FnAppend = void(__fastcall*)(void*, void*);
 using FnEconomyCallback = void(__fastcall*)(void*, void*, void*);
@@ -72,6 +78,243 @@ void __fastcall PartialDailyTickThunk(void* command) {
       (unsigned long long)before->stateDb,(unsigned long long)after->stateDb);
   // No GUI effect, selection, database scan, worker request, engine-owned
   // pointer retention or economic write is performed from this observation.
+}
+// Diagnostic only: observe calls the game already makes; never request one.
+using FnStraitPermission = uint8_t(__fastcall*)(void*, void*, uint8_t);
+FnStraitPermission g_origStraitPermission = nullptr;
+std::atomic<unsigned> g_straitPermissionSamples{0};
+std::mutex g_straitCoverageMutex;
+unsigned g_straitCoverageEvents=0;
+std::set<std::tuple<uint32_t,uint32_t,uint8_t,uint8_t>> g_straitCoverage;
+struct StraitClassificationTrace {
+  uint32_t country=UINT32_MAX;
+  uint8_t mode=0;
+  bool invalid=false;
+  NativeStraitClassification observed;
+};
+thread_local StraitClassificationTrace* g_straitClassificationTrace=nullptr;
+struct DomesticLaneBuildTrace {
+  uint32_t country=UINT32_MAX;
+  unsigned generation=0,classifications=0;
+  bool invalid=false;
+  std::optional<NativeStraitClassification> access;
+  std::vector<std::pair<uint32_t,NativeLaneSelection>> lanes;
+};
+thread_local DomesticLaneBuildTrace* g_domesticLaneBuildTrace=nullptr;
+uint8_t __fastcall StraitPermissionProbe(void* strait, void* country, uint8_t mode) {
+  const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base());
+  const auto caller=reinterpret_cast<uint64_t>(__builtin_return_address(0))-base;
+  const unsigned sample=g_straitPermissionSamples.fetch_add(1);
+  const GoodsMemoryReader read=[](uint64_t address,void* out,size_t size){
+    SIZE_T copied=0;return address && size<=UINT64_MAX-address &&
+      ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<const void*>(address),out,size,&copied) && copied==size;
+  };
+  uint32_t sid=UINT32_MAX,cid=UINT32_MAX;uint64_t definition=0;uint8_t marker=255;
+  std::array<uint8_t,4> controls{};
+  const auto sp=reinterpret_cast<uint64_t>(strait),cp=reinterpret_cast<uint64_t>(country);
+  const auto before=sample<32?ObserveNativeAccess(read,base,__readgsqword(0x58)):std::optional<NativeAccessObservation>{};
+  const bool fields=sample<32 && sp && cp && read(sp+8,&sid,4) && read(cp+0x18,&cid,4) &&
+      read(sp+0xa0,&definition,8) && definition && read(definition+0x4b,&marker,1) && read(sp+0xa8,controls.data(),4);
+  const uint8_t result=g_origStraitPermission(strait,country,mode);
+  if(auto* trace=g_straitClassificationTrace) {
+    uint32_t actualCountry=UINT32_MAX,actualStrait=UINT32_MAX;
+    if(!sp || !cp || cp>UINT64_MAX-0x1c || sp>UINT64_MAX-0xc ||
+       !read(cp+0x18,&actualCountry,4) || !read(sp+8,&actualStrait,4) ||
+       actualCountry!=trace->country || mode!=trace->mode ||
+       trace->observed.allowed.size()+trace->observed.denied.size()>=4096)trace->invalid=true;
+    else try {
+      (result?trace->observed.allowed:trace->observed.denied).push_back(actualStrait);
+    } catch(...) {trace->invalid=true;}
+  }
+  if(sample<32){
+    const auto after=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    V3_INFO("native strait probe sample=%u thread=%lu caller=%llx mode=%u result=%u fields=%u country=%u strait=%u marker=%u controls=%u,%u,%u,%u observation=%u/%u access=%u/%u owns=%u/%u context=%u/%u phase=%u/%u world=%llx/%llx date=%u/%u",
+      sample,GetCurrentThreadId(),(unsigned long long)caller,unsigned(mode),unsigned(result),unsigned(fields),cid,sid,unsigned(marker),
+      unsigned(controls[0]),unsigned(controls[1]),unsigned(controls[2]),unsigned(controls[3]),unsigned(bool(before)),unsigned(bool(after)),
+      before?before->access:999,after?after->access:999,before?unsigned(before->owns):999,after?unsigned(after->owns):999,
+      before?before->context:999,after?after->context:999,before?before->phase:999,after?after->phase:999,
+      before?(unsigned long long)before->world:0,after?(unsigned long long)after->world:0,before?before->date:0,after?after->date:0);
+  }
+  // Bounded diagnostic coverage only; never publish these potentially stale
+  // observations to a snapshot. A busy observer drops samples rather than wait.
+  if(sample<150000 && sp && cp && mode==1 && (fields || (read(sp+8,&sid,4) && read(cp+0x18,&cid,4)))) {
+    bool first=false;
+    try {
+      std::unique_lock<std::mutex> lock(g_straitCoverageMutex,std::try_to_lock);
+      if(lock.owns_lock() && g_straitCoverage.size()<4096 && g_straitCoverageEvents<8192) {
+        first=g_straitCoverage.emplace(cid,sid,mode,result).second;
+        if(first) {
+          g_straitCoverage.erase({cid,sid,mode,uint8_t(result?0:1)});
+          ++g_straitCoverageEvents;
+        }
+      }
+    } catch(...) {}
+    if(first) V3_INFO("native strait coverage sample=%u country=%u strait=%u mode=%u result=%u",sample,cid,sid,unsigned(mode),unsigned(result));
+  }
+  return result;
+}
+using FnStraitClassification = void(__fastcall*)(void*,uint8_t,void*,void*);
+FnStraitClassification g_origStraitClassification=nullptr;
+std::atomic<unsigned> g_straitClassificationSamples{0},g_straitClassificationFailures{0};
+std::mutex g_straitClassificationMutex;
+unsigned g_straitClassificationEvents=0;
+std::map<std::pair<uint32_t,uint8_t>,NativeStraitClassification> g_straitClassifications;
+void __fastcall StraitClassificationProbe(void* country,uint8_t mode,void* allowed,void* denied) {
+  const unsigned sample=g_straitClassificationSamples.fetch_add(1);
+  if(sample>=20000){
+    if(g_domesticLaneBuildTrace)g_domesticLaneBuildTrace->invalid=true;
+    g_origStraitClassification(country,mode,allowed,denied);return;
+  }
+  const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base());
+  const auto caller=reinterpret_cast<uint64_t>(__builtin_return_address(0))-base;
+  const auto cp=reinterpret_cast<uint64_t>(country),ap=reinterpret_cast<uint64_t>(allowed),dp=reinterpret_cast<uint64_t>(denied);
+  const GoodsMemoryReader read=[](uint64_t a,void* p,size_t n){SIZE_T copied=0;
+    return a && n<=UINT64_MAX-a && ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<const void*>(a),p,n,&copied) && copied==n;};
+  StraitClassificationTrace trace;trace.mode=mode;
+  std::optional<NativeAccessObservation> before;
+  std::optional<NativeStraitOutputHeader> a,d;
+  bool prepared=false;
+  try {
+    before=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    a=ReadNativeStraitOutputHeader(read,ap);d=ReadNativeStraitOutputHeader(read,dp);
+    prepared=before && a && d && cp && cp<=UINT64_MAX-0x1c &&
+        read(cp+0x18,&trace.country,4) && trace.country!=UINT32_MAX;
+  } catch(...) {}
+  {
+    struct RestoreTrace {
+      StraitClassificationTrace* previous;
+      ~RestoreTrace(){g_straitClassificationTrace=previous;}
+    } restore{g_straitClassificationTrace};
+    g_straitClassificationTrace=prepared?&trace:nullptr;
+    g_origStraitClassification(country,mode,allowed,denied);
+  }
+  try {
+    const auto after=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    auto output=prepared?CopyNativeStraitClassification(read,ap,dp,a->count,d->count):std::optional<NativeStraitClassification>{};
+    uint32_t actualCountry=UINT32_MAX;
+    const bool same=before && after && before->world==after->world && before->machine==after->machine &&
+        before->stateDb==after->stateDb && before->date==after->date && before->phase==after->phase &&
+        before->access==after->access && before->hidden==after->hidden &&
+        before->owns==after->owns && before->context==after->context &&
+        cp && cp<=UINT64_MAX-0x1c && read(cp+0x18,&actualCountry,4) && actualCountry==trace.country;
+    if(!same || !output || trace.invalid || *output!=trace.observed) {
+      if(g_domesticLaneBuildTrace)g_domesticLaneBuildTrace->invalid=true;
+      if(g_straitClassificationFailures.fetch_add(1)<32)
+        V3_WARN("native strait classification refused sample=%u country=%u prepared=%u scope=%u copied=%u trace=%u",sample,trace.country,unsigned(prepared),unsigned(same),unsigned(bool(output)),unsigned(!trace.invalid));
+      return;
+    }
+    if(auto* build=g_domesticLaneBuildTrace) {
+      if(mode!=1 || trace.country!=build->country || (build->access && *build->access!=*output))build->invalid=true;
+      else {build->access=*output;++build->classifications;}
+    }
+    bool changed=false;
+    {
+      std::unique_lock<std::mutex> lock(g_straitClassificationMutex,std::try_to_lock);
+      if(lock.owns_lock() && g_straitClassifications.size()<512 && g_straitClassificationEvents<1024) {
+        const auto key=std::make_pair(trace.country,mode);auto found=g_straitClassifications.find(key);
+        if(found==g_straitClassifications.end() || found->second!=*output) {
+          g_straitClassifications[key]=*output;++g_straitClassificationEvents;changed=true;
+        }
+      }
+    }
+    if(changed) {
+      auto list=[](const auto& values){std::string s;for(auto id:values){if(!s.empty())s+=',';s+=std::to_string(id);}return s;};
+      const auto yes=list(output->allowed),no=list(output->denied);
+      V3_INFO("native strait classification sample=%u thread=%lu caller=%llx country=%u mode=%u world=%llx date=%u access=%u owns=%u context=%u prefixes=%u/%u matched=1 allowed=[%s] denied=[%s]",
+          sample,GetCurrentThreadId(),(unsigned long long)caller,trace.country,unsigned(mode),
+          (unsigned long long)after->world,after->date,after->access,unsigned(after->owns),after->context,a->count,d->count,yes.c_str(),no.c_str());
+    }
+  } catch(...) {if(g_domesticLaneBuildTrace)g_domesticLaneBuildTrace->invalid=true;}
+  // Diagnostic only: no result or borrowed pointer is handed to the worker.
+}
+bool ReadProbeMemory(uint64_t a,void* p,size_t n) {
+  SIZE_T copied=0;return a && n<=UINT64_MAX-a &&
+      ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<const void*>(a),p,n,&copied) && copied==n;
+}
+using FnShippingConstructor=void*(__fastcall*)(void*,void*,void*,void*,void*,void*,void*,void*,void*);
+FnShippingConstructor g_origShippingConstructor=nullptr;
+void* __fastcall ShippingConstructorProbe(void* db,void* kind,void* country,void* treaty,
+    void* from,void* to,void* provinces,void* extra,void* distance) {
+  auto* build=g_domesticLaneBuildTrace;
+  if(!build)return g_origShippingConstructor(db,kind,country,treaty,from,to,provinces,extra,distance);
+  const GoodsMemoryReader read=ReadProbeMemory;
+  std::optional<NativeLaneSelection> input;uint32_t category=UINT32_MAX;
+  try {
+    if(!read(reinterpret_cast<uint64_t>(kind),&category,4))build->invalid=true;
+    else if(category==0)
+      input=CopyNativeLaneSelection(read,reinterpret_cast<uint64_t>(country),reinterpret_cast<uint64_t>(from),
+          reinterpret_cast<uint64_t>(to),reinterpret_cast<uint64_t>(provinces),reinterpret_cast<uint64_t>(distance));
+    if(category==0 && (!input || input->country!=build->country || !build->access || build->lanes.size()>=512))build->invalid=true;
+  } catch(...) {build->invalid=true;}
+  void* result=g_origShippingConstructor(db,kind,country,treaty,from,to,provinces,extra,distance);
+  if(category!=0 || build->lanes.size()>=512)return result;
+  try {
+    const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base()),object=reinterpret_cast<uint64_t>(result);
+    uint64_t type=0,secondary=0;uint32_t id=UINT32_MAX,actualKind=UINT32_MAX;
+    auto output=input && object && object<=UINT64_MAX-0x68 && read(object,&type,8) && type==base+0x04427d98 &&
+        read(object+0x10,&secondary,8) && secondary==base+0x04427d60 && read(object+8,&id,4) && id!=UINT32_MAX &&
+        read(object+0x1c,&actualKind,4) && actualKind==0?
+        CopyNativeLaneSelection(read,object+0x18,object+0x48,object+0x4c,object+0x30,object+0x60):std::optional<NativeLaneSelection>{};
+    if(!output || *output!=*input)build->invalid=true;
+    else build->lanes.emplace_back(id,std::move(*output));
+  } catch(...) {build->invalid=true;}
+  return result;
+}
+using FnDomesticLaneBuild=void(__fastcall*)(void*,void*);
+FnDomesticLaneBuild g_origDomesticLaneBuild=nullptr;
+std::atomic<unsigned> g_domesticLaneBuildSamples{0},g_domesticLaneBuildEvents{0};
+void __fastcall DomesticLaneBuildProbe(void* manager,void* country) {
+  const unsigned sample=g_domesticLaneBuildSamples.fetch_add(1);
+  if(sample>=512){g_origDomesticLaneBuild(manager,country);return;}
+  const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base()),cp=reinterpret_cast<uint64_t>(country);
+  const GoodsMemoryReader read=ReadProbeMemory;
+  DomesticLaneBuildTrace trace;trace.generation=sample+1;
+  std::optional<NativeAccessObservation> before;
+  bool prepared=false;
+  try {
+    before=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    prepared=before && cp && cp<=UINT64_MAX-0x1c && read(cp+0x18,&trace.country,4) && trace.country!=UINT32_MAX;
+  } catch(...) {}
+  {
+    struct RestoreBuildTrace {
+      DomesticLaneBuildTrace* previous;
+      ~RestoreBuildTrace(){g_domesticLaneBuildTrace=previous;}
+    } restore{g_domesticLaneBuildTrace};
+    g_domesticLaneBuildTrace=prepared?&trace:nullptr;
+    g_origDomesticLaneBuild(manager,country);
+  }
+  if(!prepared || trace.lanes.empty())return;
+  try {
+    const auto after=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    bool valid=!trace.invalid && trace.access && trace.classifications && after &&
+        before->world==after->world && before->machine==after->machine && before->stateDb==after->stateDb &&
+        before->date==after->date && before->phase==after->phase && before->access==after->access &&
+        before->hidden==after->hidden && before->owns==after->owns && before->context==after->context;
+    uint64_t db=0,type=0,entries=0;uint32_t slots=0,actualCountry=UINT32_MAX;
+    valid=valid && read(cp+0x18,&actualCountry,4) && actualCountry==trace.country &&
+        read(base+0x05966760,&db,8) && db && db<=UINT64_MAX-0x30 && read(db,&type,8) && type==base+0x04439410 &&
+        read(db+0x20,&entries,8) && read(db+0x2c,&slots,4) && slots<=131072;
+    for(const auto& [id,selected]:trace.lanes) {
+      uint64_t object=0,secondary=0;uint32_t actual=UINT32_MAX,kind=UINT32_MAX;
+      valid=valid && (id&0xffffff)<slots && entries && entries<=UINT64_MAX-uint64_t(slots)*16 &&
+          read(entries+uint64_t(id&0xffffff)*16+8,&object,8) && object && object<=UINT64_MAX-0x68 &&
+          read(object+8,&actual,4) && actual==id && read(object,&type,8) && type==base+0x04427d98 &&
+          read(object+0x10,&secondary,8) && secondary==base+0x04427d60 && read(object+0x1c,&kind,4) && kind==0;
+      auto current=valid?CopyNativeLaneSelection(read,object+0x18,object+0x48,object+0x4c,object+0x30,object+0x60):std::optional<NativeLaneSelection>{};
+      if(!current || *current!=selected){valid=false;break;}
+    }
+    if(!valid){V3_WARN("native domestic lane binding refused generation=%u country=%u lanes=%zu classifications=%u",trace.generation,trace.country,trace.lanes.size(),trace.classifications);return;}
+    auto ids=[](const auto& values){std::string s;for(auto id:values){if(!s.empty())s+=',';s+=std::to_string(id);}return s;};
+    const auto allowed=ids(trace.access->allowed),denied=ids(trace.access->denied);
+    for(const auto& [id,selected]:trace.lanes)if(g_domesticLaneBuildEvents.fetch_add(1)<256) {
+      std::string ranges;
+      for(const auto& r:selected.provinces){if(!ranges.empty())ranges+=',';ranges+=std::to_string(r.first)+':'+std::to_string(r.last);}
+      V3_INFO("native domestic lane binding generation=%u thread=%lu world=%llx date=%u country=%u lane=%u from=%u to=%u distance=%lld classifications=%u matched=1 allowed=[%s] denied=[%s] provinces=[%s]",
+          trace.generation,GetCurrentThreadId(),(unsigned long long)after->world,after->date,trace.country,id,
+          selected.fromState,selected.toState,(long long)selected.distance,trace.classifications,allowed.c_str(),denied.c_str(),ranges.c_str());
+    }
+  } catch(...) {}
+  // All results remain diagnostic, owned and confined to this natural call.
 }
 std::atomic<uint64_t> g_economyCallbackCalls{0};
 using FnContainerRead = void*(__fastcall*)(void*, void*, void*);
@@ -539,6 +782,15 @@ bool Overlay::Install(std::string* error) {
     if (!root.empty()) m_settingsPath = root + L"\\freight.ini";
   }
   LoadSettings();
+  wchar_t timing[2]{};
+  LARGE_INTEGER frequency{};
+  m_frameTiming=GetEnvironmentVariableW(L"IRONROAD_FRAME_TIMING",timing,2)==1 && timing[0]==L'1' &&
+      QueryPerformanceFrequency(&frequency) && frequency.QuadPart>0;
+  if(m_frameTiming){
+    m_frameTimingFrequency=uint64_t(frequency.QuadPart);
+    V3_INFO("FRAME PERF enabled frequency=%llu batch=64 metric=Present-entry-interval",
+        (unsigned long long)m_frameTimingFrequency);
+  }
   auto geography = std::make_shared<RouteGeography>();
   { std::string why; if (!geography->splines.Load(m_dataDir, &why)) V3_WARN("authored routing unavailable: %s", why.c_str()); }
 
@@ -584,12 +836,15 @@ bool Overlay::Install(std::string* error) {
     uint8_t* base = game.Base();
     if (m_settings.nativeVariables && m_stateDataLoaded) {
       void* end=base+kRvaAccessScopeEnd;
-      if (MH_CreateHook(end,(LPVOID)&Overlay::AccessScopeEndThunk,&m_origAccessScopeEnd)==MH_OK &&
+      void* retire=base+kRvaDestroyNativeWorld;
+      if (MH_CreateHook(retire,(LPVOID)&Overlay::DestroyNativeWorldThunk,&m_origDestroyNativeWorld)==MH_OK &&
+          MH_EnableHook(retire)==MH_OK &&
+          MH_CreateHook(end,(LPVOID)&Overlay::AccessScopeEndThunk,&m_origAccessScopeEnd)==MH_OK &&
           MH_EnableHook(end)==MH_OK) {
         m_nativeCaptureHooked.store(true);
         RequestNativeSnapshot();
-        V3_INFO("completed command snapshot hook installed");
-      } else V3_WARN("completed command snapshot hook failed; economy unavailable");
+        V3_INFO("native world retirement and completed command snapshot hooks installed");
+      } else V3_WARN("native world retirement/capture hook failed; economy unavailable");
     }
     if (m_settings.probeAccess) {
       void* tick=base+kRvaPartialDailyTick;
@@ -597,6 +852,35 @@ bool Overlay::Install(std::string* error) {
                         (LPVOID*)&g_origPartialDailyTick)==MH_OK && MH_EnableHook(tick)==MH_OK)
         V3_INFO("native access tick probe installed (16 observations only)");
       else V3_WARN("native access tick probe hook failed");
+      constexpr uint8_t straitSignature[] = {0x40,0x53,0x55,0x57,0x41,0x56,0x48,0x83};
+      void* permission=base+0x00BE7C10;
+      if(std::memcmp(permission,straitSignature,sizeof(straitSignature))!=0)
+        V3_WARN("native strait probe refused: signature mismatch");
+      else if(MH_CreateHook(permission,(LPVOID)&StraitPermissionProbe,(LPVOID*)&g_origStraitPermission)==MH_OK &&
+              MH_EnableHook(permission)==MH_OK)
+        V3_INFO("native strait probe installed (32 observations only)");
+      else V3_WARN("native strait probe hook failed");
+      constexpr uint8_t classificationSignature[]={0x48,0x89,0x4c,0x24,0x08,0x56,0x57,0x41,0x54,0x41,0x55,0x41,0x56};
+      void* classification=base+0x0141FDA0;
+      if(std::memcmp(classification,classificationSignature,sizeof(classificationSignature))!=0)
+        V3_WARN("native strait classification probe refused: signature mismatch");
+      else if(g_origStraitPermission &&
+              MH_CreateHook(classification,(LPVOID)&StraitClassificationProbe,(LPVOID*)&g_origStraitClassification)==MH_OK &&
+              MH_EnableHook(classification)==MH_OK)
+        V3_INFO("native strait classification probe installed (owned outputs, diagnostic only)");
+      else V3_WARN("native strait classification probe hook failed");
+      constexpr uint8_t buildSignature[]={0x48,0x89,0x4c,0x24,0x08,0x55,0x53,0x56,0x57,0x41,0x54,0x41,0x55};
+      constexpr uint8_t constructorSignature[]={0x4c,0x89,0x44,0x24,0x18,0x48,0x89,0x54,0x24,0x10,0x53,0x41,0x54};
+      void* build=base+0x0140D830;void* constructor=base+0x0140FAA0;
+      if(std::memcmp(build,buildSignature,sizeof(buildSignature))!=0 ||
+         std::memcmp(constructor,constructorSignature,sizeof(constructorSignature))!=0)
+        V3_WARN("native domestic lane probe refused: signature mismatch");
+      else if(g_origStraitClassification &&
+              MH_CreateHook(constructor,(LPVOID)&ShippingConstructorProbe,(LPVOID*)&g_origShippingConstructor)==MH_OK &&
+              MH_CreateHook(build,(LPVOID)&DomesticLaneBuildProbe,(LPVOID*)&g_origDomesticLaneBuild)==MH_OK &&
+              MH_EnableHook(constructor)==MH_OK && MH_EnableHook(build)==MH_OK)
+        V3_INFO("native domestic lane probe installed (natural builds, diagnostic only)");
+      else V3_WARN("native domestic lane probe hook failed");
     }
     if (m_settings.probePanelMarket) {
       constexpr uint8_t expected[] = {0x40,0x53,0x48,0x83,0xEC,0x30,0x48,0x83,0xC1,0x70};
@@ -894,6 +1178,7 @@ void Overlay::ApplyPendingRoute() {
     ApplyPendingFreight(); return;
   }
   if (m_viewMode != 0) { ApplyPendingFreight(); return; }
+  ReportRibbonBatch("cancelled");
   if (!m_preview) return;
   const uint64_t generation = m_preview->Generation();
   if (generation != m_seenGeneration) {
@@ -943,6 +1228,28 @@ void Overlay::ApplyPendingRoute() {
   }
 }
 
+void Overlay::ReportRibbonBatch(const char* state) {
+  if (!m_ribbonBatchOpen) return;
+  const auto stats=m_ribbons.Stats();
+  const auto failures=stats.failures-m_ribbonBatchStart.failures;
+  V3_INFO("DRAW PERF paths=%zu uploads=%llu reused=%llu failed=%llu pool=%zu cpu_us=%llu repeats_skipped=%llu "
+          "state=%s gen=%llu world=%llu rev=%llu pending=%zu visible=%zu dropped=%llu native_slots=%zu "
+          "peak_frame_us=%llu peak_step_us=%llu peak_attempts=%u overrun_frames=%llu",
+          m_ribbons.Requested(),
+          (unsigned long long)(stats.attempts-m_ribbonBatchStart.attempts-failures),
+          (unsigned long long)(stats.hits-m_ribbonBatchStart.hits),
+          (unsigned long long)failures,m_ribbons.Size(),
+          (unsigned long long)((stats.seconds-m_ribbonBatchStart.seconds)*1e6),
+          (unsigned long long)stats.repeats,state,(unsigned long long)m_ribbonBatchKey,
+          (unsigned long long)m_ribbonBatchWorld,(unsigned long long)m_ribbonBatchRevision,
+          m_ribbons.Pending(),m_ribbons.Active().size(),
+          (unsigned long long)(stats.dropped-m_ribbonBatchStart.dropped),m_slots.size(),
+          (unsigned long long)(stats.peakFrameSeconds*1e6),
+          (unsigned long long)(stats.peakStepSeconds*1e6),stats.peakFrameAttempts,
+          (unsigned long long)stats.overrunFrames);
+  m_ribbonBatchOpen=false;
+}
+
 void Overlay::ApplyPendingFreight() {
   if (NativeWorldRetired()) return;
   if (!m_logisticsSession) return;
@@ -952,20 +1259,25 @@ void Overlay::ApplyPendingFreight() {
   if ((!m_visible && !nativeOwner) || !m_settings.nativeEnabled || m_hideFlows.load() || !frame ||
       !m_logisticsSession->FrameIsCurrent(frame, status.applied)) {
     if (m_freightKey) {
+      ReportRibbonBatch("cancelled");
       DeactivateRibbons();
       m_freightKey = 0;
     }
     return;
   }
   if (status.applied != m_freightKey) {
+    ReportRibbonBatch("superseded");
     DeactivateRibbons();
+    m_ribbonBatchStart=m_ribbons.Stats(); m_ribbonBatchOpen=true;
+    m_ribbonBatchKey=status.applied; m_ribbonBatchWorld=frame->world;
+    m_ribbonBatchRevision=frame->economyRevision;
     m_ribbons.Request(frame->ribbons);
     m_freightKey = status.applied;
     m_lastBuildMs = frame->computeMs;
     std::snprintf(m_lastResult, sizeof(m_lastResult),
-                  "freight %zu ribbons, %zu shipments, %.2f ms%s",
+                  "%s %zu ribbons, %zu records, %.2f ms%s",frame->nativeFacts?"native trade":"model freight",
                   frame->ribbons.size(),
-                  frame->allocation ? frame->allocation->shipments.size() : size_t(0),
+                  frame->nativeFacts?frame->nativeFacts->bindings.size():frame->allocation?frame->allocation->shipments.size():size_t(0),
                   frame->computeMs, status.synthetic ? " (TEST INPUT)" : "");
     V3_INFO("freight view gen=%llu world=%llu rev=%llu ribbons=%zu compute=%.3f ms synthetic=%d",
             (unsigned long long)status.applied, (unsigned long long)frame->world,
@@ -986,10 +1298,12 @@ void Overlay::ApplyPendingFreight() {
            !m_logisticsSession->FrameIsCurrent(frame, key);
   });
   if (m_freightKey != key || !m_logisticsSession->FrameIsCurrent(frame, key)) {
+    ReportRibbonBatch("cancelled");
     DeactivateRibbons();
     m_freightKey = 0;
     return;
   }
+  if (!m_ribbons.Pending()) ReportRibbonBatch("complete");
   m_cacheHits = m_ribbons.Hits();
   m_routeActive = !m_ribbons.Active().empty();
   for (size_t index : m_ribbons.Active()) {
@@ -1381,6 +1695,8 @@ bool Overlay::IsMainSwapchain(IDXGISwapChain* swap) {
 
 HRESULT WINAPI Overlay::PresentThunk(IDXGISwapChain* self, UINT sync, UINT flags) {
   Overlay& o = Instance();
+  FrameTimingScope timing(g_frameTimingDepth,o.m_frameTiming);
+  if(timing.outer)o.RecordFrameTiming(self,flags);
   if (!o.m_imguiReady && !o.m_initializing && !o.m_imguiDisabled) {
     if (!o.IsMainSwapchain(self)) return ((FnPresent)o.m_origPresent)(self, sync, flags);
     o.m_initializing = true;
@@ -1402,6 +1718,8 @@ HRESULT WINAPI Overlay::PresentThunk(IDXGISwapChain* self, UINT sync, UINT flags
 HRESULT WINAPI Overlay::Present1Thunk(IDXGISwapChain1* self, UINT sync, UINT flags,
                                       const DXGI_PRESENT_PARAMETERS* params) {
   Overlay& o = Instance();
+  FrameTimingScope timing(g_frameTimingDepth,o.m_frameTiming);
+  if(timing.outer)o.RecordFrameTiming(self,flags);
   if (!o.m_imguiReady && !o.m_initializing && !o.m_imguiDisabled) {
     if (!o.IsMainSwapchain(self)) return ((FnPresent1)o.m_origPresent1)(self, sync, flags, params);
     o.m_initializing = true;
@@ -1411,6 +1729,20 @@ HRESULT WINAPI Overlay::Present1Thunk(IDXGISwapChain1* self, UINT sync, UINT fla
     o.OnPresent(self);
   }
   return ((FnPresent1)o.m_origPresent1)(self, sync, flags, params);
+}
+
+void Overlay::RecordFrameTiming(IDXGISwapChain* swap,UINT flags) {
+  if((flags&DXGI_PRESENT_TEST) || !m_imguiReady || swap!=m_swap)return;
+  static thread_local FrameTimingSamples samples;
+  LARGE_INTEGER now{};
+  if(!QueryPerformanceCounter(&now) || now.QuadPart<=0){samples.Reset();return;}
+  const auto world=m_economyWorld.load();
+  if(!samples.Push(reinterpret_cast<uintptr_t>(swap),world,uint64_t(now.QuadPart)))return;
+  std::string raw;raw.reserve(1408);
+  for(uint64_t tick:samples.ticks){if(!raw.empty())raw+=',';raw+=std::to_string(tick);}
+  V3_INFO("FRAME PERF thread=%lu world=%llu swap=%p frequency=%llu begin=%llu end=%llu count=64 ticks=%s",
+      GetCurrentThreadId(),(unsigned long long)world,swap,(unsigned long long)m_frameTimingFrequency,
+      (unsigned long long)samples.begin,(unsigned long long)samples.end,raw.c_str());
 }
 
 void Overlay::ReinitForSwapchain(IDXGISwapChain* swap) {
@@ -1807,18 +2139,24 @@ void Overlay::QueueLogisticsVariables(const std::shared_ptr<const LogisticsDocum
   const auto status = m_logisticsSession ? m_logisticsSession->Status() : LogisticsStatus{};
   const auto frame = m_logisticsSession ? m_logisticsSession->Frame() : nullptr;
   const bool live = document && !document->synthetic && !m_goodsMetadataUnavailable.load() &&
+      document->nativeTrade && frame && frame->nativeFacts && frame->nativeView &&
       status.world==m_economyWorld.load() &&
       document->kind==FreightViewKind::Market &&
       (status.owner==kOwnerNativePanel || status.owner==kOwnerHover) && document->world == status.world &&
       document->revision == status.revision && frame && frame->filter.market == document->market &&
       m_logisticsSession->StatisticsAreCurrent(frame);
   const bool stateLive=document && !document->synthetic && !m_goodsMetadataUnavailable.load() &&
+      document->nativeTrade && frame && frame->nativeFacts && frame->nativeView &&
       status.world==m_economyWorld.load() &&
       status.owner==kOwnerNativeState && document->kind==FreightViewKind::State &&
       document->world==status.world && document->revision==status.revision && frame &&
       frame->filter.kind==FreightViewKind::State && frame->filter.state==document->state &&
-      frame->filter.market==document->market && m_logisticsSession->FrameIsCurrent(frame,status.applied);
-  if (document)
+      frame->filter.market==document->market && m_logisticsSession->StatisticsAreCurrent(frame);
+  if(document && document->nativeTrade)
+    V3_INFO("queue native trade vars live=%d selection_fixed=%lld scope_fixed=%lld drawable_fixed=%lld scale=%lld",int(live),
+        (long long)document->nativeTrade->selectionQuantity,(long long)document->nativeTrade->scopeQuantity,
+        (long long)document->nativeTrade->scopeDrawable,(long long)kNativeTradeQuantityScale);
+  else if (document)
     V3_INFO("queue vars live=%d freight=%.2f target=%.2f allocated=%.2f unmet=%.2f", int(live),
             document->allFreight, document->targetImport, document->allocatedImport,
             document->unmetDemand);
@@ -1828,7 +2166,7 @@ void Overlay::QueueLogisticsVariables(const std::shared_ptr<const LogisticsDocum
     return std::string(buffer);
   };
   std::array<std::string, 9> values;
-  std::string scope = "model allocation (market ";
+  std::string scope = document && document->nativeTrade?"native trade (market ":"model allocation (market ";
   if (document) scope += std::to_string(document->market);
   scope += m_settings.marketOverride > 0 ? ", override)" : ", panel)";
   if (NativeWorldRetired()) scope += " - native map validation pending";
@@ -1836,12 +2174,21 @@ void Overlay::QueueLogisticsVariables(const std::shared_ptr<const LogisticsDocum
                                 ? "waiting for goods metadata" :
                                 m_nativePanelUnavailable.load() ? "native market panel unavailable" :
                                 m_nativeFiltersPending.load() ? "waiting for native goods filters" :
-                                "waiting for model view");
+                                "waiting for trade view");
   values[1] = FormatFreightWork(live ? document.get() : nullptr);
   values[2] = live ? number(document->targetImport) : "--";
   values[3] = live ? number(document->allocatedImport) : "--";
   values[4] = live ? number(document->unmetDemand) : "--";
-  values[5] = live && document->railKilometres ? number(*document->railKilometres)+" km" : "--";
+  if(live && document->nativeTrade){
+    const auto& quantity=*document->nativeTrade;
+    values[2]=FormatNativeTradeQuantity(quantity.scopeQuantity);
+    values[3]=FormatNativeTradeQuantity(quantity.scopeQuantity-quantity.domesticScopeQuantity);
+    values[4]=FormatNativeTradeQuantity(quantity.domesticScopeQuantity);
+  }
+  values[5] = FormatLaidTrack(live ? document.get() : nullptr);
+  if(document && document->nativeTrade)
+    V3_INFO("queue railway vars live=%d value=%s market=%u world=%llu revision=%llu",int(live),values[5].c_str(),
+        document->market,(unsigned long long)document->world,(unsigned long long)document->revision);
   values[6] = document && document->synthetic ? "1" : "0";
   {
     std::lock_guard<std::mutex> lock(m_marketSummaryMutex);
@@ -1872,6 +2219,22 @@ void Overlay::QueueLogisticsVariables(const std::shared_ptr<const LogisticsDocum
   if (m_hwnd) PostMessageW(m_hwnd, WM_APP + 0x51, 0, 0);
 }
 
+void __fastcall Overlay::DestroyNativeWorldThunk(void* nativeWorld) {
+  Overlay& o=Instance();
+  try {
+    const auto world=o.m_snapshotMailbox.RetireWorld(reinterpret_cast<uint64_t>(nativeWorld),o.m_economyWorld);
+    if(world) {
+      o.m_nativeRecoveryStatusDirty.store(true);
+      V3_INFO("native world retirement event: thread=%lu next world=%llu; source retired before original destruction",
+              GetCurrentThreadId(),(unsigned long long)world);
+    }
+  } catch(...) {
+    ++o.m_economyWorld;o.m_snapshotMailbox.Retire();
+    V3_WARN("native world retirement handoff failed; old requests discarded");
+  }
+  reinterpret_cast<void(__fastcall*)(void*)>(o.m_origDestroyNativeWorld)(nativeWorld);
+}
+
 void __fastcall Overlay::AccessScopeEndThunk(void* scope) {
   auto& o=Instance();
   const uint64_t caller=reinterpret_cast<uint64_t>(__builtin_return_address(0))-
@@ -1890,12 +2253,7 @@ void Overlay::RequestNativeSnapshot() {
   if(requested && requested->world>=m_economyWorld.load())return;
   auto request=std::make_shared<NativeCaptureRequest>();
   request->world=m_economyWorld.load();request->revision=++m_economyRevision;
-  request->geography=m_geography;
   request->marketOverride=m_settings.marketOverride>0?uint32_t(m_settings.marketOverride):0;
-  for(const auto& region:m_geography->states)
-    if(!request->regions.emplace(region.key,uint32_t(region.id)).second){
-      V3_WARN("snapshot request refused: ambiguous map region key");return;
-    }
   m_snapshotMailbox.Ensure(std::move(request));
 }
 
@@ -1927,7 +2285,7 @@ void Overlay::CopyAtNativeScopeEnd(uint64_t caller) {
   const uint64_t revision=++m_economyRevision;
   auto copy=CopyNativeSnapshot(memory,base,tls,caller,*request,revision,[&]{
     return m_snapshotMailbox.Current(request) && request->world==m_economyWorld.load();
-  },&why);
+  },&why,[](uint64_t candidates){return Game::Instance().SelectTradePath(candidates);});
   if(!copy){
     m_snapshotMailbox.Fail(request,revision,why);
     static std::string lastError;
@@ -1938,10 +2296,23 @@ void Overlay::CopyAtNativeScopeEnd(uint64_t caller) {
   }
   if(m_snapshotMailbox.Publish(request,copy)) {
     m_lastNativeSnapshotAt.store(GetTickCount64());m_lastNativeRequestRevision.store(request->revision);
-    V3_INFO("native snapshot copied: thread=%lu world=%llu revision=%llu date=%u states=%zu orders=%zu goods=%zu rail_edges=%zu total=%llu ms",
+    V3_INFO("native snapshot copied: thread=%lu world=%llu revision=%llu date=%u states=%zu goods=%zu legacy_orders/rails=not_collected total=%llu ms",
         GetCurrentThreadId(),(unsigned long long)request->world,(unsigned long long)revision,
-        copy->identity.date,copy->states.size(),copy->snapshot->orders.size(),copy->catalog.goods.size(),
-        copy->rails.builtEdges.size(),(unsigned long long)(GetTickCount64()-start));
+        copy->identity.date,copy->states.size(),copy->catalog.goods.size(),(unsigned long long)(GetTickCount64()-start));
+    const auto& trade=*copy->snapshot->nativeTrade;
+    size_t destinations=0,alternatives=0,selected=0;
+    for(const auto& group:trade.groups)for(const auto& dest:group.destinations){
+      ++destinations;alternatives+=dest.candidates.size();selected+=dest.selected.has_value();
+    }
+    V3_INFO("native trade copied: world=%llu revision=%llu groups=%zu destinations=%zu alternatives=%zu selected=%zu pairs=%zu straits=%zu",
+        (unsigned long long)request->world,(unsigned long long)revision,trade.groups.size(),destinations,
+        alternatives,selected,trade.statePairs.size(),trade.straits.size());
+    const auto& geometry=*trade.geometry;
+    V3_INFO("native spline geometry copied: map=%ux%u points=%zu segments=%zu connections=%zu",
+        geometry.width,geometry.height,geometry.points.size(),geometry.strips.size(),geometry.connections.size());
+    const auto& sea=*trade.seaGeography;
+    V3_INFO("native sea geography copied: definitions=%zu referenced_provinces=%zu states=%zu",
+        sea.definitions.size(),sea.provinces.size(),sea.states.size());
   }
 }
 
@@ -1963,7 +2334,7 @@ void Overlay::CollectRealEconomy() {
     if(m_logisticsSession)m_nativeMarketOwner.Close(*m_logisticsSession);
     if(m_logisticsSession)m_nativeStateOwner.Close(*m_logisticsSession);
     m_nativeStateRoster={};m_nativeMarketOwner.Reset();
-    m_realMarketIds.clear();m_realGoodsByKey.clear();PublishLogisticsDocument(nullptr);
+    m_realMarketIds.clear();m_realGoodsByKey.clear();m_hoverVariableKeys.clear();PublishLogisticsDocument(nullptr);
   }
   auto capture=m_snapshotMailbox.Take();
   if(!capture){RequestNativeSnapshot();return;}
@@ -1996,7 +2367,11 @@ void Overlay::CollectRealEconomy() {
   m_realMarketIds.clear();
   for (const auto& [market, count] : marketCounts) m_realMarketIds.insert(market);
   m_realGoodsByKey.clear();
-  for (const auto& good : snapshot->goods) m_realGoodsByKey.emplace(good.key,good.id);
+  m_hoverVariableKeys.clear();
+  for (const auto& good : snapshot->goods) {
+    m_realGoodsByKey.emplace(good.key,good.id);
+    m_hoverVariableKeys.push_back("ironroad_market_hover_"+good.key);
+  }
   int primaryCount = 0;
   for (const auto& [market, count] : marketCounts)
     if (count > primaryCount) {
@@ -2169,6 +2544,7 @@ void Overlay::ApplyEconomyWorld(uint64_t world,const char* why) {
   m_nativeMarketOwner.Reset();
   m_realMarketIds.clear();
   m_realGoodsByKey.clear();
+  m_hoverVariableKeys.clear();
   PublishLogisticsDocument(nullptr);
 }
 
@@ -2195,8 +2571,19 @@ void Overlay::PollNativeMarketPanel() {
   const auto change=m_nativeMarketOwner.Update(*m_logisticsSession,panel,m_realMarketIds,
         !m_goodsMetadataUnavailable.load(),m_settings.marketOverride);
   const auto statePanel=DecodeNativeStatePanel(reader,reinterpret_cast<uint64_t>(Game::Instance().Base()));
+  const auto previousStateContext=m_nativeStateOwner.Context();
   const auto stateChange=m_nativeStateOwner.Update(*m_logisticsSession,statePanel,m_nativeStateRoster,
         !m_goodsMetadataUnavailable.load());
+  if(previousStateContext!=m_nativeStateOwner.Context()){
+    std::string error;
+    bool ready=SetGuiVariable(Game::Instance().Base(),"ironroad_state_controls_id_v1","ironroad-state-unavailable",&error) &&
+       SetGuiVariable(Game::Instance().Base(),"ironroad_state_context_v1",m_nativeStateOwner.Context(),&error);
+    for(const auto& key:m_nativeStateOwner.FilterKeys())
+      if(ready)ready=SetGuiVariable(Game::Instance().Base(),key,m_nativeStateOwner.Context()+":all",&error);
+    if(ready)
+      SetGuiVariable(Game::Instance().Base(),"ironroad_state_controls_id_v1",m_nativeStateOwner.ReadyId(),&error);
+    if(!error.empty())V3_WARN("native state controls unavailable: %s",error.c_str());
+  }
   // Diagnostic only (no view authorisation): the vanilla panel resolves its market
   // through the GUI registry, the snapshot groups states by state+0x48. Log both so
   // the two id spaces can be reconciled from evidence instead of assumption.
@@ -2219,7 +2606,8 @@ void Overlay::PollNativeMarketPanel() {
     static std::string lastOwner, lastMame;
     if (panel.available && panel.marketOpen && panel.tab == "ironroad_logistics" && (sample++ % 60) == 0) {
       std::string error;
-      const v3::GuiVariableProbe probe = v3::ProbeGuiVariables(Game::Instance().Base());
+      const v3::GuiVariableProbe probe = v3::ProbeGuiVariableKeys(Game::Instance().Base(),
+          {"ironroad_probe_market_owner_v1","ironroad_probe_market_name_v1"});
       if (!probe.ok) {
         V3_WARN("gui market identity probe failed: %s", probe.error.c_str());
       } else {
@@ -2242,12 +2630,19 @@ void Overlay::PollNativeMarketPanel() {
     m_hoverContext=context;
     std::string error;
     m_hoverContextReady=SetGuiVariable(Game::Instance().Base(),"ironroad_hover_context_v1",context,&error);
+    if(m_hoverContextReady)m_hoverContextReady=SetGuiVariable(Game::Instance().Base(),"ironroad_market_color_v1",context+":all",&error);
     if (!m_hoverContextReady) V3_WARN("native hover context unavailable: %s",error.c_str());
   }
-  const auto variables=m_hoverContextReady && context!="ironroad-hover-inactive"
-      ? ProbeGuiVariables(Game::Instance().Base()) : GuiVariableProbe{};
+  auto variableKeys=m_nativeStateOwner.FilterKeys();
+  if(m_hoverContextReady && context!="ironroad-hover-inactive"){
+    variableKeys.insert(variableKeys.end(),m_hoverVariableKeys.begin(),m_hoverVariableKeys.end());
+    variableKeys.push_back("ironroad_market_color_v1");
+  }
+  const auto variables=!variableKeys.empty()?ProbeGuiVariableKeys(Game::Instance().Base(),variableKeys):GuiVariableProbe{};
+  const bool colorChanged=m_nativeMarketOwner.UpdateColor(*m_logisticsSession,variables);
   const bool hoverChanged=m_nativeMarketOwner.UpdateHover(*m_logisticsSession,variables,m_realGoodsByKey);
-  if (change.changed || stateChange.changed || hoverChanged || availabilityChanged || filterPendingChanged) {
+  const bool stateFilterChanged=m_nativeStateOwner.UpdateFilters(*m_logisticsSession,variables,m_realGoodsByKey);
+  if (change.changed || stateChange.changed || stateFilterChanged || hoverChanged || colorChanged || availabilityChanged || filterPendingChanged) {
     const auto status=m_logisticsSession->Status();
     // A lower-priority panel change must not erase another owner's document.
     if ((change.changed || stateChange.changed || availabilityChanged || filterPendingChanged) &&
@@ -2257,6 +2652,8 @@ void Overlay::PollNativeMarketPanel() {
             panel.market,panel.tab.c_str(),panel.error.c_str());
     if(stateChange.changed)V3_INFO("native state owner %s state=%u tab=%s reason=%s",
         stateChange.closed?"closed":"selected",statePanel.state,statePanel.tab.c_str(),statePanel.error.c_str());
+    if(stateFilterChanged)V3_INFO("native state map filter changed state=%u",statePanel.state);
+    if(colorChanged)V3_INFO("native market color mode changed market=%u",panel.market);
   }
   if (auto document=m_logisticsSession->Poll()) PublishLogisticsDocument(std::move(document));
 }
@@ -2265,7 +2662,7 @@ void Overlay::PollHideFlows() {
   if (!m_settings.nativeVariables || !Game::Instance().Ready()) return;
   const auto base = Game::Instance().Base();
   if (!base) return;
-  const auto probe = ProbeGuiVariables(base);
+  const auto probe = ProbeGuiVariableKeys(base,{"ironroad_hide_flows"});
   bool hide = false;
   for (const auto& entry : probe.entries) {
     if (entry.key == "ironroad_hide_flows") {

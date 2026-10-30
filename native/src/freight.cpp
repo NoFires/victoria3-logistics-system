@@ -57,7 +57,8 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
   result.graphRevision = policy.graphRevision;
   try {
     CheckCancel(cancelled);
-    if (!graph.Valid() || graph.nodes.size() > 1000000) throw std::runtime_error("invalid transport graph");
+    if ((!graph.Valid() && (snapshot.stateTerminals.empty() || graph.nodes.empty())) || graph.nodes.size() > 1000000)
+      throw std::runtime_error("invalid transport graph");
     if (snapshot.orders.size() > 1000000) throw std::runtime_error("economy snapshot too large");
     for (double c : policy.costPerDistance)
       if (!std::isfinite(c) || c <= 0) throw std::runtime_error("invalid route cost");
@@ -71,7 +72,7 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
     std::map<std::pair<uint32_t,uint32_t>,bool> uniqueOrders;
     std::map<uint32_t,std::pair<uint32_t,uint32_t>> stateIdentities;
     for (const auto& o : snapshot.orders) {
-      if (!goods.count(o.good) || o.region > UINT32_MAX/100 || o.production < 0 || o.consumption < 0 ||
+      if (!goods.count(o.good) || (snapshot.stateTerminals.empty() && o.region > UINT32_MAX/100) || o.production < 0 || o.consumption < 0 ||
           o.production > kMaxQuantity || o.consumption > kMaxQuantity ||
           !uniqueOrders.emplace(std::make_pair(o.state,o.good),true).second)
         throw std::runtime_error("invalid or duplicate state orders");
@@ -101,7 +102,8 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
     for (uint32_t i=0;i<graph.edges.size();++i) {
       const auto& e=graph.edges[i];
       if (e.from >= graph.nodes.size() || e.to >= graph.nodes.size() || e.from == e.to ||
-          !std::isfinite(e.length) || e.length <= 0 || e.type > 4 || !edgeIndex.emplace(e.id,i).second)
+          !std::isfinite(e.length) || e.length < 0 || (e.length==0 && (snapshot.stateTerminals.empty() || e.type!=2)) ||
+          e.type > 4 || !edgeIndex.emplace(e.id,i).second)
         throw std::runtime_error("invalid transport edge");
       if (e.type == 1 && snapshot.builtRailEdges.count(e.id)) result.builtRailLength += e.length;
     }
@@ -160,7 +162,14 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
       for (size_t i : indices) {
         const auto& b=result.balances[i];
         auto [region,market]=stateIdentities.at(b.state);
-        const uint32_t anchor=anchorFor(region);
+        uint32_t anchor=UINT32_MAX;
+        if(snapshot.stateTerminals.empty())anchor=anchorFor(region);
+        else {
+          const auto terminal=snapshot.stateTerminals.find(b.state);
+          if(terminal==snapshot.stateTerminals.end() || terminal->second>=graph.nodes.size())
+            throw std::runtime_error("invalid current state terminal");
+          anchor=terminal->second;
+        }
         // No usable authored hub retains an explicit unallocated balance.
         if (anchor==UINT32_MAX || anchor>=source) continue;
         if (b.availableExport) exporters.push_back({i,anchor,AddArc(net,source,anchor,b.availableExport,0)});

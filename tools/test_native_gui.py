@@ -1,6 +1,6 @@
 from pathlib import Path
 import re
-from native_gui import braces, block, patch_market, patch_state, patch_logistics_fragment
+from native_gui import braces, block, patch_market, patch_state, patch_logistics_fragment, localization_files
 
 GAME = Path('C:/Program Files (x86)/Steam/steamapps/common/Victoria 3/game')
 raw = (GAME / 'gui/market_panel.gui').read_bytes()
@@ -42,9 +42,10 @@ assert fragment.count('onmousehierarchyenter =') == 1
 assert fragment.count('onmousehierarchyleave =') == 1
 assert "GetVariableSystem.Get('ironroad_hover_context_v1')" in fragment
 assert fragment.count("Concatenate('ironroad_market_hover_', Goods.GetKey)") == 2
-assert fragment.count("GetVariableSystem.Get('ironroad_demand_v1')") == 1
+assert "GetVariableSystem.Get('ironroad_demand_v1')" in fragment, 'domestic model must expose its Freight demand ledger'
 assert 'text = "IRONROAD_ORDERS_LEDGER"' in fragment
 assert 'text = "IRONROAD_FREIGHT_LEDGER"' in fragment
+assert "GetVariableSystem.Get('ironroad_demand_v1')" in fragment
 assert "EqualTo_string(GetVariableSystem.Get('ironroad_map_status_v1'), 'map-retired-state-v1')" in fragment
 assert 'text = "IRONROAD_MAP_RETIRED"' in fragment
 assert 'Target / allocated / unmet:' not in fragment
@@ -82,6 +83,7 @@ state_original = state_raw.decode('utf-8-sig')
 state_patched = patch_state(state_raw)
 braces(state_patched)
 assert state_patched.count('ironroad_state_freight_cell = {}') == 1
+assert state_patched.count('ironroad_state_filters = {}') == 1
 assert state_patched.count('IRONROAD_FREIGHT_COLUMN') == 1
 # Preserve every vanilla script expression and its multiplicity, including all
 # sorts, original prices/graphs, navigation, menus and native window lifecycle.
@@ -104,7 +106,26 @@ for bad in (state_raw+b'changed', raw):
         raise AssertionError('unknown state GUI or market GUI must be rejected')
 assert 'State.GetIDString' in fragment and 'ironroad_state_rows_id_v1' in fragment
 assert "Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey)))" in fragment
-assert 'IRONROAD_STATE_WORK_TOOLTIP' in fragment
+assert 'IRONROAD_STATE_WORK_TOOLTIP' in state_patched
+assert "GetVariableSystem.Get('ironroad_state_context_v1')" in fragment
+for name in ('good', 'direction', 'transport'):
+    assert f"ironroad_state_{name}_v1" in fragment
+for value in ('imports', 'exports', 'land', 'sea'):
+    assert f"'), ':{value}'))]" in fragment
+assert 'IRONROAD_STATE_FILTER_TOOLTIP' in fragment and 'IRONROAD_STATE_GOOD_TOOLTIP' in fragment
+labels = []
+for match in re.finditer(r'\btextbox\s*=\s*\{', fragment):
+    body = fragment[match.start():braces(fragment)[match.end()-1]+1]
+    if 'parentanchor = center' in body and 'text = "IRONROAD_' in body:
+        labels.append(body)
+        assert 'size = { 100% 100% }' in body and 'align = center' in body, 'button labels need a bounded centered text box'
+        assert 'alwaystransparent = yes' in body, 'full button label cannot capture its parent click'
+assert len(labels) == 16
+for name in ('state', 'market'):
+    assert f"ironroad_{name}_color_v1" in fragment
+assert fragment.count('ironroad_flow_legend = {}') == 2
+assert "GetVariableSystem.Toggle('ironroad_legend_open_v1')" in fragment
+assert "Concatenate(':', Goods.GetKey)" in fragment, 'selection indicator uses the native good key, never row order'
 print('PASS: state Freight column, original lifecycle/sort/price/action bindings, untouched other panels and unknown-version rejection')
 
 # Screenshot regressions: inherited goods icons consume 55px; child bars and
@@ -175,3 +196,24 @@ for key in ('MARKET_PANEL_BALANCE_GOLD', 'MARKET_PANEL_BALANCE', 'MARKET_PANEL_B
     cell = fragment[start:end+1]
     assert 'autoresize' not in cell and re.search(r'size\s*=\s*\{\s*\d+\s+55\s*\}', cell), 'balance floats at row top'
 print('PASS: screenshot layout bounds, state header/cell alignment, market goods header and centered balance cells')
+
+# The formal legend must describe the exact production width bands, not example
+# screenshot values. Visual samples are four times the world-style width ratio.
+width_source = (Path(__file__).resolve().parents[1] / 'native/src/flow_width.h').read_text(encoding='utf-8')
+thresholds = [float(n) for n in re.search(r'kFlowWidthThresholds\{\{([^}]+)', width_source)[1].split(',')]
+widths = [float(n.strip().rstrip('f')) for n in re.search(r'kFlowWidths\{\{([^}]+)', width_source)[1].split(',')]
+legend_start, legend_end = block(fragment, r'type\s+ironroad_flow_legend\s*=\s*flowcontainer\s*\{')
+legend = fragment[legend_start:legend_end+1]
+bars = re.findall(r'size = \{ 40 (\d+) \}', legend)
+assert [int(n) for n in bars] == [4*w for w in widths]
+assert 8*64+7*2 <= 530
+for content in localization_files().values():
+    text = content.decode('utf-8-sig')
+    for band in range(8):
+        line = next(line for line in text.splitlines() if line.startswith(f' IRONROAD_WIDTH_{band}:'))
+        expected = ([0, thresholds[0]] if band == 0 else [thresholds[-1]] if band == 7 else [thresholds[band-1], thresholds[band]])
+        for threshold in expected:
+            assert re.search(rf'(?<!\d){threshold:g}(?!\d)', line), (band, line)
+    for key in ('LEGEND_STATE', 'LEGEND_MARKET', 'LEGEND_GOODS', 'LEGEND_NATIVE', 'WIDTH_TOOLTIP'):
+        assert f' IRONROAD_{key}:' in text
+print('PASS: formal colour modes, selected-good indicator and bilingual eight-band legend match production width thresholds/ratios')

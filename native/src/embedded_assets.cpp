@@ -1,6 +1,7 @@
 #include "embedded_assets.h"
 #include "game.h"
 #include "native_gui.h"
+#include "editable_resources.h"
 #include "log.h"
 #include "offsets.h"
 #include "util.h"
@@ -87,16 +88,41 @@ bool PrepareEmbeddedRuntime(HMODULE self, std::string* error) {
     if (root.empty()) { if (error) *error = "freight DLL directory unavailable"; return false; }
     dataDirectory = root + L"\\data";
     std::filesystem::create_directories(dataDirectory);
+    const std::string editing=
+        "Freight editable resources / 可编辑资源\r\n\r\n"
+        "native-gui/gui/: GUI files generated from your installed game and our fragment.\r\n"
+        "native-gui/localization/: English and Simplified Chinese labels/tooltips.\r\n"
+        "assets/gfx/models/military/ironroad_arrows.asset: our arrow definitions.\r\n"
+        "assets/gfx/FX/ironroad_building_flow.shader: our arrow shader.\r\n\r\n"
+        "关闭游戏后编辑上述文件，重启后生效。无需启用外部 Mod。\r\n"
+        "Edit while the game is closed; restart to apply. No external Mod/playset is needed.\r\n"
+        "玩家修改会保留。升级仅替换仍与上次默认值相同的文件。\r\n"
+        "Your edits are preserved. Upgrades replace only untouched previous defaults.\r\n"
+        "每个目录中的 .defaults 保存当前发行默认值，供比较／复制恢复。\r\n"
+        "Each .defaults folder holds current shipped defaults for comparison/reset.\r\n"
+        "删除一个可编辑文件后，下次启动会重新生成；删除前可自行备份。\r\n"
+        "Deleting an editable file regenerates its current default at next startup.\r\n"
+        "不要编辑内容命名的 ZIP 缓存；它们由上述明文文件自动生成。\r\n"
+        "Do not edit content-addressed ZIP caches; they are generated from the plain files.\r\n"
+        "原版完整 GUI 只从本机安装派生，换游戏版本时请对照新 .defaults 合并自己的修改。\r\n"
+        "Full base GUI is derived locally. When upgrading game versions, merge edits with new .defaults.\r\n"
+        "GUI 格式错误会记录到 freight.log / 游戏 error.log，不覆盖你的文件。\r\n"
+        "Invalid GUI is logged; your source file is retained. Keep internal variable/style names when changing appearance.\r\n\r\n"
+        "国内运量为观察性物流模型分配；国际部分保留原版贸易数量。\r\n"
+        "Domestic quantities are modeled logistics allocations; international quantities retain original trade data.\r\n"
+        "地图与当前可用连接从游戏对象读取；data 中的旧派生图仅供历史调试，不作为正式地图绑定表。\r\n";
+    EditableResources(root,{{"EDITING_RESOURCES.txt",{editing.begin(),editing.end()}}});
     // Content-address the archive so a running game never has its mounted file
     // replaced by a different build's standalone test process.
     HRSRC zip = FindResourceW(self, MAKEINTRESOURCEW(151), RT_RCDATA);
     auto block = zip ? LoadResource(self, zip) : nullptr;
     auto bytes = block ? static_cast<const uint8_t*>(LockResource(block)) : nullptr;
     if (!bytes) { if (error) *error = "embedded assets ZIP missing"; return false; }
-    uint64_t hash = 14695981039346656037ull;
-    for (DWORD i = 0; i < SizeofResource(self, zip); ++i) hash = (hash ^ bytes[i]) * 1099511628211ull;
-    assetArchive = root + L"\\assets-" + std::to_wstring(hash) + L".zip";
-    if (!WriteResource(self, 151, assetArchive, error)) return false;
+    const auto assetFiles=EditableResources(root+L"\\assets",ReadStoredZip({bytes,bytes+SizeofResource(self,zip)}));
+    const auto archive=BuildStoredZip(assetFiles);
+    assetArchive=root+L"\\assets-"+Widen(Sha256Bytes(archive.data(),archive.size()))+L".zip";
+    std::vector<uint8_t> previous;
+    if(!ReadFileBytes(assetArchive,&previous) || previous!=archive)WriteResourceFile(assetArchive,archive);
     const wchar_t* files[] = {L"positions.txt", L"heights.bin", L"provinces.bin", L"terrain_names.txt", L"splines.bin"};
     for (int i = 0; i < 5; ++i)
       if (!WriteResource(self, 201+i, dataDirectory + L"\\" + files[i], error)) return false;

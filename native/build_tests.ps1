@@ -13,6 +13,18 @@ New-Item -ItemType Directory -Force $testBuild | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "harness build failed" }
 Write-Host "Built $testBuild\harness.exe"
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'frame_timing_tests.exe') (Join-Path $here 'test\frame_timing_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'frame timing tests build failed' }
+& (Join-Path $testBuild 'frame_timing_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'frame timing tests failed' }
+& $gpuPython (Join-Path $root 'tools/test_frame_timing.py')
+if ($LASTEXITCODE -ne 0) { throw 'frame timing parser tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static -DNOMINMAX "-I$here\src" `
+  -o (Join-Path $testBuild 'gui_variable_keys_tests.exe') (Join-Path $here 'test\gui_variable_keys_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'GUI variable key tests build failed' }
+& (Join-Path $testBuild 'gui_variable_keys_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'GUI variable key tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
   -o (Join-Path $testBuild 'native_access_tests.exe') (Join-Path $here 'test\native_access_tests.cpp')
 if ($LASTEXITCODE -ne 0) { throw 'native access tests build failed' }
 & (Join-Path $testBuild 'native_access_tests.exe')
@@ -32,6 +44,48 @@ if ($LASTEXITCODE -ne 0) { throw 'native VFS tests failed' }
 if ($LASTEXITCODE -ne 0) { throw 'native rail tests build failed' }
 & (Join-Path $testBuild 'native_rail_tests.exe')
 if ($LASTEXITCODE -ne 0) { throw 'native rail tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_shipping_tests.exe') (Join-Path $here 'test\native_shipping_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native shipping tests build failed' }
+& (Join-Path $testBuild 'native_shipping_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native shipping tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_domestic_tests.exe') (Join-Path $here 'test\native_domestic_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native domestic source tests build failed' }
+& (Join-Path $testBuild 'native_domestic_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native domestic source tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_world_trade_tests.exe') (Join-Path $here 'test\native_world_trade_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native world trade tests build failed' }
+& (Join-Path $testBuild 'native_world_trade_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native world trade tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_trade_routes_tests.exe') (Join-Path $here 'test\native_trade_routes_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native trade route tests build failed' }
+& (Join-Path $testBuild 'native_trade_routes_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native trade route tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_trade_geometry_tests.exe') (Join-Path $here 'test\native_trade_geometry_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native trade geometry tests build failed' }
+& (Join-Path $testBuild 'native_trade_geometry_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native trade geometry tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_splines_tests.exe') (Join-Path $here 'test\native_splines_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native spline tests build failed' }
+& (Join-Path $testBuild 'native_splines_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native spline tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_sea_geography_tests.exe') (Join-Path $here 'test\native_sea_geography_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native sea geography tests build failed' }
+& (Join-Path $testBuild 'native_sea_geography_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native sea geography tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_ports_tests.exe') (Join-Path $here 'test\native_ports_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native port tests build failed' }
+& (Join-Path $testBuild 'native_ports_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native port tests failed' }
+& $gpuPython (Join-Path $root 'tools\test_native_trade_selector.py')
+if ($LASTEXITCODE -ne 0) { throw 'exact-build native trade selector harness failed' }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
   -o (Join-Path $testBuild 'native_economy_tests.exe') (Join-Path $here 'test\native_economy_tests.cpp')
 if ($LASTEXITCODE -ne 0) { throw 'native economy tests build failed' }
@@ -95,7 +149,7 @@ if ($LASTEXITCODE -ne 0) { throw "freight tests build failed" }
 if ($LASTEXITCODE -ne 0) { throw "freight tests failed" }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static -DUNICODE -D_UNICODE -DNOMINMAX "-I$here\src" `
   -o (Join-Path $testBuild 'freight_engine_tests.exe') (Join-Path $here 'test\freight_engine_tests.cpp') `
-  (Join-Path $here 'src\freight_engine.cpp') (Join-Path $here 'src\freight_worker.cpp') `
+  (Join-Path $here 'src\freight_engine.cpp') (Join-Path $here 'src\native_trade_view.cpp') (Join-Path $here 'src\freight_worker.cpp') `
   (Join-Path $here 'src\freight.cpp') (Join-Path $here 'src\route_data.cpp') `
   (Join-Path $here 'src\util.cpp') (Join-Path $here 'src\log.cpp') '-ladvapi32' '-lshell32' '-lole32' '-luuid'
 if ($LASTEXITCODE -ne 0) { throw "freight engine tests build failed" }
@@ -104,16 +158,26 @@ if ($LASTEXITCODE -ne 0) { throw "freight engine tests failed" }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static -DUNICODE -D_UNICODE -DNOMINMAX "-I$here\src" `
   -o (Join-Path $testBuild 'logistics_session_tests.exe') (Join-Path $here 'test\logistics_session_tests.cpp') `
   (Join-Path $here 'src\logistics_session.cpp') (Join-Path $here 'src\freight_worker.cpp') `
-  (Join-Path $here 'src\freight_engine.cpp') (Join-Path $here 'src\freight.cpp') `
+  (Join-Path $here 'src\freight_engine.cpp') (Join-Path $here 'src\native_trade_view.cpp') (Join-Path $here 'src\freight.cpp') `
   (Join-Path $here 'src\logistics_ui.cpp') (Join-Path $here 'src\route_data.cpp') `
   (Join-Path $here 'src\util.cpp') (Join-Path $here 'src\log.cpp') '-ladvapi32' '-lshell32' '-lole32' '-luuid'
 if ($LASTEXITCODE -ne 0) { throw "logistics session tests build failed" }
 & (Join-Path $testBuild 'logistics_session_tests.exe')
 if ($LASTEXITCODE -ne 0) { throw "logistics session tests failed" }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static -DUNICODE -D_UNICODE -DNOMINMAX "-I$here\src" `
+  -o (Join-Path $testBuild 'native_trade_view_tests.exe') (Join-Path $here 'test\native_trade_view_tests.cpp') `
+  (Join-Path $here 'src\native_trade_view.cpp') (Join-Path $here 'src\logistics_session.cpp') `
+  (Join-Path $here 'src\freight_worker.cpp') (Join-Path $here 'src\freight_engine.cpp') `
+  (Join-Path $here 'src\freight.cpp') (Join-Path $here 'src\logistics_ui.cpp') `
+  (Join-Path $here 'src\route_data.cpp') (Join-Path $here 'src\util.cpp') (Join-Path $here 'src\log.cpp') `
+  '-ladvapi32' '-lshell32' '-lole32' '-luuid'
+if ($LASTEXITCODE -ne 0) { throw 'native trade view tests build failed' }
+& (Join-Path $testBuild 'native_trade_view_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native trade view tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static -DUNICODE -D_UNICODE -DNOMINMAX "-I$here\src" `
   -o (Join-Path $testBuild 'dev_snapshot_tests.exe') (Join-Path $here 'test\dev_snapshot_tests.cpp') `
   (Join-Path $here 'src\dev_snapshot.cpp') (Join-Path $here 'src\logistics_session.cpp') `
-  (Join-Path $here 'src\freight_worker.cpp') (Join-Path $here 'src\freight_engine.cpp') `
+  (Join-Path $here 'src\freight_worker.cpp') (Join-Path $here 'src\freight_engine.cpp') (Join-Path $here 'src\native_trade_view.cpp') `
   (Join-Path $here 'src\freight.cpp') (Join-Path $here 'src\logistics_ui.cpp') `
   (Join-Path $here 'src\route_data.cpp') (Join-Path $here 'src\util.cpp') (Join-Path $here 'src\log.cpp') `
   '-ladvapi32' '-lshell32' '-lole32' '-luuid'
@@ -122,7 +186,7 @@ if ($LASTEXITCODE -ne 0) { throw "dev snapshot tests build failed" }
 if ($LASTEXITCODE -ne 0) { throw "dev snapshot tests failed" }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static -DUNICODE -D_UNICODE -DNOMINMAX "-I$here\src" `
   -o (Join-Path $testBuild 'freight_scale_tests.exe') (Join-Path $here 'test\freight_scale_tests.cpp') `
-  (Join-Path $here 'src\dev_snapshot.cpp') (Join-Path $here 'src\freight_engine.cpp') `
+  (Join-Path $here 'src\dev_snapshot.cpp') (Join-Path $here 'src\freight_engine.cpp') (Join-Path $here 'src\native_trade_view.cpp') `
   (Join-Path $here 'src\freight.cpp') (Join-Path $here 'src\route_data.cpp') `
   (Join-Path $here 'src\util.cpp') (Join-Path $here 'src\log.cpp') `
   '-ladvapi32' '-lshell32' '-lole32' '-luuid'
@@ -166,4 +230,10 @@ if ($LASTEXITCODE -ne 0) { throw "freight deployment tests failed" }
 if (Test-Path -LiteralPath (Join-Path $root "dist\freight\freight.dll")) {
   & python (Join-Path $root "tools\test_freight_loader.py") --runtime
   if ($LASTEXITCODE -ne 0) { throw "freight runtime directory tests failed" }
+  & powershell -ExecutionPolicy Bypass -File (Join-Path $root 'tools/test_native_gui_runtime.ps1')
+  if ($LASTEXITCODE -ne 0) { throw 'native GUI runtime/archive tests failed' }
+  & python (Join-Path $root 'tools/test_native_gui.py')
+  if ($LASTEXITCODE -ne 0) { throw 'native GUI bindings/layout/legend tests failed' }
+  & powershell -ExecutionPolicy Bypass -File (Join-Path $root 'tools/test_frame_timing_runtime.ps1')
+  if ($LASTEXITCODE -ne 0) { throw 'frame timing runtime tests failed' }
 }
