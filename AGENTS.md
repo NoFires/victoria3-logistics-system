@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R209：省份归属与replace_path测试（未取得干净结论）
+
+省份颜色探针基线`xE165F5`/`x0087C9`→STATE_MAZOVIA；把`x0087C9`移入LOWER_SILESIA的ZIP加载后探针却读到STATE_UPPER_SILESIA（state 1051），模板索引→运行省份表映射或引擎归属规则需专门核对，不作通过。含全部state文件与replace_paths的ZIP加载后州id生效，但1.15 VFS探针报窗口TLS context不可用，替换规则未独立证明。content_load均恢复。证据checkpoint2026-11-06-r207-partial-sea-ids。
+
 ### 2026-11-06 — R208：1.15 ZIP Mod身份实机
 
 州id夹具打成ZIP（descriptor＋.metadata＋state_regions文件，3,712B），content_load绝对路径启用；实机`state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`，快照states=1157 goods=54，市场物流页`freight view gen=2 ribbons=187`、`DRAW PERF uploads=187 visible=187 dropped=0`；content_load恢复原字节、ZIP删除。replace_path／省份交换未做。证据checkpoint2026-11-06-r207-partial-sea-ids（zip-test.log、ironroad_map_test.zip）。

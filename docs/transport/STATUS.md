@@ -1,5 +1,12 @@
 # 当前状态
 
+### 2026-11-06 — R209：1.15省份归属与replace_path测试（均未取得干净结论）
+
+- 省份颜色探针：新增只读探针按省份模板对象+0xC4颜色值映射运行省份；基准实机`xE165F5`→STATE_MAZOVIA、`x0087C9`→STATE_MAZOVIA（state 1084），映射可用于基线。
+- 省份归属：ZIP夹具把`x0087C9`从STATE_MAZOVIA的provinces列表移入STATE_LOWER_SILESIA（文件其余内容相同），content_load启用后游戏加载、快照states=1157、物流页`ribbons=187`正常；但探针读到该省属于state 1051 `STATE_UPPER_SILESIA`（geo 924），既非改前的MAZOVIA也非夹具的LOWER_SILESIA。该结果说明模板索引→运行省份表索引的映射或引擎实际归属规则仍需专门核对，**不作为省份归属绑定通过**；测试后content_load恢复原字节、ZIP删除。
+- replace_path：ZIP包含全部17份state_regions文件与`replace_paths=["map_data/state_regions"]`，加载后州id修改生效（geo=901），但1.15 `live_vfs_probe`返回`current game window filesystem context unavailable`（窗口线程TLS context不可用，探针仍为旧版语义），替换规则注册未被独立证明；夹具在merge语义下与replace等价，故不声称replace_path通过。
+- 边界：省份归属与replace_path保持未验证；三处海路末端中的2条unavailable与37条partial未知端保留；设备重建、搜索/双语与A01–A27 PARTIAL项未做。证据：checkpoint2026-11-06-r207-partial-sea-ids（province/replace测试日志与JSON、ironroad_province.zip、ironroad_replace.zip）。
+
 ### 2026-11-06 — R208：1.15 ZIP Mod身份实机
 
 - 将R202的州id夹具（STATE_BEKES 164→901）打成ZIP（含descriptor、`.metadata`、`map_data/state_regions/02_east_europe.txt`，3,712B），置于用户mod目录并以content_load绝对路径启用。实机pid35748：`state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`——ZIP Mod经1.15 VFS加载且运行时绑定同一geo身份；快照states=1157 goods=54；市场物流页`owner selected`、`freight view gen=2 ribbons=187 compute=87.348 ms`、`DRAW PERF paths=187 uploads=187 visible=187 dropped=0`。测试后content_load恢复原字节、ZIP删除。
