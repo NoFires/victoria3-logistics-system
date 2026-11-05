@@ -318,9 +318,30 @@ std::shared_ptr<const FreightFrame> FreightEngine::Build(const FreightFilter& in
       facts.nativeFacts=std::make_shared<const NativeTradeFacts>(std::move(*built));++m_stats.allocations;
       if(facts.nativeFacts->domestic){
         const auto& domestic=*facts.nativeFacts->domestic;
-        V3_INFO("native domestic allocation land=%u sea=%u unavailableSea=%u partialSea=%u shipments=%zu balances=%zu",
+        auto lanes=[&](const std::vector<uint32_t>& ids){
+          std::string out;
+          const auto& transfers=m_snapshot->nativeTrade->domestic->portTransfers;
+          auto port=[&](uint32_t state){
+            for(const auto& transfer:transfers)if(transfer.state==state)return true;
+            return false;
+          };
+          for(uint32_t id:ids){
+            for(const auto& lane:m_snapshot->nativeTrade->domestic->shipping.lanes){
+              if(lane.id!=id)continue;
+              if(!out.empty())out+=';';
+              out+=std::to_string(id)+':'+std::to_string(lane.fromState)+(port(lane.fromState)?"P":"-")+'>'+
+                  std::to_string(lane.toState)+(port(lane.toState)?"P":"-");
+              const auto reason=domestic.unavailableSeaReasons.find(id);
+              if(reason!=domestic.unavailableSeaReasons.end())out+='['+reason->second+']';
+              break;
+            }
+          }
+          return out;
+        };
+        V3_INFO("native domestic allocation land=%u sea=%u unavailableSea=%u partialSea=%u shipments=%zu balances=%zu partialSeaIds=[%s] unavailableSeaIds=[%s]",
             domestic.landConnections,domestic.seaConnections,domestic.unavailableSea,domestic.partialSea,
-            domestic.allocation.shipments.size(),domestic.allocation.balances.size());
+            domestic.allocation.shipments.size(),domestic.allocation.balances.size(),
+            lanes(domestic.partialSeaIds).c_str(),lanes(domestic.unavailableSeaIds).c_str());
       }
     }
     frame->nativeFacts=facts.nativeFacts;

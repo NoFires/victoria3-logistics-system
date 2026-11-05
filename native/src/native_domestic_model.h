@@ -11,6 +11,9 @@ struct NativeDomesticModel {
   // Bit63 distinguishes copied original keyless paths from native spline IDs.
   std::map<uint64_t,std::vector<NativeSplinePoint>> portPaths;
   uint32_t landConnections=0,seaConnections=0,unavailableSea=0,partialSea=0;
+  // Diagnostic identities of the lanes whose geometry chain is not complete.
+  std::vector<uint32_t> unavailableSeaIds,partialSeaIds;
+  std::map<uint32_t,std::string> unavailableSeaReasons;
 };
 // Only the domestic allocation is a model. Its network consists of CURRENT
 // original land connections and original domestic port lanes. Sea lane shapes
@@ -186,14 +189,18 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     // The port access splines are added as their own edges below; keep the
     // lane geometry sea-only and let its resolved chain ends define the graph
     // endpoints, so geometry and graph stay identical even without transfers.
-    auto shape=BuildNativeTradeGeometry(trade,lane.fromState,destination,nullptr,cancelled,true,true);
+    std::string laneError;
+    auto shape=BuildNativeTradeGeometry(trade,lane.fromState,destination,&laneError,cancelled,true,true);
     NativeTradeGeometry available;
     std::array<uint64_t,2> laneEndpoints{endpoint(lane.fromState,0),endpoint(lane.toState,1)};
-    if(!shape){if(cancelled && cancelled())return fail("cancelled");++result.unavailableSea;available.complete=false;}
+    if(!shape){if(cancelled && cancelled())return fail("cancelled");++result.unavailableSea;
+      result.unavailableSeaIds.push_back(lane.id);
+      result.unavailableSeaReasons[lane.id]=laneError.empty()?"unknown":laneError;
+      available.complete=false;}
     else{
       available=std::move(*shape);
       laneEndpoints={available.startAnchor,available.endAnchor};
-      if(!available.complete)++result.partialSea;
+      if(!available.complete){++result.partialSea;result.partialSeaIds.push_back(lane.id);}
     }
     if(!add(lane.fromState,lane.toState,2,std::move(available),double(lane.travelDistanceFixed)/kNativeShippingDistanceScale,
         laneEndpoints))

@@ -1,5 +1,12 @@
 # 当前状态
 
+### 2026-11-06 — R207：1.15海路缺港口端点回退，unavailableSea 35→2
+
+- 新增有界诊断（`NativeDomesticModel`记录缺几何航线的id/端点/原因，worker分配日志输出`partialSeaIds`／`unavailableSeaIds`）。实机判明35条`unavailableSea`全部为`native route endpoints are not distinct current port anchors`：均为HOME_COUNTIES（州5）→35个目的州，目的州在当前旅行网络中没有type-5港口接续；4条partial为只在单侧缺港口的岛屿航线（OKHOTSK→SAKHALIN×2、GUANGDONG→FORMOSA、MIRANDA→WEST_INDIES）。
+- 根因：R199的seaOnly把端点固定为“当前港口接续的海锚或geo推导海锚”；当目的州无接续时，geo海锚不一定是所选原版海段链的控制点，整条航线被判unavailable（改动前R199早期构建同类航线为partial）。修复：仅对seaOnly航线，当一端锚点不在所选海段链上时，用该链自身最后一个原版控制点作为该端（与R199前partial语义一致），标记`complete=false`；不造岸点、图端点使用同一解析锚点。35条航线恢复原版海段几何（partial）。
+- 实机（构建`4e0ed054…`／50,015,990B，引导`c8020412…`）：`unavailableSea 35→2`、`partialSea 4→37`，`DRAW PERF paths=187`（原185），页面13982.47687／510.99MU不变；剩余2条unavailable为`925→590`与`611→608`（链端点不唯一，保持未知）。完整官方等价原生入口35/35 PASS，trade_geometry／domestic／trade_view／engine套件均PASS。
+- 边界：37条partial航线的一端仍无见证港口（数量保留、几何标注未知，不冒充完整）；2条unavailable保留；三处海路末端的像素级复看未做；性能三对证据来自上一构建`64913eea…`（本次仅改模型几何/诊断，渲染路径未变），最终同构建复跑仍待。证据：checkpoint2026-11-06-r207-partial-sea-ids（allocation-after-fallback.txt、source-change.diff、page-after-fallback.png）。
+
 ### 2026-11-06 — R206：1.15单商品／原生绿模式与原版商品详情实机
 
 - 单商品颜色模式：提示“单商品：悬停市场行，或点击地区物流列”，未选商品时`freight view gen=3 ribbons=0`、卡片总量13982.47687不变；点击谷物行→打开原版商品详情（价格£19.3、销售/购买订单、生产与消费拆分），`用途`页显示可生产/可使用建筑与财富消费；关闭详情→`native market owner closed`。

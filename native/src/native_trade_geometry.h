@@ -79,7 +79,7 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
   // The sea-only shortcut applies only to the domestic transfer path;
   // the legacy port selector must still report a missing endpoint as partial.
   const bool seaOnlyPorts=domesticPorts && seaOnly && !intraRegion;
-  const bool complete=seaOnlyPorts?true:(connections.ports[0] && connections.ports[1]);
+  bool complete=seaOnlyPorts?true:(connections.ports[0] && connections.ports[1]);
   if((!complete && !allowPartialPort) || (!seaOnlyPorts && !connections.ports[0] && !connections.ports[1]))
     return fail("native endpoint port connection unavailable");
   const auto& network=*trade.geometry;
@@ -126,6 +126,22 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
     // This is the last EXISTING original sea control, not a fabricated shore
     // point or a claim that it is the selected state's physical port.
     if(connections.ports[0])end=*loose;else start=*loose;
+  }
+  // 1.15 sea-only lanes join the sea anchors of the current port transfers.
+  // When a state has no current transfer, its geo-derived naval anchor is not
+  // necessarily a control of the selected sea chain. Keep the authored sea
+  // chain and its own last control as that end instead of discarding the whole
+  // lane; the missing physical port stays marked partial (no shore point is
+  // fabricated and the graph uses the same resolved anchor).
+  if(seaOnlyPorts && (start==end || !incident.count(start) || !incident.count(end))){
+    std::vector<uint32_t> loose;
+    for(const auto& [point,edges]:incident)if(edges.size()==1)loose.push_back(point);
+    if(loose.size()==2){
+      const bool hasStart=incident.count(start)!=0,hasEnd=incident.count(end)!=0;
+      if(hasStart && !hasEnd)end=loose[0]==start?loose[1]:loose[0];
+      else if(!hasStart && hasEnd)start=loose[0]==end?loose[1]:loose[0];
+      if((hasStart && !hasEnd) || (!hasStart && hasEnd))complete=false;
+    }
   }
   if(start==end || !incident.count(start) || !incident.count(end))return fail("native route endpoints are not distinct current port anchors");
   for(const auto& [point,edges]:incident)if(edges.size()!=(point==start || point==end?1u:2u))
