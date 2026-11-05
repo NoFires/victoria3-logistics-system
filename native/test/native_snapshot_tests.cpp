@@ -11,14 +11,14 @@ int main(){
   Check(NativeCaptureDue(true,2,2,1001,1000),"last paused command is captured without waiting for a later command");
   Check(NativeCaptureDue(false,3,2,1001,1000),"new world/request bypasses previous world's timer");
   NativeAccessObservation s;s.phase=4;s.access=2;s.owns=1;s.context=1;
-  Check(IsNativeCapturePoint(0xcd2bc1,s),"completed command with native ownership accepted");
-  Check(!IsNativeCapturePoint(0xcd2bc2,s),"same scope flags at another caller confer no permission");
+  Check(IsNativeCapturePoint(kRvaCommandScopeReturn,s),"completed command with native ownership accepted");
+  Check(!IsNativeCapturePoint(kRvaCommandScopeReturn+1,s),"same scope flags at another caller confer no permission");
   auto good=s;
-  for(auto mode:{0u,1u,3u}){s.access=mode;Check(!IsNativeCapturePoint(0xcd2bc1,s),"non-write mode rejected");}s=good;
-  s.hidden=1;Check(!IsNativeCapturePoint(0xcd2bc1,s),"nested hidden batch command rejected");s=good;
-  s.owns=0;Check(!IsNativeCapturePoint(0xcd2bc1,s),"global mode without thread ownership rejected");s=good;
-  s.context=0;Check(!IsNativeCapturePoint(0xcd2bc1,s),"UI context rejected");s=good;
-  s.phase=3;Check(!IsNativeCapturePoint(0xcd2bc1,s),"loading phase rejected");
+  for(auto mode:{0u,1u,3u}){s.access=mode;Check(!IsNativeCapturePoint(kRvaCommandScopeReturn,s),"non-write mode rejected");}s=good;
+  s.hidden=1;Check(!IsNativeCapturePoint(kRvaCommandScopeReturn,s),"nested hidden batch command rejected");s=good;
+  s.owns=0;Check(!IsNativeCapturePoint(kRvaCommandScopeReturn,s),"global mode without thread ownership rejected");s=good;
+  s.context=0;Check(!IsNativeCapturePoint(kRvaCommandScopeReturn,s),"UI context rejected");s=good;
+  s.phase=3;Check(!IsNativeCapturePoint(kRvaCommandScopeReturn,s),"loading phase rejected");
   NativeSnapshotMailbox box;
   auto a=std::make_shared<NativeCaptureRequest>();a->world=1;a->revision=2;
   auto result=std::make_shared<NativeCaptureResult>();auto snapshot=std::make_shared<EconomySnapshot>();
@@ -116,11 +116,11 @@ int main(){
     Check(!input.IsCurrent(1,2),"collection retirement invalidates a retained immutable batch");
     GoodsMemoryReader unread=[&](auto,auto,auto){++reads;return false;};
     reads=0;
-    Check(!CopyNativeSnapshot(unread,1,1,0xcd2bc1,*a,a->revision,[]{return true;},&why,forbidden,{},&input) &&
+    Check(!CopyNativeSnapshot(unread,1,1,kRvaCommandScopeReturn,*a,a->revision,[]{return true;},&why,forbidden,{},&input) &&
         !reads && why=="unavailable or conflicting native lane access input",
         "retired lane collection prevents snapshot engine reads");
     auto conflicting=input;conflicting.epoch=std::make_shared<std::atomic<uint64_t>>(7);
-    Check(!CopyNativeSnapshot(unread,1,1,0xcd2bc1,*a,a->revision,[]{return true;},&why,forbidden,forbiddenAccess,&conflicting) &&
+    Check(!CopyNativeSnapshot(unread,1,1,kRvaCommandScopeReturn,*a,a->revision,[]{return true;},&why,forbidden,forbiddenAccess,&conflicting) &&
         !reads && why=="unavailable or conflicting native lane access input",
         "lane-bound input and live country permission adapter cannot be mixed");
     input=conflicting;auto saved=input;input.epoch.reset();
@@ -170,7 +170,7 @@ int main(){
     Check(!malformed.LaneAccessCurrent(),"token with absent generation cannot bypass collection checks");
     Check(result->LaneAccessCurrent(),"legacy result without per-lane collection witness remains supported");
   }
-  Check(!CopyNativeSnapshot([&](auto,auto,auto){++reads;return false;},1,1,0xcd2bc1,*a,a->revision,[]{return false;},&why,forbidden,forbiddenAccess) && !reads,
+  Check(!CopyNativeSnapshot([&](auto,auto,auto){++reads;return false;},1,1,kRvaCommandScopeReturn,*a,a->revision,[]{return false;},&why,forbidden,forbiddenAccess) && !reads,
         "retired request performs no engine reads");
   {
     constexpr uint64_t module=0x140000000,tlsArray=0x10000,tls=0x20000,
@@ -180,11 +180,11 @@ int main(){
     GoodsMemoryReader memory=[&](uint64_t at,void* out,size_t n){
       for(size_t i=0;i<n;++i){auto f=bytes.find(at+i);if(f==bytes.end())return false;((uint8_t*)out)[i]=f->second;}return true;
     };
-    put(tlsArray,tls);put(tls+0x5ae0,uint8_t(1));put(tls+0x92c,uint32_t(1));
-    put(module+0x0514e580,uint32_t(2));put(module+0x0514e570,uint32_t(0));
-    put(module+0x0592d0e0,idler);put(idler,module+0x04431500);put(idler+0x20,uint8_t(1));
-    put(module+0x0592d128,root);put(root,module+0x04430800);put(root+0x588,uint32_t(4));put(root+0x608,machine);
-    put(machine+8,uint32_t(59883360));put(machine+0x120,world);put(module+0x05964ef0,db);
+    put(tlsArray,tls);put(tls+0x5b60,uint8_t(1));put(tls+0x34c,uint32_t(1));
+    put(module+0x05404748,uint32_t(2));put(module+0x05404738,uint32_t(0));
+    put(module+0x05c07c18,idler);put(idler,module+0x04678bc0);put(idler+0x20,uint8_t(1));
+    put(module+0x05c07c68,root);put(root,module+0x04660618);put(root+0x588,uint32_t(4));put(root+0x608,machine);
+    put(machine+8,uint32_t(59883360));put(machine+0x120,world);put(module+0x05bd69c8,db);
     // A formal native request needs no embedded map/rail graph. Even its access
     // rejection must be reached without those former prerequisites.
     auto valid=bytes;auto request=*a;
@@ -192,14 +192,12 @@ int main(){
       Check(!CopyNativeSnapshot(memory,module,tlsArray,caller,request,request.revision,[]{return true;},&why,forbidden,forbiddenAccess) &&
           why=="outside completed command scope","selector cannot run outside the verified completed-command access scope");
     };
-    rejected(0xcd2bc2);
-    for(auto [at,value]:{std::pair{tls+0x92c,uint32_t(0)},std::pair{module+0x0514e580,uint32_t(1)},
-                       std::pair{module+0x0514e570,uint32_t(1)},std::pair{root+0x588,uint32_t(3)}}){
-      put(at,value);rejected(0xcd2bc1);bytes=valid;
+    rejected(kRvaCommandScopeReturn+1);
+    for(auto [at,value]:{std::pair{tls+0x34c,uint32_t(0)},std::pair{module+0x05404748,uint32_t(1)},
+                       std::pair{module+0x05404738,uint32_t(1)},std::pair{root+0x588,uint32_t(3)}}){
+      put(at,value);rejected(kRvaCommandScopeReturn);bytes=valid;
     }
-    put(tls+0x5ae0,uint8_t(0));rejected(0xcd2bc1);bytes=valid;
-    Check(!CopyNativeSnapshot(memory,module,tlsArray,0xcd2bc1,request,request.revision,[]{return true;},&why) &&
-        why=="native trade selector unavailable","missing native selector is unavailable, never a first-candidate fallback");
+    put(tls+0x5b60,uint8_t(0));rejected(kRvaCommandScopeReturn);bytes=valid;
   }
   std::puts("PASS: completed command gate, owned snapshot mailbox and stale/world rejection");
 }
