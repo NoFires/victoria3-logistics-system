@@ -1,5 +1,10 @@
 # 当前状态
 
+### 2026-11-06 — R203：1.15市场物流页hover作用域实机
+
+- 市场物流页打开后`freight view gen=2 world=1 rev=4 ribbons=185`（owner10）。悬停首个商品行（谷物）→`freight view gen=3 ribbons=34 compute=0.732 ms`、`native session gen=3 owner=20 ribbons=34`、`DRAW PERF paths=34 uploads=33 reused=1 visible=34 dropped=0`；市场卡片总量13982.47687／510.99MU不变。移出→`freight view gen=4 ribbons=185 compute=0.008 ms`、`owner=10 ribbons=185`（缓存命中）。证明1.15下hover只改地图贡献并在移出后恢复，不改数量。
+- 边界：本轮只覆盖市场页单商品hover；分类／显示隐藏／搜索（键盘输入不可用）／切州切市场／双语未在1.15重做，完整A18–A19矩阵仍PARTIAL。证据：checkpoint2026-11-06-r201-lifecycle-graphics（hover-grain.png、hover-restored.png、hover-log.txt）。
+
 ### 2026-11-06 — R202：1.15部署矩阵与改图身份（州定义geo 164→901实机绑定）
 
 - 部署矩阵（同一`64913eea…`／`c8020412…`构建，游戏关闭时逐例准备，每例启动后保持运行≥50秒）：主体缺失→loader.log最后一行`LoadLibraryExW failed (error=126)`、无payload日志、游戏进程存活；主体损坏（256字节零）→`error=193`、游戏存活；整套卸载（version.dll＋freight.dll移开）→无新loader条目、游戏以原版界面存活；重新安装→`loaded freight.dll (error=0)`且`loader attached`/渲染pass日志出现。全部用例后dist＝安装逐文件哈希相同，EXE`473186e8…`、存档`458e7780…`、content_load`f8c89f83…`字节保持。

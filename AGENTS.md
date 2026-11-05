@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R203：1.15市场物流页hover作用域
+
+市场物流页gen2 owner10 ribbons185；悬停首个商品行→gen3 owner20 ribbons34（uploads33/reused1/visible34），卡片总量13982.47687／510.99MU不变；移出→gen4 owner10 ribbons185（compute0.008ms缓存）。证明1.15下hover只改地图贡献并恢复。分类／显示隐藏／搜索（键盘注入不可用）／切州／双语未在1.15重做，A18–A19仍PARTIAL。证据checkpoint2026-11-06-r201-lifecycle-graphics（hover-*.png、hover-log.txt）。
+
 ### 2026-11-06 — R202：1.15部署矩阵与改图身份
 
 - 部署矩阵（同构建、游戏关闭逐例准备）：主体缺失→loader.log `error=126`、主体损坏→`error=193`、整套卸载→无新loader条目、重装→`loaded freight.dll (error=0)`；四例游戏进程均存活≥50秒。事后安装＝dist、EXE／存档／content_load哈希保持。
