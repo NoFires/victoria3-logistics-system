@@ -162,7 +162,7 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     }
     uint64_t object=0,vt=0;int32_t state=-1;
     if(!field(provinces,uint64_t(id)*8,object) || !object || !field(object,0,vt) ||
-       vt!=module+0x046ac1c0 || !field(object,0x18,state) || state<0 ||
+       vt!=module+0x046ac1c0 || !field(object,0x18,state) || state==-1 ||
        !markets.count(uint32_t(state))){provinceStates.emplace(id,UINT32_MAX);return {};}
     provinceStates.emplace(id,uint32_t(state));
     return uint32_t(state);
@@ -242,19 +242,18 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     if(bool(first)==bool(second))return fail("ambiguous domestic port transfer state");
     const uint32_t state=first?*first:*second;
     const uint32_t start=uint32_t(key>>6)&0x1fffffff,end=uint32_t(key>>35);
-    uint32_t from=0,to=0;
-    if(a.anchor==start && b.anchor==end){from=a.anchor;to=b.anchor;}
-    else if(b.anchor==start && a.anchor==end){from=b.anchor;to=a.anchor;}
-    else return fail("domestic port transfer anchors differ from spline");
-    // 1.15.0 prefixes the land-hub control with 0x800000 on the port side.
-    // Normalise it back to the witnessed hub so the land graph can reach it.
+    if(!((a.anchor==start && b.anchor==end) || (b.anchor==start && a.anchor==end)))
+      return fail("domestic port transfer anchors differ from spline");
+    // The endpoint with the linked land province is the port side; the other is
+    // the sea-side node used by the lane. 1.15.0 prefixes the land-hub control
+    // with 0x800000; normalise it back to the witnessed hub.
+    uint32_t landAnchor=first?a.anchor:b.anchor,seaAnchor=first?b.anchor:a.anchor;
     if(const auto hubAnchor=hubs.find(state);hubAnchor!=hubs.end()){
-      if((from&~0x800000u)==hubAnchor->second)from=hubAnchor->second;
-      else if((to&~0x800000u)==hubAnchor->second)to=hubAnchor->second;
+      if((landAnchor&~0x800000u)==hubAnchor->second)landAnchor=hubAnchor->second;
     }
-    if(from==to || !transferIds.insert(id).second)
+    if(landAnchor==seaAnchor || !transferIds.insert(id).second)
       return fail("invalid owned native port transfer");
-    result.portTransfers.push_back({id,state,{from,to},key,true});
+    result.portTransfers.push_back({id,state,{landAnchor,seaAnchor},key,true});
   }
   for(const auto& [state,anchor]:hubs)result.landHubs.emplace(state,anchor);
   if(!window.Unchanged())return fail("domestic sources changed during copy");

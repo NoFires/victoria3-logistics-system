@@ -26,7 +26,7 @@ std::optional<NativeSeaGeography> DecodeNativeSeaGeography(const Reader& reader,
     const std::vector<NativeStateEconomy>& states,const NativeWorldTradeSnapshot& trade,const Current& current,
     std::string* error=nullptr) {
   auto fail=[&](const char* why)->std::optional<NativeSeaGeography>{if(error)*error=why;return {};};
-  if(!module || module>UINT64_MAX-0x05964ef8 || !tlsArray || states.empty() || states.size()>65536 || !current())
+  if(!module || module>UINT64_MAX-0x05c43140 || !tlsArray || states.empty() || states.size()>65536 || !current())
     return fail("missing current sea geography identity");
   EconomyReadWindow window(reader);
   GoodsMemoryReader read=[&](uint64_t a,void* p,size_t n){return window.Read(a,p,n);};
@@ -35,11 +35,11 @@ std::optional<NativeSeaGeography> DecodeNativeSeaGeography(const Reader& reader,
   auto u32=[](const auto& bytes,size_t at){uint32_t n=0;std::memcpy(&n,bytes.data()+at,4);return n;};
   auto u16=[](const auto& bytes,size_t at){uint16_t n=0;std::memcpy(&n,bytes.data()+at,2);return n;};
   uint64_t tls=0,token=0,database=0,type=0,objects=0;uint32_t initialized=0,cap=0,count=0;uint8_t active=0;
-  if(!field(tlsArray,0,tls) || !field(tls,0x8600,initialized) || !(initialized&1) ||
-     !field(tls,0x8648,token) || uint32_t(token)>=16 ||
-     !field(module,0x0514d418+16*uint32_t(token),database) ||
-     !field(module,0x0514d420+16*uint32_t(token),active) || active!=1 ||
-     !field(database,0,type) || type!=module+0x04424140 || !field(database,0x80,objects) ||
+  if(!field(tlsArray,0,tls) || !field(tls,0x8670,initialized) || !(initialized&1) ||
+     !field(tls,0x86b8,token) || uint32_t(token)>=16 ||
+     !field(module,0x053fad38+16*uint32_t(token),database) ||
+     !field(module,0x053fad40+16*uint32_t(token),active) || active!=1 ||
+     !field(database,0,type) || type!=module+0x04663078 || !field(database,0x80,objects) ||
      !field(database,0x88,cap) || !field(database,0x8c,count) || count>cap || cap>4096)
     return fail("current strait definition context unavailable");
   std::vector<uint64_t> roster(count);
@@ -47,7 +47,7 @@ std::optional<NativeSeaGeography> DecodeNativeSeaGeography(const Reader& reader,
   NativeSeaGeography result;std::set<uint16_t> wanted;std::set<uint64_t> seen;
   for(uint32_t id=0;id<count;++id){
     std::array<uint8_t,0x48> row{};
-    if(!seen.insert(roster[id]).second || !read(roster[id],row.data(),row.size()) || u64(row,0)!=module+0x044f85a0 ||
+    if(!seen.insert(roster[id]).second || !read(roster[id],row.data(),row.size()) || u64(row,0)!=module+0x04786528 ||
        u32(row,0x10)!=id || !u16(row,0x44) || u16(row,0x44)==UINT16_MAX || !u16(row,0x46) ||
        u16(row,0x46)==UINT16_MAX || u16(row,0x44)==u16(row,0x46))return fail("invalid current strait definition");
     result.definitions.push_back({id,{u16(row,0x44),u16(row,0x46)}});
@@ -71,7 +71,7 @@ std::optional<NativeSeaGeography> DecodeNativeSeaGeography(const Reader& reader,
       }
     }
   uint64_t map=0,provinces=0;
-  if(!field(module,0x058fccf0,map) || !field(map,0,type) || type!=module+0x0441c938 ||
+  if(!field(module,0x05bd7308,map) || !field(map,0,type) || type!=module+0x046d6850 ||
      !field(map,0x2a0,provinces) || !field(map,0x2a8,cap) || !field(map,0x2ac,count) ||
      !count || count>65535 || count>cap || cap>131072)return fail("current province map unavailable");
   roster.resize(count);
@@ -80,14 +80,14 @@ std::optional<NativeSeaGeography> DecodeNativeSeaGeography(const Reader& reader,
   auto region=[&](uint64_t object)->std::optional<NativeSeaRegion>{
     if(auto found=regions.find(object);found!=regions.end())return found->second;
     std::array<uint8_t,0x48> row{};
-    if(!read(object,row.data(),row.size()) || u64(row,0)!=module+0x044e7850 ||
+    if(!read(object,row.data(),row.size()) || u64(row,0)!=module+0x046ba948 ||
        u32(row,0x10)==UINT32_MAX || row[0x44]!=1 || u32(row,0x40)==UINT32_MAX)return {};
     NativeSeaRegion copy{u32(row,0x10),u32(row,0x40)};regions.emplace(object,copy);return copy;
   };
   seen.clear();
   for(uint16_t id:wanted){
     if(id>=roster.size() || !seen.insert(roster[id]).second || !field(roster[id],0,type) ||
-       type!=module+0x044dc488)return fail("unknown native sea province");
+       type!=module+0x046ab568)return fail("unknown native sea province");
     uint64_t definition=0;
     if(!field(roster[id],0xc8,definition))return fail("unreadable native sea region");
     auto identity=region(definition);if(!identity)return fail("invalid native sea region identity");
@@ -105,7 +105,7 @@ std::optional<NativeSeaGeography> DecodeNativeSeaGeography(const Reader& reader,
   }
   for(const auto& state:states){
     const auto object=ReadNativeStateObject(read,module,state.id);uint64_t definition=0;
-    if(!object || !field(object,0xe78,definition))return fail("unavailable native state region");
+    if(!object || !field(object,0xf10,definition))return fail("unavailable native state region");
     auto identity=region(definition);
     if(!identity || !result.states.emplace(state.id,*identity).second)return fail("invalid or duplicate native state geography");
   }

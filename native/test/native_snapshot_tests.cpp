@@ -102,8 +102,74 @@ int main(){
         "a later real destruction after address reuse retires the later object lifetime too");
   }
   std::string why;unsigned reads=0;
-  const auto forbidden=[](uint64_t){Check(false,"retired or unleased source cannot invoke native selector");return uint64_t(0);};
+  const auto forbidden=[](uint64_t,uint32_t,uint32_t){Check(false,"retired or unleased source cannot invoke native selector");return uint64_t(0);};
   const auto forbiddenAccess=[](uint64_t,uint64_t)->std::optional<bool>{Check(false,"retired or unleased source cannot invoke strait access");return {};};
+  {
+    auto batch=std::make_shared<NativeLaneAccessBatch>();batch->scope={1,2,7};
+    auto collection=std::make_shared<std::atomic<uint64_t>>(7);
+    NativeLaneAccessInput input{batch,7,collection};
+    Check(input.IsCurrent(1,2),"owned lane batch requires an independent current collection witness");
+    Check(!input.IsCurrent(2,2) && !input.IsCurrent(1,3),"wrong world/revision rejected");
+    input.generation=6;
+    Check(!input.IsCurrent(1,2),"old collection generation cannot validate its own batch");
+    input.generation=7;collection->store(8);
+    Check(!input.IsCurrent(1,2),"collection retirement invalidates a retained immutable batch");
+    GoodsMemoryReader unread=[&](auto,auto,auto){++reads;return false;};
+    reads=0;
+    Check(!CopyNativeSnapshot(unread,1,1,0xcd2bc1,*a,a->revision,[]{return true;},&why,forbidden,{},&input) &&
+        !reads && why=="unavailable or conflicting native lane access input",
+        "retired lane collection prevents snapshot engine reads");
+    auto conflicting=input;conflicting.epoch=std::make_shared<std::atomic<uint64_t>>(7);
+    Check(!CopyNativeSnapshot(unread,1,1,0xcd2bc1,*a,a->revision,[]{return true;},&why,forbidden,forbiddenAccess,&conflicting) &&
+        !reads && why=="unavailable or conflicting native lane access input",
+        "lane-bound input and live country permission adapter cannot be mixed");
+    input=conflicting;auto saved=input;input.epoch.reset();
+    Check(!input.IsCurrent(1,2),"missing collection witness is unavailable");input=saved;
+    input.generation=0;Check(!input.IsCurrent(1,2),"zero collection generation is unavailable");input=saved;
+    input.batch.reset();Check(!input.IsCurrent(1,2),"missing owned batch is unavailable");input=saved;
+    batch.reset();Check(input.IsCurrent(1,2),"adapter input owns the batch after producer releases it");
+    input=saved;collection.reset();Check(input.IsCurrent(1,2),"collection witness owns no borrowed producer storage");
+    auto retired=std::make_shared<std::atomic<uint64_t>>(8);input.epoch=retired;
+    Check(!input.IsCurrent(1,2),"ownership alone cannot extend the collection epoch");
+    auto invalid=std::make_shared<NativeLaneAccessBatch>();invalid->scope={0,0,7};
+    input.batch=invalid;
+    Check(!input.IsCurrent(0,0),"zero world/revision cannot identify a current batch");
+  }
+  {
+    NativeSnapshotMailbox lanes;lanes.Request(a);
+    auto collection=std::make_shared<std::atomic<uint64_t>>(7);
+    auto stamped=std::make_shared<NativeCaptureResult>(*result);
+    stamped->laneAccessEpoch=collection;stamped->laneAccessGeneration=7;
+    Check(lanes.Publish(a,stamped),"current lane collection can enter resident mailbox");
+    collection->store(8);
+    Check(lanes.Ready() && lanes.TakeError()=="native lane access retired before drain" && !lanes.Take() && lanes.Current(a),
+        "undrained stale collection produces existing UI withdrawal error while retaining retry request");
+    auto fresh=std::make_shared<NativeCaptureResult>(*stamped);
+    auto updated=std::make_shared<EconomySnapshot>(*snapshot);updated->revision=3;fresh->snapshot=updated;
+    fresh->laneAccessGeneration=8;
+    Check(lanes.Publish(a,fresh) && !lanes.Publish(a,stamped) && lanes.TakeError().empty(),
+        "late stale collection cannot clear a newer current result");
+    auto retained=lanes.Take();
+    Check(retained==fresh && NativeCaptureMatches(*retained,retained->identity,1,3,retained->anchor),
+        "current drained result passes adapter handoff");
+    collection->store(9);
+    Check(!NativeCaptureMatches(*retained,retained->identity,1,3,retained->anchor),
+        "retained result fails handoff after its collection retires");
+    updated=std::make_shared<EconomySnapshot>(*snapshot);updated->revision=4;
+    auto late=std::make_shared<NativeCaptureResult>(*fresh);late->snapshot=updated;
+    Check(!lanes.Publish(a,late) && lanes.TakeError()=="native lane access retired before publication",
+        "retirement between copy return and publication rejects result and signals withdrawal");
+    late->laneAccessGeneration=9;updated=std::make_shared<EconomySnapshot>(*snapshot);updated->revision=5;late->snapshot=updated;
+    Check(lanes.Publish(a,late),"a newer snapshot can retry with the current collection generation");
+    collection->store(10);
+    Check(!lanes.Take() && lanes.TakeError()=="native lane access retired before drain",
+        "retirement racing the UI error check is rejected at drain too");
+    auto malformed=*late;malformed.laneAccessEpoch.reset();
+    Check(!malformed.LaneAccessCurrent(),"nonzero generation without collection token rejected");
+    malformed=*late;malformed.laneAccessGeneration=0;
+    Check(!malformed.LaneAccessCurrent(),"token with absent generation cannot bypass collection checks");
+    Check(result->LaneAccessCurrent(),"legacy result without per-lane collection witness remains supported");
+  }
   Check(!CopyNativeSnapshot([&](auto,auto,auto){++reads;return false;},1,1,0xcd2bc1,*a,a->revision,[]{return false;},&why,forbidden,forbiddenAccess) && !reads,
         "retired request performs no engine reads");
   {

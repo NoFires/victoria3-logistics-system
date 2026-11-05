@@ -139,6 +139,9 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     if(connection->source==connection->destination || !addLand(*connection))return fail("invalid current domestic land connection");
     ++result.landConnections;
   }
+  std::map<uint32_t,uint64_t> portAnchors;
+  for(const auto* transfer:ordered(trade.domestic->portTransfers))
+    portAnchors.emplace(transfer->state,transfer->anchors[1]);
   for(const auto* current:ordered(trade.domestic->shipping.lanes)){
     const auto& lane=*current;
     if(cancelled && cancelled())return fail("cancelled");
@@ -172,6 +175,11 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     // distance(+60), including a valid zero within one sea region, is its model
     // route metric. A missing graphics key cannot erase this known connection.
     auto endpoint=[&](uint32_t state,uint32_t side)->uint64_t{
+      // 1.15.0: the current port-access transfer carries the sea-side anchor
+      // the lane physically joins. The state region geo is a different space
+      // and no longer matches the port anchor, so prefer the witnessed port.
+      const auto port=portAnchors.find(state);
+      if(port!=portAnchors.end())return port->second;
       const auto region=trade.seaGeography->states.find(state);
       if(region!=trade.seaGeography->states.end() && region->second.definition!=UINT32_MAX && region->second.geo!=UINT32_MAX)
         return ((region->second.geo*100)&0x1fffffff)|0x800000; // original naval anchor encoding

@@ -22,10 +22,10 @@ struct Fixture {
     Zero(a,0x28);Put(a+8,data);Put(a+0x10,uint32_t(1));Put(a+0x14,uint32_t(1));
   }
   Fixture(){
-    Put(module+0x05964ef0,stateDb);Put(stateDb+0x20,stateEntries);Put(stateDb+0x2c,uint32_t(2050));
+    Put(module+0x05bd69c8,stateDb);Put(stateDb+0x20,stateEntries);Put(stateDb+0x2c,uint32_t(2050));
     Zero(stateEntries,2050*16);Put(stateEntries+8,first);Put(stateEntries+2049*16+8,last);Put(stateEntries+3*16+8,third);
     for(auto [a,id]:{std::pair{first,uint32_t(0)},std::pair{last,lastId},std::pair{third,uint32_t(3)}}){
-      Put(a,module+0x044de308);Put(a+8,id);Zero(a+0x890,0x50);
+      Put(a,module+0x046bad90);Put(a+8,id);Zero(a+0x870,0x90);
       Put(a+0xb48,uint32_t(id==lastId?1:0));
     }
     Put(module+0x05964ea0,areaDb);Put(areaDb+0x20,areaEntries);Put(areaDb+0x2c,uint32_t(2));
@@ -33,16 +33,16 @@ struct Fixture {
     for(auto [a,id,center]:{std::tuple{firstArea,uint32_t(0),uint32_t(0)},std::tuple{lastArea,uint32_t(1),lastId}}){
       Put(a,module+0x04430cd8);Put(a+8,id);Put(a+0x48,center);
     }
-    Put(module+0x059667f8,straitDb);Put(straitDb,module+0x04439720);Put(straitDb+0x20,straitEntries);
+    Put(module+0x05c43138,straitDb);Put(straitDb,module+0x0471cc78);Put(straitDb+0x20,straitEntries);
     Put(straitDb+0x2c,uint32_t(1));Put(straitDb+0x3c,uint32_t(1));Zero(straitEntries,16);Put(straitEntries+8,strait);
-    Zero(strait,0xb0);Put(strait,module+0x04490548);Put(strait+8,straitId);Put(strait+0xa0,definition);Put(strait+0xad,uint8_t(3));
-    Zero(definition,0x4c);Put(definition,module+0x044f85a0);Put(definition+0x44,uint16_t(11));Put(definition+0x46,uint16_t(12));
-    Put(module+0x0592d128,root);Put(root+0x608,machine);Put(machine+0x120,world);
-    Zero(world+0x898,0x18);Put(world+0x898,groups);Put(world+0x8a0,uint32_t(2));Put(world+0x8a4,uint32_t(2));
+    Zero(strait,0x130);Put(strait,module+0x046c9758);Put(strait+8,straitId);Put(strait+0x120,definition);Put(strait+0x12d,uint8_t(3));
+    Zero(definition,0x4c);Put(definition,module+0x04786528);Put(definition+0x44,uint16_t(11));Put(definition+0x46,uint16_t(12));
+    Put(module+0x05c07c68,root);Put(root+0x608,machine);Put(machine+0x120,world);
+    Zero(world+0x870,0x18);Put(world+0x870,groups);Put(world+0x878,uint32_t(2));Put(world+0x87c,uint32_t(2));
     Zero(groups,2*0x48);Put(groups,uint32_t(0));Put(groups+8,members);Put(groups+0x10,uint32_t(2));Put(groups+0x14,uint32_t(2));
     Put(members,uint32_t(0));Put(members+4,uint32_t(3));Put(groups+0x48,lastId);Put(groups+0x50,members+0x100);
     Put(groups+0x58,uint32_t(1));Put(groups+0x5c,uint32_t(1));Put(members+0x100,lastId);
-    Map(world+0x800,groupLookup);Put(world+0x810,uint32_t(2));Zero(groupLookup,2*0x18);
+    Map(world+0x7d8,groupLookup);Put(world+0x7e8,uint32_t(2));Zero(groupLookup,2*0x18);
     Put(groupLookup+4,uint8_t(1));Put(groupLookup+8,uint32_t(0));Put(groupLookup+0x10,groups);
     Put(groupLookup+0x18+4,uint8_t(1));Put(groupLookup+0x18+8,lastId);Put(groupLookup+0x18+0x10,groups+0x48);
     Map(groups+0x20,destinations);Zero(destinations,2*0x28);Put(destinations+4,uint8_t(1));Put(destinations+8,lastId);
@@ -56,10 +56,10 @@ struct Fixture {
     }
     Put(ranges,std::array<uint16_t,2>{10,0});Put(ranges+4,std::array<uint16_t,2>{11,1});
     Put(paths+0x38+0x18,straitList);Put(paths+0x38+0x20,uint32_t(1));Put(paths+0x38+0x24,uint32_t(1));Put(straitList,straitId);
-    Map(first+0x890,pairs);Zero(pairs,2*0x60);Put(pairs+4,uint8_t(1));Put(pairs+8,lastId);
-    Put(pairs+0x10,module+0x044283b0);Put(pairs+0x18,values);Put(pairs+0x20,uint32_t(2));Put(pairs+0x24,uint32_t(2));
+    Map(first+0x898,pairs);Zero(pairs,2*0x60);Put(pairs+4,uint8_t(1));Put(pairs+8,lastId);
+    Put(pairs+0x10,module+0x0465cb70);Put(pairs+0x18,values);Put(pairs+0x20,uint32_t(2));Put(pairs+0x24,uint32_t(2));
     Put(pairs+0x30,uint64_t(1));Put(values,int64_t(100001));Put(values+8,int64_t(-999));
-    Map(first+0x8b8,pairs); // Same fixture bytes, independent original tables.
+    Map(first+0x870,pairs); // Same fixture bytes, independent original tables.
   }
   bool Read(uint64_t a,void* out,size_t n){
     for(size_t i=0;i<n;++i){auto f=bytes.find(a+i);if(f==bytes.end())return false;((uint8_t*)out)[i]=f->second;}
@@ -87,7 +87,7 @@ int main(){
   Check(result->straits[0].id==Fixture::straitId && result->straits[0].definition==0,
       "runtime strait generation handle is separate from its native definition ID");
   for(unsigned i=0;i<4;++i){
-    f.Put(Fixture::strait+0xa8+i,uint8_t(1));auto changed=f.Decode();
+    f.Put(Fixture::strait+0x128+i,uint8_t(1));auto changed=f.Decode();
     Check(changed && changed->straits[0].accessControls[i]==1 && !v3::NativeTradeEquivalent(*result,*changed),
         "same-handle strait control changes invalidate cached native facts");
     f.bytes=original;
@@ -105,29 +105,29 @@ int main(){
   f.bytes=original;
   int selections=0;
   auto selected=v3::DecodeNativeWorldTrade([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,f.states,2,
-      []{return true;},[&](uint64_t vector){++selections;Check(vector==Fixture::destinations+0x10,"native selector receives original live vector");
+      []{return true;},[&](uint64_t vector,uint32_t,uint32_t){++selections;Check(vector==Fixture::destinations+0x10,"native selector receives original live vector");
         return Fixture::paths+0x38;});
   Check(selected && selected->groups[0].destinations[0].selected==1 && selections==1,
       "verified selector chooses second candidate and only an owned index escapes");
   f.Put(Fixture::straitList,uint32_t(0));
   Check(!v3::DecodeNativeWorldTrade([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,f.states,2,
-      []{return true;},[](uint64_t){Check(false,"unavailable canal cannot reach native selector");return uint64_t(0);}),
+      []{return true;},[](uint64_t,uint32_t,uint32_t){Check(false,"unavailable canal cannot reach native selector");return uint64_t(0);}),
       "unavailable strait rejected before native invocation");
   f.bytes=original;
   Check(!v3::DecodeNativeWorldTrade([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,f.states,2,
-      []{return true;},[&](uint64_t){f.Put(Fixture::paths+0x30,int64_t(1));return Fixture::paths+0x38;}),
+      []{return true;},[&](uint64_t,uint32_t,uint32_t){f.Put(Fixture::paths+0x30,int64_t(1));return Fixture::paths+0x38;}),
       "input mutation during selector rejects complete owned copy");
   f.bytes=original;
   for(auto bad:{uint64_t(0),Fixture::paths+1,Fixture::paths+2*0x38})
     Check(!v3::DecodeNativeWorldTrade([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,f.states,2,
-        []{return true;},[&](uint64_t){return bad;}),"foreign, interior or stale selector pointer rejected");
+        []{return true;},[&](uint64_t,uint32_t,uint32_t){return bad;}),"foreign, interior or stale selector pointer rejected");
   f.Put(Fixture::destinations+0x1c,uint32_t(1));
   auto sole=f.Decode();Check(sole && sole->groups[0].destinations[0].selected==0,
       "single candidate follows the original direct return without a native call");
   f.bytes=original;
   int callbackChecks=0;
   Check(!v3::DecodeNativeWorldTrade([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,f.states,2,
-      [&]{return ++callbackChecks==1;},[&](uint64_t){Check(false,"retired source cannot invoke native selector");return uint64_t(0);}),
+      [&]{return ++callbackChecks==1;},[&](uint64_t,uint32_t,uint32_t){Check(false,"retired source cannot invoke native selector");return uint64_t(0);}),
       "retirement before native selection rejected");
   Check(dest.candidates[1].provinces[0].first==11 && dest.candidates[1].provinces[0].last==12 &&
       result->groups[1].destinations[0].candidates.empty(),"inclusive ranges and known empty alternatives preserved");
@@ -142,9 +142,9 @@ int main(){
       "original grouped export table copied independently, not as reverse imports");
   Check(result->centers.at(0)==0 && result->centers.at(3)==0 && result->centers.at(Fixture::lastId)==Fixture::lastId,
       "current area center handles copied independently of cached membership");
-  f.Map(Fixture::last+0x890,Fixture::pairs+0x200);f.Zero(Fixture::pairs+0x200,2*0x60);
+  f.Map(Fixture::last+0x898,Fixture::pairs+0x200);f.Zero(Fixture::pairs+0x200,2*0x60);
   f.Put(Fixture::pairs+0x204,uint8_t(1));f.Put(Fixture::pairs+0x208,uint32_t(0));
-  f.Put(Fixture::pairs+0x210,Fixture::module+0x044283b0);f.Put(Fixture::pairs+0x218,Fixture::values+0x100);
+  f.Put(Fixture::pairs+0x210,Fixture::module+0x0465cb70);f.Put(Fixture::pairs+0x218,Fixture::values+0x100);
   f.Put(Fixture::pairs+0x220,uint32_t(2));f.Put(Fixture::pairs+0x224,uint32_t(2));f.Put(Fixture::pairs+0x230,uint64_t(2));
   f.Put(Fixture::values+0x100,int64_t(-333));f.Put(Fixture::values+0x108,int64_t(200003));
   auto reverse=f.Decode();
@@ -158,21 +158,17 @@ int main(){
   test([](auto& m){m.current=false;},"retired before copying rejected");
   test([](auto& m){m.states.push_back(m.states[0]);},"duplicate source state rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::last+8,2049);},"recycled full state handle checked");
-  test([](auto& m){m.template Put<uint32_t>(Fixture::lastArea+8,0x1000001);},"recycled full area handle checked");
-  test([](auto& m){m.template Put<uint32_t>(Fixture::firstArea+0x48,999);},"unknown current trade center rejected");
-  test([](auto& m){m.template Put<uint64_t>(Fixture::firstArea,1);},"unknown area type rejected");
-  test([](auto& m){m.template Put<uint32_t>(Fixture::areaDb+0x2c,1);},"area slot bounds checked");
   test([](auto& m){m.template Put<uint64_t>(Fixture::groupLookup+0x10,Fixture::groups+1);},"interior group lookup pointer rejected");
   test([](auto& m){m.template Put<uint64_t>(Fixture::groupLookup+0x10,Fixture::groups+0x48);},"group lookup key/pointer mismatch rejected");
-  test([](auto& m){m.template Put<uint32_t>(Fixture::world+0x810,0);},"missing current group lookup cannot use cached vector alone");
+  test([](auto& m){m.template Put<uint32_t>(Fixture::world+0x7e8,0);},"missing current group lookup cannot use cached vector alone");
   test([](auto& m){m.template Put<uint64_t>(Fixture::straitDb,1);},"unknown strait database rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::straitDb+0x3c,0);},"strait active count mismatch rejected");
   test([](auto& m){m.template Put<uint64_t>(Fixture::definition,1);},"unknown strait definition rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::definition+0x10,UINT32_MAX);},"unavailable strait definition ID rejected");
-  test([](auto& m){m.template Put<uint8_t>(Fixture::strait+0xad,4);},"unknown tariff enum rejected");
+  test([](auto& m){m.template Put<uint8_t>(Fixture::strait+0x12d,4);},"unknown tariff enum rejected");
   test([](auto& m){m.template Put<uint16_t>(Fixture::definition+0x44,UINT16_MAX);},"sea province sentinel rejected");
   test([](auto& m){m.template Put<uint64_t>(Fixture::machine+0x120,0);},"null world rejected");
-  test([](auto& m){m.template Put<uint32_t>(Fixture::world+0x8a0,1);},"group count above capacity rejected");
+  test([](auto& m){m.template Put<uint32_t>(Fixture::world+0x878,1);},"group count above capacity rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::groups+0x14,3);},"member count above capacity rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::members+4,999);},"unknown member rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::members+4,Fixture::lastId);},"one state cannot belong to two groups");
@@ -187,13 +183,13 @@ int main(){
   test([](auto& m){m.template Put<std::array<uint16_t,2>>(Fixture::ranges,{65534,1});},"province set overflow rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::straitList,0);},"stale generation cannot impersonate current strait");
   test([](auto& m){m.template Put<uint32_t>(Fixture::pairs+8,2049);},"full peer handle checked");
-  test([](auto& m){m.template Put<uint64_t>(Fixture::first+0x8c0,0);},"unreadable grouped table rejects complete snapshot");
+  test([](auto& m){m.template Put<uint64_t>(Fixture::first+0x878,0);},"unreadable grouped table rejects complete snapshot");
   test([](auto& m){m.template Put<uint64_t>(Fixture::pairs+0x10,1);},"unknown goods counter type rejected");
   test([](auto& m){m.template Put<uint64_t>(Fixture::pairs+0x38,1);},"goods mask outside catalog rejected");
   test([](auto& m){m.template Put<int64_t>(Fixture::values,-1);},"negative populated trade value rejected");
   test([](auto& m){m.bytes.erase(Fixture::ranges);},"unreadable path rejected");
-  for(auto a:{Fixture::module+0x0592d128,Fixture::groups,Fixture::members,Fixture::paths,Fixture::ranges,Fixture::straitList,
-      Fixture::pairs,Fixture::values,Fixture::strait,Fixture::definition,Fixture::first+0xb48,Fixture::firstArea+0x48,Fixture::groupLookup})
+  for(auto a:{Fixture::module+0x05c07c68,Fixture::groups,Fixture::members,Fixture::paths,Fixture::ranges,Fixture::straitList,
+      Fixture::pairs,Fixture::values,Fixture::strait,Fixture::definition,Fixture::groupLookup})
     test([&](auto& m){m.mutate=a;},"observed mutation in any component rejects whole candidate");
   f.bytes=original;f.current=true;f.mutate=0;f.reads=0;int calls=0;
   Check(!v3::DecodeNativeWorldTrade([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,

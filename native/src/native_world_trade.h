@@ -101,7 +101,7 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
     const std::vector<NativeStateEconomy>& states,uint32_t goodCount,const Current& current,
     const std::function<uint64_t(uint64_t,uint32_t,uint32_t)>& select={},std::string* error=nullptr) {
   auto fail=[&](const char* why)->std::optional<NativeWorldTradeSnapshot>{if(error)*error=why;return {};};
-  if(!current() || !module || module>UINT64_MAX-0x059667f8-8 || states.empty() ||
+  if(!current() || !module || module>UINT64_MAX-0x05c43140 || states.empty() ||
      states.size()>65536 || !goodCount || goodCount>128)return fail("missing current world trade identity");
   EconomyReadWindow window(reader);
   GoodsMemoryReader read=[&](uint64_t a,void* p,size_t n){return window.Read(a,p,n);};
@@ -112,33 +112,15 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
   std::unordered_map<uint32_t,uint64_t> objects;
   for(const auto& state:states){
     const auto object=ReadNativeStateObject(read,module,state.id);
-    if(!object || object>UINT64_MAX-0x8b8 || !objects.emplace(state.id,object).second)return fail("invalid world trade state roster");
+    if(!object || object>UINT64_MAX-0x8c0 || !objects.emplace(state.id,object).second)return fail("invalid world trade state roster");
   }
   NativeWorldTradeSnapshot result;
   result.states=states;
-  uint64_t areaDb=0,areaEntries=0;uint32_t areaSlots=0;
-  if(!field(module,0x05964ea0,areaDb) || !field(areaDb,0x20,areaEntries) ||
-     !field(areaDb,0x2c,areaSlots) || areaSlots>65536)return fail("invalid current trade area database");
-  std::map<uint32_t,uint32_t> areaCenters;
-  for(const auto& state:states){
-    uint32_t areaId=UINT32_MAX,center=UINT32_MAX;
-    if(!field(objects.at(state.id),0xb48,areaId))return fail("unreadable current state trade area");
-    if(areaId!=UINT32_MAX){
-      auto found=areaCenters.find(areaId);
-      if(found==areaCenters.end()){
-        uint64_t area=0,type=0;uint32_t id=UINT32_MAX;
-        if((areaId&0xffffff)>=areaSlots || !field(areaEntries,uint64_t(areaId&0xffffff)*16+8,area) ||
-           !field(area,0,type) || type!=module+0x04430cd8 || !field(area,8,id) || id!=areaId ||
-           !field(area,0x48,center) || (center!=UINT32_MAX && !objects.count(center)))
-          return fail("invalid current trade area or center handle");
-        found=areaCenters.emplace(areaId,center).first;
-      }
-      center=found->second;
-    }
-    result.centers.emplace(state.id,center);
-  }
+  // 1.15.0 replaced the market-area center field with nested vectors. The
+  // trade group anchor is the same representative state the old center pointed
+  // at, so centers are derived from the copied group roster below.
   uint64_t db=0,type=0,entries=0;uint32_t slots=0,active=0;
-  if(!field(module,0x059667f8,db) || !field(db,0,type) || type!=module+0x04439720 ||
+  if(!field(module,0x05c43138,db) || !field(db,0,type) || type!=module+0x0471cc78 ||
      !field(db,0x20,entries) || !field(db,0x2c,slots) || !field(db,0x3c,active) ||
      slots>4096 || active>slots)return fail("invalid current strait database");
   std::vector<uint64_t> straitRoster(size_t(slots)*2);
@@ -146,20 +128,20 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
   std::unordered_set<uint32_t> straitIds;std::unordered_set<uint64_t> seenObjects;
   for(uint32_t slot=0;slot<slots;++slot){
     const uint64_t object=straitRoster[size_t(slot)*2+1];if(!object)continue;
-    std::array<uint8_t,0xb0> row{};std::array<uint8_t,0x4c> definition{};
+    std::array<uint8_t,0x130> row{};std::array<uint8_t,0x4c> definition{};
     if(!seenObjects.insert(object).second || !read(object,row.data(),row.size()) ||
-       u64(row,0)!=module+0x04490548 || u32(row,8)==UINT32_MAX || (u32(row,8)&0xffffff)!=slot ||
-       !read(u64(row,0xa0),definition.data(),definition.size()) || u64(definition,0)!=module+0x044f85a0 || u32(definition,0x10)==UINT32_MAX ||
+       u64(row,0)!=module+0x046c9758 || u32(row,8)==UINT32_MAX || (u32(row,8)&0xffffff)!=slot ||
+       !read(u64(row,0x120),definition.data(),definition.size()) || u64(definition,0)!=module+0x04786528 || u32(definition,0x10)==UINT32_MAX ||
        !u16(definition,0x44) || u16(definition,0x44)==UINT16_MAX || !u16(definition,0x46) ||
-       u16(definition,0x46)==UINT16_MAX || u16(definition,0x44)==u16(definition,0x46) || row[0xac]>3 || row[0xad]>3)
+       u16(definition,0x46)==UINT16_MAX || u16(definition,0x44)==u16(definition,0x46) || row[0x12c]>3 || row[0x12d]>3)
       return fail("invalid current strait type, handle or endpoints");
     straitIds.insert(u32(row,8));
-    result.straits.push_back({u32(row,8),{u16(definition,0x44),u16(definition,0x46)},{row[0xac],row[0xad]},u32(definition,0x10),
-        {row[0xa8],row[0xa9],row[0xaa],row[0xab]},definition[0x4b]});
+    result.straits.push_back({u32(row,8),{u16(definition,0x44),u16(definition,0x46)},{row[0x12c],row[0x12d]},u32(definition,0x10),
+        {row[0x128],row[0x129],row[0x12a],row[0x12b]},definition[0x4b]});
   }
   if(result.straits.size()!=active)return fail("current strait active count mismatch");
   uint64_t root=0,machine=0,world=0;
-  if(!field(module,0x0592d128,root) || !field(root,0x608,machine) || !field(machine,0x120,world) ||
+  if(!field(module,0x05c07c68,root) || !field(root,0x608,machine) || !field(machine,0x120,world) ||
      !world || world>UINT64_MAX-0x8b0)return fail("current world trade source unavailable");
   // Read only live buckets. Native empty maps may use shared sentinel storage;
   // a known zero count does not authorize reading unused bucket pointers.
@@ -177,7 +159,7 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
     return found==count;
   };
   std::array<uint8_t,0x18> groupHeader{};
-  if(!read(world+0x898,groupHeader.data(),groupHeader.size()) || u32(groupHeader,12)>u32(groupHeader,8) ||
+  if(!read(world+0x870,groupHeader.data(),groupHeader.size()) || u32(groupHeader,12)>u32(groupHeader,8) ||
      u32(groupHeader,8)>4096)return fail("invalid world trade group bounds");
   std::vector<std::array<uint8_t,0x48>> groups(u32(groupHeader,12));
   if(!groups.empty() && !read(u64(groupHeader,0),groups.data(),groups.size()*0x48))return fail("unreadable world trade groups");
@@ -196,11 +178,15 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
     // A trade center may represent a group without belonging to its members.
     result.groups.push_back(std::move(group));
   }
-  // Original013C4E70 reaches groups through world+800, not by a member's
-  // nearest port or old representative. Verify the current lookup is exactly
-  // the copied group roster before using owned representative->index lookup.
+  for(const auto& group:result.groups)
+    for(uint32_t member:group.states)result.centers.emplace(member,group.anchor);
+  for(const auto& state:states)result.centers.emplace(state.id,UINT32_MAX);
+  // Original013C4E70 reaches groups through the current lookup table, not by a
+  // member's nearest port or old representative. Verify the current lookup is
+  // exactly the copied group roster before using owned representative->index
+  // lookup.
   std::vector<uint8_t> lookup;uint64_t lookupTable=0;
-  if(!buckets(world+0x800,0x18,lookup,lookupTable))return fail("invalid current trade group lookup");
+  if(!buckets(world+0x7d8,0x18,lookup,lookupTable))return fail("invalid current trade group lookup");
   std::set<uint32_t> indexed;
   for(size_t i=0;i<lookup.size();i+=0x18)if(lookup[i+4]){
     const uint64_t pointer=u64(lookup,i+0x10),begin=u64(groupHeader,0);
@@ -247,7 +233,10 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
       if(count==1)dest.selected=0;
       else if(count && select){
         if(!current())return fail("retired before native path selection");
-        const uint64_t chosen=select(world+0x4e0,result.groups[i].anchor,dest.state),begin=u64(rows,j+0x10);
+        // 1.15.0 original selector takes the live candidate-vector descriptor
+        // plus a derived hash; the adapter receives (descriptor, anchor, state).
+        const uint64_t begin=u64(rows,j+0x10);
+        const uint64_t chosen=select(table+j+0x10,result.groups[i].anchor,dest.state);
         if(chosen<begin || (chosen-begin)%0x38 || (chosen-begin)/0x38>=count)
           return fail("native selector returned a path outside its current alternatives");
         dest.selected=uint32_t((chosen-begin)/0x38);
@@ -257,7 +246,7 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
   }
   for(const auto& state:states)for(unsigned grouped=0;grouped<2;++grouped){
     std::vector<uint8_t> rows;uint64_t table=0;
-    if(!buckets(objects.at(state.id)+(grouped?0x8b8:0x890),0x60,rows,table))return fail("invalid state trade table");
+    if(!buckets(objects.at(state.id)+(grouped?0x870:0x898),0x60,rows,table))return fail("invalid state trade table");
     std::unordered_set<uint32_t> peers;
     for(size_t j=0;j<rows.size();j+=0x60){
       if(!rows[j+4])continue;
@@ -266,7 +255,7 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
         return fail("unknown or duplicate state trade peer");
       const uint64_t data=u64(rows,j+0x18),mask0=u64(rows,j+0x30),mask1=u64(rows,j+0x38);
       const uint32_t cap=u32(rows,j+0x20),count=u32(rows,j+0x24);
-      if(u64(rows,j+0x10)!=module+0x044283b0 || count>cap || cap>128 || (count && count!=goodCount))
+      if(u64(rows,j+0x10)!=module+0x0465cb70 || count>cap || cap>128 || (count && count!=goodCount))
         return fail("invalid state trade goods counter");
       const std::array<uint64_t,2> masks{{mask0,mask1}};
       for(uint32_t good=goodCount;good<128;++good)if(masks[good/64]&(uint64_t(1)<<(good%64)))
