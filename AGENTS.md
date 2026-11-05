@@ -197,7 +197,7 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ### 2026-11-06 — R197：1.15贸易表语义修正与无主州处理
 
-用户报物流显示`--`：worker报`native detailed and grouped exports differ`，随后快照报`native state market unavailable`。实机证据：1.15两张贸易表键集合相同但数值逐项不同，grouped按目的组近似常量，不再是detailed的等值聚合；`BindNativeTradeRoutes`改为结构校验＋逐州detailed绑定，不再要求两表等值。无主州`STATE_TEXAS`（owner=`UINT32_MAX`、无特殊市场区）现从贸易名册跳过而非整份拒绝；其他市场失败仍拒绝。离线实数据：4350绑定（4348有路由）、facts 1550 shapes、model 3759 shipments、builtRail 719.251863 MU。构建exit0、14套原生测试全PASS；候选主体`3ddf32cd…`／49,618,850B，游戏未关闭未部署。下一步用户退出→部署→开页核对。详见STATUS R197。
+用户报物流显示`--`：worker报`native detailed and grouped exports differ`，随后快照报`native state market unavailable`。实机证据：1.15两张贸易表键集合相同但数值逐项不同，grouped按目的组近似常量，不再是detailed的等值聚合；`BindNativeTradeRoutes`改为结构校验＋逐州detailed绑定，不再要求两表等值。无主州`STATE_TEXAS`（owner=`UINT32_MAX`、无特殊市场区）现从贸易名册跳过而非整份拒绝；其他市场失败仍拒绝。离线实数据：4350绑定（4348有路由）、facts 1550 shapes、model 3759 shipments、builtRail 719.251863 MU。构建exit0、14套原生测试全PASS；主体`3ddf32cd…`／49,618,850B已部署（安装＝dist）。用户开页实测：owner selected→`publish document=1`→`freight view gen=2 world=1 rev=4 ribbons=196 compute=98.813ms`→`DRAW PERF visible=196 dropped=0`，`--`修复实机通过；该批次peak_frame_us=2255超2ms软预算1帧，不作性能验收。详见STATUS R197。
 
 ### 2026-11-05 — R196：1.15数据管线全链实机通过
 

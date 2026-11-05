@@ -6,7 +6,9 @@
 - 贸易表：1.15 detailed(0x898)与grouped(0x870)键集合完全相同（4350对全部一致），但数值逐项不同（same=0／differ=5729）；grouped在目的组内近似常量（3451/3478组单一值）、detailed按州（780组混合值），说明grouped不再是与detailed等值的聚合表。`BindNativeTradeRoutes`不再用detailed==grouped作等值校验，改为结构校验＋逐州detailed绑定＋组代表路由；注释记录该实机证据。
 - 无主州：用户局中`STATE_TEXAS`（运行id93）owner=`UINT32_MAX`且无特殊市场区，`DecodeNativeStateMarket`无结果；`DecodeNativeTradeStates`现仅在该明确情形跳过该州（不伪造市场），其他市场失败仍整份拒绝。新增native_economy_tests用例：跳过无主州、特殊区不可读仍拒绝、无效owner仍拒绝。
 - 离线实数据验证（同一运行游戏，PROCESS_VM_READ）：roster 1157／skip1；trade 67组／9海峡／4350对；bindings 4350（withGroup4350／withRoute4348）；facts shapes1550／shapedBindings4348；domestic 27108订单／419陆路／810州内／32铁路／371港口接入／411枢纽／96航线；model shipments=3759（海1535／陆2224）、builtRail=719.251863 MU、target／allocated／unmet=144803.446／34307.144／110496.302。不是DLL worker帧或绘图验收。
-- 构建exit0，14套原生测试全PASS（含更新后的native_trade_routes_tests与native_economy_tests）。新候选dist主体`3ddf32cd03ae366a3c0701b8305fb34665bb59a25388cb4f94545aa7f8d95233`／49,618,850B，引导`c8020412…`／779,879B。游戏仍在用户手中（未关闭），未强替DLL、未部署。下一步：用户保存退出→原子替换部署→重开最小化→打开物流页核对owner selected／worker帧／ribbon。
+- 构建exit0，14套原生测试全PASS（含更新后的native_trade_routes_tests与native_economy_tests）。新主体`3ddf32cd03ae366a3c0701b8305fb34665bb59a25388cb4f94545aa7f8d95233`／49,618,850B，引导`c8020412…`／779,879B。用户保存退出后，在无游戏进程状态下原子替换部署，安装＝dist；以`-continuelastsave`重新最小化启动，loader识别1.15.0、hooks安装。
+- **实机开页验收通过**（同一新构建pid35212）：快照复制states=1157（无主州已跳过）／goods=54；用户打开市场面板物流页后`native market owner selected panel=0 tab=ironroad_logistics`，session gen=2 ready=1 err=，`publish document=1`，`freight view gen=2 world=1 rev=4 ribbons=196 compute=98.813 ms synthetic=0`，`SUBMIT … submitted=14 uploads=14`，`DRAW PERF paths=196 … visible=196 dropped=0 native_slots=196 peak_frame_us=2255 overrun_frames=1`，session tick owner=10 frame=1 ribbons=196 err=；随后用户关闭面板（owner closed）。这证明1.15下开态面板解码（market／tab／visibleGoods／history kind=9）、无主州跳过后的快照、贸易绑定、国内模型、worker出帧与196条ribbon提交均实际工作，`--`不再出现。
+- 边界：本批次`peak_frame_us=2255`超过2ms软预算1帧，compute=98.8ms为worker计算时间，不构成性能验收；未做开态商品行逐项值核对（owner激活已要求visibleGoods可用）与完整GUI手动矩阵；三处海路末端、权限、改图、生命周期等原有未完成项不变。
 
 ### 2026-11-05 — R196：1.15数据管线全链实机通过；正式面板唯余开页验收
 
