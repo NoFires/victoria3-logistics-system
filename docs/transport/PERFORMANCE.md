@@ -1,5 +1,11 @@
 # 性能预算与测量
 
+### 2026-11-06 — R201：1.15稳定视图缓存与20轮重开（非三对协议）
+
+当前主体`64913eea…`／49,737,579B、引导`c8020412…`，1.15.0实机暂停1836-01-13、市场物流页。稳定65秒内`SUBMIT … uploads=346`不变且无新`DRAW PERF`批次（零新增几何上传）。20轮关闭→重开市场→物流页逐轮记录：`paths=185 uploads=0 reused=185 failed=0 pool=346 cpu_us=0 repeats_skipped=1…20 state=complete`，即全部命中缓存、池恒346（≤8192）、每帧上传0（≤16）；22个完成批次`peak_attempts=16`、`peak_frame_us=685`、`overrun_frames=0`。20轮内存采样RSS 8,155,156,480–8,156,925,952B（Δ1.9MB），private 15,801,597,952–15,888,187,392B，末6轮波动无单调增长、末4轮完全相同。该结果只覆盖缓存／压力门槛；未启用`IRONROAD_FRAME_TIMING`、未控速度3、无模拟速度对照，不替代三对P95≤+2ms／模拟≤−5%验收。
+
+同一构建修复了1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），菜单→载入world2后`native pool recovered world=2 slots=185`、`freight view gen=7 world=2 ribbons=185`、`DRAW PERF uploads=0 reused=185 visible=185 dropped=0`；缩放1920×1080往返无池退休。证据checkpoint2026-11-06-r201-lifecycle-graphics。
+
 ### 2026-10-29 — R135完成：当前同核三对性能与20轮颜色组合缓存验收
 
 主体仍9afd299ab0f0aba088e9f6db68147319fbdeabd4fae74fdfaed453e31f451a69／47581219B，引导71dae36d…／779879B；源码／资源／dist／安装未变，复用R134完整55 PASS。无新增构建／部署／原生ABI／hook；当前实际54780双模块核对，timing-audit.json证据及指定性能门槛PASS。

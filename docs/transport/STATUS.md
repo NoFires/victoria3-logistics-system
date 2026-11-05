@@ -1,5 +1,13 @@
 # 当前状态
 
+### 2026-11-06 — R201：稳定视图缓存门槛与1.15重载池恢复修复（缩放往返通过）
+
+- 缓存／压力：市场物流页保持打开65秒，`SUBMIT … uploads=346`持续不变、无新`DRAW PERF`批次，即稳定视图零新增几何上传。随后20轮关闭→重开市场→物流页，逐轮`DRAW PERF paths=185 uploads=0 reused=185 failed=0 pool=346 … repeats_skipped=1…20 state=complete gen=6…44`：20轮零上传、池恒346（≤8192）、每帧上传0（≤16）、`peak_attempts=16`、`peak_frame_us=685`（软2 ms预算内）、`overrun_frames=0`。内存采样20轮：RSS 8,155,156,480–8,156,925,952B（Δ1.9MB），private 15,801,597,952–15,888,187,392B，末6轮在15.86–15.89GB间波动无单调增长，末4轮完全相同→平台。
+- 生命周期实测发现真实1.15缺陷：`overlay.cpp`仍从1.13地址`0x0592d5c8`读图形身份，1.15该地址实读为无效值`0x404048404c302440`；而`arrow_lease.h`校验器按1.15读`0x05c080b8`（实机`0x57a50a50000`）。首轮“菜单→载入autosave_exit”重载后，池恢复被误判`native graphics identity changed`，物流页显示`IRONROAD_MAP_RETIRED`且无箭头（世界2模型帧185条仍生成）。修三处读取为`0x05c080b8`后重建`64913eeaadccdbc4dff3ceee484e76b6710f0fe171f68e9ae9e6d46cf70f27d5`／49,737,579B（引导仍`c8020412…`），官方等价原生入口再次35/35、零FAIL；游戏关闭时原子部署，安装＝dist。
+- 修复后实机重载：世界1→菜单→载入world2，`native world retirement event next world=2`、快照world2 rev5/rev7、UI handoff accepted；打开物流页时`native pool recovered world=2 slots=185; old requests cleared`、`freight view gen=7 world=2 rev=7 ribbons=185 compute=91.031 ms`、`DRAW PERF paths=185 uploads=0 reused=185 failed=0 pool=185 visible=185 dropped=0`，页面显示13982.47687／510.99MU且无未就绪横幅、箭头可见。无需重启游戏即恢复正式视图。
+- 缩放：视图开启状态下客户区2560×1440→1920×1080→2560×1440，无池退休、无旧帧残留，数值与185条箭头保持（截图resize-1920x1080／resize-restored）。最小化→恢复由本轮启动/恢复重复覆盖。
+- 边界：本轮不是性能三对验收（未启用IRONROAD_FRAME_TIMING、未控速3、未测模拟速度）；设备重建未做；三处海路末端／海峡权限／改图及最终同构建A01–A27仍未完成。证据：checkpoint2026-11-06-r201-lifecycle-graphics（before overlay.cpp、source-change.diff、cycles.json、draw-perf-cycles.log、build/tests日志、重载与缩放截图）。
+
 ### 2026-11-06 — R200：1.15港口接入解码器迁移，阶段1官方等价入口35/35
 
 - 上一轮唯一失败的`native_port_approach_tests`是R193诊断解码器的1.13夹具。本轮把`native_port_approach.h`整体迁移到1.15：州地区`state+0xF10`（vtable`0x046ba948`，id+0x10／geo+0x40／valid+0x44）、市场经`DecodeNativeStateMarket`、world链`0x05c07c68→+0x608 machine→+0x120 world`、manager=`world+0x5028`（vtable`0x046b1d48`）、省份运行表`machine+0xB0`（vtable`0x046ac1c0`，州int32+0x18）、省份模板注册表`0x5bd7308`（数据+0x2A0／计数+0x2AC，vtable`0x046ab568`，地区+0xC8）、海军连接表`manager+0x58`（行0x40，定义kind+4=5，样条key+0x20类型3，节点定义flags+4／anchor+8／province+0xC／linked+0xE）。陆侧节点由linked省份解析到运行州判定，海侧物理省份取另一节点province；只有物理海区与所选州地区不同才产生查询。重复id、两侧州歧义、错误kind／样条类型、依赖不可读、复制中变化与退休均拒绝。

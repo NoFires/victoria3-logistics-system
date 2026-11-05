@@ -1819,7 +1819,10 @@ bool Overlay::UploadRibbon(size_t index, const RibbonGeometry& geometry) {
   if (m_nativePoolDeviceChanged || !m_device || FAILED(m_device->GetDeviceRemovedReason())) return false;
   if (!m_nativePoolDevice) {
     SIZE_T copied=0;
-    if (!ReadProcessMemory(GetCurrentProcess(),game.Base()+0x0592d5c8,&m_nativePoolGraphics,
+    // 1.15.0: the live graphics identity global moved to 0x05c080b8 (the same
+    // address ValidateNativeArrowLeases checks); 1.13's 0x0592d5c8 now holds
+    // unrelated data, so reading it made every reload look like a device change.
+    if (!ReadProcessMemory(GetCurrentProcess(),game.Base()+0x05c080b8,&m_nativePoolGraphics,
                            sizeof(m_nativePoolGraphics),&copied) ||
         copied!=sizeof(m_nativePoolGraphics) || !m_nativePoolGraphics) return false;
     m_nativePoolDevice=m_device;
@@ -1885,7 +1888,7 @@ bool Overlay::RecoverNativeWorld() {
         ReadProcessMemory(GetCurrentProcess(),(const void*)address,out,bytes,&copied) && copied==bytes;
   };
   if (m_slots.empty()) {
-    if (!reader((uint64_t)Game::Instance().Base()+0x0592d5c8,&m_nativePoolGraphics,8)) return false;
+    if (!reader((uint64_t)Game::Instance().Base()+0x05c080b8,&m_nativePoolGraphics,8)) return false;
     m_nativePoolDevice=m_device;
   }
   std::vector<NativeArrowLease> leases;
@@ -1944,7 +1947,7 @@ void Overlay::OnRenderPass(void* ctx) {
   if (!game.IsArrowSubmissionPass(ctx)) return;
   uint64_t graphics=0;SIZE_T graphicsBytes=0;
   const bool graphicsCurrent=!m_nativePoolDevice ||
-      (ReadProcessMemory(GetCurrentProcess(),game.Base()+0x0592d5c8,&graphics,sizeof(graphics),&graphicsBytes) &&
+      (ReadProcessMemory(GetCurrentProcess(),game.Base()+0x05c080b8,&graphics,sizeof(graphics),&graphicsBytes) &&
        graphicsBytes==sizeof(graphics) && graphics==m_nativePoolGraphics);
   // Cached geometry also needs this check when the world itself did not change.
   // A new/lost device must never receive old native buffers through cache hits.

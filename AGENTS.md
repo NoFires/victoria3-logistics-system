@@ -115,7 +115,7 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 ## 5. 当前状态与恢复入口
 
-截至R200：1.15.0适配继续。1.15港口接入解码器迁移完成，官方等价原生入口从仓库根运行35/35 PASS、零FAIL；`verify_embedded`／GUI结构（4项）／flow GPU（含负对照）／引导隔离测试全PASS。新构建主体`86cdaada…`／49,737,579B、引导`c8020412…`／779,879B，游戏关闭时原子部署，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。最小化实机pid39776识别1.15.0、快照states=1157 goods=54；州本地价格页（state=434 owner15 gen2 ribbons161）与市场物流页（owner10 gen4 ribbons185、贸易量13982.47687、铁路510.99MU）均为真实数值，日期保持暂停未存档。港口接入仍是默认关闭诊断；三处海路末端／海峡权限／改图、性能3×60秒、生命周期及最终同构建A01–A27未做，详见STATUS R200。
+截至R201：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_attempts=16`、`peak_frame_us=685`、`overrun_frames=0`，20轮内存趋于平台。生命周期实测修复1.15图形身份偏移：`overlay.cpp`由1.13`0x0592d5c8`（实读无效值）改为1.15`0x05c080b8`，重载world2后`native pool recovered world=2 slots=185`、`freight view gen=7 world=2 ribbons=185`且页面真实数值与箭头恢复；缩放2560×1440→1920×1080→2560×1440无池退休、无旧帧。当前主体`64913eea…`／49,737,579B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。性能三对（IRONROAD_FRAME_TIMING、控速3、模拟速度）与设备重建、三处海路末端／海峡权限／改图、最终同构建A01–A27未做，详见STATUS R201。
 
 截至2026-11-05：按用户要求在保存退出后经deploy.ps1卸载引导和主体；配置、日志、缓存及可编辑资源逐项哈希保持，卸载备份已留。游戏更新后的ABI未验证，目标保持暂停，R194未完成源码保留且未部署。当前实际安装已卸载，dist仍保留，详见STATUS。
 
@@ -194,6 +194,12 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 **最新操作授权（2026-10-25）**：用户明确“我现在不在电脑旁边，请你自主验证”，允许自主启动及操作测试，覆盖此前手动操控限制；保留不强制结束可能有未保存进度会话的部署约束。
 
 ## 6. 进度日志（简要记录，最新在上）
+
+### 2026-11-06 — R201：稳定视图缓存门槛与1.15重载池恢复修复
+
+- 稳定视图65秒`uploads=346`不变、无新DRAW PERF批次（零新增上传）。20轮关/开市场物流页逐轮`paths=185 uploads=0 reused=185 pool=346 repeats_skipped=1…20`，池≤8192、每帧上传0、`peak_attempts=16`、`peak_frame_us=685`、`overrun_frames=0`；RSSΔ1.9MB、private末6轮波动无单调增长，末4轮相同（平台）。
+- 发现并修复1.15生命周期缺陷：`overlay.cpp`三处图形身份读取仍是1.13`0x0592d5c8`（实读无效值`0x404048404c302440`），与校验器1.15`0x05c080b8`（`0x57a50a50000`）不一致，导致菜单→载入world2后误报`native graphics identity changed`、物流页显示未就绪且无箭头。改为`0x05c080b8`后重建`64913eea…`／49,737,579B（引导`c8020412…`），统一35/35，原子部署安装＝dist。
+- 修复后重载world2：`native pool recovered world=2 slots=185; old requests cleared`、`freight view gen=7 world=2 ribbons=185 compute=91.031 ms`、`DRAW PERF uploads=0 reused=185 pool=185 visible=185 dropped=0`，页面13982.47687／510.99MU、箭头可见；缩放2560×1440→1920×1080→2560×1440无池退休、无旧帧。未做性能三对/控速、设备重建、三末端/权限/改图及A01–A27。证据checkpoint2026-11-06-r201-lifecycle-graphics。
 
 ### 2026-11-06 — R200：1.15港口接入解码器迁移，官方等价入口35/35
 
