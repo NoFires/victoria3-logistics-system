@@ -1,5 +1,10 @@
 # 当前状态
 
+### 2026-11-06 — R208：1.15 ZIP Mod身份实机
+
+- 将R202的州id夹具（STATE_BEKES 164→901）打成ZIP（含descriptor、`.metadata`、`map_data/state_regions/02_east_europe.txt`，3,712B），置于用户mod目录并以content_load绝对路径启用。实机pid35748：`state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`——ZIP Mod经1.15 VFS加载且运行时绑定同一geo身份；快照states=1157 goods=54；市场物流页`owner selected`、`freight view gen=2 ribbons=187 compute=87.348 ms`、`DRAW PERF paths=187 uploads=187 visible=187 dropped=0`。测试后content_load恢复原字节、ZIP删除。
+- 边界：本轮为无replace_path的ZIP覆盖；replace_path、省份归属交换与增删省份矩阵仍未在1.15验证。证据：checkpoint2026-11-06-r207-partial-sea-ids（ironroad_map_test.zip、r208_zip_test.json、zip-test.log、page截图沿用）。
+
 ### 2026-11-06 — R207：1.15海路缺港口端点回退，unavailableSea 35→2
 
 - 新增有界诊断（`NativeDomesticModel`记录缺几何航线的id/端点/原因，worker分配日志输出`partialSeaIds`／`unavailableSeaIds`）。实机判明35条`unavailableSea`全部为`native route endpoints are not distinct current port anchors`：均为HOME_COUNTIES（州5）→35个目的州，目的州在当前旅行网络中没有type-5港口接续；4条partial为只在单侧缺港口的岛屿航线（OKHOTSK→SAKHALIN×2、GUANGDONG→FORMOSA、MIRANDA→WEST_INDIES）。

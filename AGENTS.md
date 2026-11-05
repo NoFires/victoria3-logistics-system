@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R208：1.15 ZIP Mod身份实机
+
+州id夹具打成ZIP（descriptor＋.metadata＋state_regions文件，3,712B），content_load绝对路径启用；实机`state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`，快照states=1157 goods=54，市场物流页`freight view gen=2 ribbons=187`、`DRAW PERF uploads=187 visible=187 dropped=0`；content_load恢复原字节、ZIP删除。replace_path／省份交换未做。证据checkpoint2026-11-06-r207-partial-sea-ids（zip-test.log、ironroad_map_test.zip）。
+
 ### 2026-11-06 — R207：1.15海路缺港口端点回退
 
 诊断日志判明35条unavailableSea全为`native route endpoints are not distinct current port anchors`（州5 HOME_COUNTIES→无港口接续的35目的州）；partial为单侧缺港口的岛屿航线。修复：seaOnly航线一端锚点不在所选海段链上时，用该链自身原版末端控制点替代并标记partial；不造岸点、图端点同源。实机`unavailableSea 35→2`、`partialSea 4→37`、`DRAW PERF paths 185→187`，页面数值不变；完整入口35/35及四个相关套件PASS。剩余2条unavailable（925→590、611→608）与37条partial的未知港口端保留；三末端像素复看待做。同构建`4e0ed054…`三对性能复跑：P95 +0.570／+0.446／+0.556 ms（≤2）、模拟最大降0.21%（≤5%）、窗口61.7–62.6秒，A25同构建立项通过。构建`4e0ed054…`／50,015,990B已部署安装＝dist。证据checkpoint2026-11-06-r207-partial-sea-ids。
