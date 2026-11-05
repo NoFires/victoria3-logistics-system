@@ -5,7 +5,8 @@
 - 新增有界诊断（`NativeDomesticModel`记录缺几何航线的id/端点/原因，worker分配日志输出`partialSeaIds`／`unavailableSeaIds`）。实机判明35条`unavailableSea`全部为`native route endpoints are not distinct current port anchors`：均为HOME_COUNTIES（州5）→35个目的州，目的州在当前旅行网络中没有type-5港口接续；4条partial为只在单侧缺港口的岛屿航线（OKHOTSK→SAKHALIN×2、GUANGDONG→FORMOSA、MIRANDA→WEST_INDIES）。
 - 根因：R199的seaOnly把端点固定为“当前港口接续的海锚或geo推导海锚”；当目的州无接续时，geo海锚不一定是所选原版海段链的控制点，整条航线被判unavailable（改动前R199早期构建同类航线为partial）。修复：仅对seaOnly航线，当一端锚点不在所选海段链上时，用该链自身最后一个原版控制点作为该端（与R199前partial语义一致），标记`complete=false`；不造岸点、图端点使用同一解析锚点。35条航线恢复原版海段几何（partial）。
 - 实机（构建`4e0ed054…`／50,015,990B，引导`c8020412…`）：`unavailableSea 35→2`、`partialSea 4→37`，`DRAW PERF paths=187`（原185），页面13982.47687／510.99MU不变；剩余2条unavailable为`925→590`与`611→608`（链端点不唯一，保持未知）。完整官方等价原生入口35/35 PASS，trade_geometry／domestic／trade_view／engine套件均PASS。
-- 边界：37条partial航线的一端仍无见证港口（数量保留、几何标注未知，不冒充完整）；2条unavailable保留；三处海路末端的像素级复看未做；性能三对证据来自上一构建`64913eea…`（本次仅改模型几何/诊断，渲染路径未变），最终同构建复跑仍待。证据：checkpoint2026-11-06-r207-partial-sea-ids（allocation-after-fallback.txt、source-change.diff、page-after-fallback.png）。
+- 同一构建`4e0ed054…`三对性能复跑（同存档／相机／速度III、`IRONROAD_FRAME_TIMING=1`）：关闭→打开P95为17.642→18.212、17.732→18.178、17.659→18.215 ms，增加0.570／0.446／0.556 ms均≤2；模拟速度11.797→11.773、11.791→11.821、11.803→11.821 date单位/秒，最大降幅0.21%≤5%；窗口61.7–62.6秒、帧流连续且身份一致。A25最终同构建立项通过。
+- 边界：37条partial航线的一端仍无见证港口（数量保留、几何标注未知，不冒充完整）；2条unavailable保留；三处海路末端的像素级复看未做。证据：checkpoint2026-11-06-r207-partial-sea-ids（allocation-after-fallback.txt、source-change.diff、page-after-fallback.png、r207_perf_arms.json、perf-analysis-r207.log）。
 
 ### 2026-11-06 — R206：1.15单商品／原生绿模式与原版商品详情实机
 

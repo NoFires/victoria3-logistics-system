@@ -115,7 +115,7 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 ## 5. 当前状态与恢复入口
 
-截至R207：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_frame_us=685`、`overrun_frames=0`；三对性能P95增加0.281／0.407／0.405 ms（≤2）、模拟速度最大降幅0.61%（≤5%）；生命周期修复1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），重载world2池恢复、缩放往返无旧帧。部署矩阵：主体缺失126／损坏193／整套卸载无loader／重装0，游戏均存活且安装＝dist、存档与content_load字节保持。改图身份：州geo 164→901与同key样条点X+10均被运行时绑定，正式物流页重建。海路端点：seaOnly缺港口端回退到原版海段链末端，`unavailableSea 35→2`、`partialSea 4→37`、paths 185→187，页面数值不变；剩余2条unavailable（925→590、611→608）与37条partial的未知端口端保留。当前主体`4e0ed054…`／50,015,990B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。省份交换／ZIP、设备重建、三处海路末端像素复看、最终同构建性能复跑与A01–A27未做，详见STATUS R207。
+截至R207：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_frame_us=685`、`overrun_frames=0`；生命周期修复1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），重载world2池恢复、缩放往返无旧帧。部署矩阵：主体缺失126／损坏193／整套卸载无loader／重装0，游戏均存活且安装＝dist、存档与content_load字节保持。改图身份：州geo 164→901与同key样条点X+10均被运行时绑定，正式物流页重建。海路端点：seaOnly缺港口端回退到原版海段链末端，`unavailableSea 35→2`、`partialSea 4→37`、paths 185→187，页面数值不变；剩余2条unavailable（925→590、611→608）与37条partial的未知端口端保留。当前构建同构建三对性能：P95增加0.570／0.446／0.556 ms（≤2），模拟速度最大降幅0.21%（≤5%），窗口61.7–62.6秒。当前主体`4e0ed054…`／50,015,990B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。省份交换／ZIP、设备重建、三处海路末端像素复看与A01–A27未做，详见STATUS R207。
 
 截至2026-11-05：按用户要求在保存退出后经deploy.ps1卸载引导和主体；配置、日志、缓存及可编辑资源逐项哈希保持，卸载备份已留。游戏更新后的ABI未验证，目标保持暂停，R194未完成源码保留且未部署。当前实际安装已卸载，dist仍保留，详见STATUS。
 
@@ -197,7 +197,7 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ### 2026-11-06 — R207：1.15海路缺港口端点回退
 
-诊断日志判明35条unavailableSea全为`native route endpoints are not distinct current port anchors`（州5 HOME_COUNTIES→无港口接续的35目的州）；partial为单侧缺港口的岛屿航线。修复：seaOnly航线一端锚点不在所选海段链上时，用该链自身原版末端控制点替代并标记partial；不造岸点、图端点同源。实机`unavailableSea 35→2`、`partialSea 4→37`、`DRAW PERF paths 185→187`，页面数值不变；完整入口35/35及四个相关套件PASS。剩余2条unavailable（925→590、611→608）与37条partial的未知港口端保留；三末端像素复看与最终同构建性能复跑待做。构建`4e0ed054…`／50,015,990B已部署安装＝dist。证据checkpoint2026-11-06-r207-partial-sea-ids。
+诊断日志判明35条unavailableSea全为`native route endpoints are not distinct current port anchors`（州5 HOME_COUNTIES→无港口接续的35目的州）；partial为单侧缺港口的岛屿航线。修复：seaOnly航线一端锚点不在所选海段链上时，用该链自身原版末端控制点替代并标记partial；不造岸点、图端点同源。实机`unavailableSea 35→2`、`partialSea 4→37`、`DRAW PERF paths 185→187`，页面数值不变；完整入口35/35及四个相关套件PASS。剩余2条unavailable（925→590、611→608）与37条partial的未知港口端保留；三末端像素复看待做。同构建`4e0ed054…`三对性能复跑：P95 +0.570／+0.446／+0.556 ms（≤2）、模拟最大降0.21%（≤5%）、窗口61.7–62.6秒，A25同构建立项通过。构建`4e0ed054…`／50,015,990B已部署安装＝dist。证据checkpoint2026-11-06-r207-partial-sea-ids。
 
 ### 2026-11-06 — R206：1.15单商品／原生绿模式与原版商品详情实机
 

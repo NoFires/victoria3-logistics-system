@@ -8,6 +8,8 @@
 
 同一构建修复了1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），菜单→载入world2后`native pool recovered world=2 slots=185`、`freight view gen=7 world=2 ribbons=185`、`DRAW PERF uploads=0 reused=185 visible=185 dropped=0`；缩放1920×1080往返无池退休。证据checkpoint2026-11-06-r201-lifecycle-graphics（PERF-ARMS.md、perf-analysis.log、r201_perf_arms.json）。该三对只覆盖本存档／相机／速度III；不外推到其他速度或全部设备。
 
+同一构建`4e0ed054…`（海路缺港口端点回退后）再次执行三对同协议：关闭→打开P95为17.642→18.212、17.732→18.178、17.659→18.215 ms，增加0.570／0.446／0.556 ms均≤2；模拟速度11.797→11.773、11.791→11.821、11.803→11.821 date单位/秒，最大降幅0.21%≤5%；窗口61.7–62.6秒、帧流连续且身份一致。A25最终同构建立项通过。证据checkpoint2026-11-06-r207-partial-sea-ids（r207_perf_arms.json、perf-analysis-r207.log）。
+
 ### 2026-10-29 — R135完成：当前同核三对性能与20轮颜色组合缓存验收
 
 主体仍9afd299ab0f0aba088e9f6db68147319fbdeabd4fae74fdfaed453e31f451a69／47581219B，引导71dae36d…／779879B；源码／资源／dist／安装未变，复用R134完整55 PASS。无新增构建／部署／原生ABI／hook；当前实际54780双模块核对，timing-audit.json证据及指定性能门槛PASS。
