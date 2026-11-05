@@ -1,6 +1,12 @@
 # 当前状态
 
-### 2026-11-06 — R209：1.15省份归属与replace_path测试（均未取得干净结论）
+### 2026-11-06 — R210：省份归属绑定通过，撤回R209的UPPER_SILESIA结论
+
+- R209的省份探针把“省份模板索引”当作“运行省份表索引”读取+0x18州指针，得到错误的STATE_UPPER_SILESIA。修正：省份模板对象的颜色在+0xC4，其权威归属是+0xC8的区域指针（vtable 0x046ba948，id+0x10/geo+0x40）。基线实机pid32876：`x0087C9`→`colorRegion id=139 geo=154`（STATE_MAZOVIA）；改图ZIP（该省移入LOWER_SILESIA）pid48100：同一省份`colorRegion id=140 geo=155`（STATE_LOWER_SILESIA，definition=140/geo=155），模板索引由23162变为19995，因此运行省份表按模板索引读取必然错位。
+- 改图会话快照states=1157 goods=54，市场物流页`freight view gen=2 ribbons=187`、`DRAW PERF uploads=187 visible=187 dropped=0`；content_load恢复原字节、ZIP删除。省份归属交换（一个省在MAZOVIA与LOWER_SILESIA之间移动）在1.15实机正确绑定。
+- 边界：单省、两州、单次移动；增删省份、拆并省、其他地图与存档迁移仍未测；replace_path仍未独立证明（R209结论保留）。证据：checkpoint2026-11-06-r207-partial-sea-ids（province-baseline-32876.txt、r210_province_test.json、province-test-run2.log、live_province_color_probe.cpp、ironroad_province.zip）。
+
+### 2026-11-06 — R209：1.15省份归属与replace_path测试（replace_path未证明；省份结论已被R210更正）
 
 - 省份颜色探针：新增只读探针按省份模板对象+0xC4颜色值映射运行省份；基准实机`xE165F5`→STATE_MAZOVIA、`x0087C9`→STATE_MAZOVIA（state 1084），映射可用于基线。
 - 省份归属：ZIP夹具把`x0087C9`从STATE_MAZOVIA的provinces列表移入STATE_LOWER_SILESIA（文件其余内容相同），content_load启用后游戏加载、快照states=1157、物流页`ribbons=187`正常；但探针读到该省属于state 1051 `STATE_UPPER_SILESIA`（geo 924），既非改前的MAZOVIA也非夹具的LOWER_SILESIA。该结果说明模板索引→运行省份表索引的映射或引擎实际归属规则仍需专门核对，**不作为省份归属绑定通过**；测试后content_load恢复原字节、ZIP删除。

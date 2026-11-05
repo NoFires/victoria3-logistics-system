@@ -115,7 +115,7 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 ## 5. 当前状态与恢复入口
 
-截至R207：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_frame_us=685`、`overrun_frames=0`；生命周期修复1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），重载world2池恢复、缩放往返无旧帧。部署矩阵：主体缺失126／损坏193／整套卸载无loader／重装0，游戏均存活且安装＝dist、存档与content_load字节保持。改图身份：州geo 164→901与同key样条点X+10均被运行时绑定，正式物流页重建。海路端点：seaOnly缺港口端回退到原版海段链末端，`unavailableSea 35→2`、`partialSea 4→37`、paths 185→187，页面数值不变；剩余2条unavailable（925→590、611→608）与37条partial的未知端口端保留。当前构建同构建三对性能：P95增加0.570／0.446／0.556 ms（≤2），模拟速度最大降幅0.21%（≤5%），窗口61.7–62.6秒。当前主体`4e0ed054…`／50,015,990B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。省份交换／ZIP、设备重建、三处海路末端像素复看与A01–A27未做，详见STATUS R207。
+截至R207：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_frame_us=685`、`overrun_frames=0`；生命周期修复1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），重载world2池恢复、缩放往返无旧帧。部署矩阵：主体缺失126／损坏193／整套卸载无loader／重装0，游戏均存活且安装＝dist、存档与content_load字节保持。改图身份：州geo 164→901与同key样条点X+10均被运行时绑定，正式物流页重建。海路端点：seaOnly缺港口端回退到原版海段链末端，`unavailableSea 35→2`、`partialSea 4→37`、paths 185→187，页面数值不变；剩余2条unavailable（925→590、611→608）与37条partial的未知端口端保留。当前构建同构建三对性能：P95增加0.570／0.446／0.556 ms（≤2），模拟速度最大降幅0.21%（≤5%），窗口61.7–62.6秒。当前主体`4e0ed054…`／50,015,990B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。改图矩阵：州geo→901、同key样条点+10、ZIP、省份归属（模板+0xC8 id/geo 139/154→140/155）均通过；replace_path、设备重建、三处海路末端像素复看与A01–A27未完成，详见STATUS R207–R210。
 
 截至2026-11-05：按用户要求在保存退出后经deploy.ps1卸载引导和主体；配置、日志、缓存及可编辑资源逐项哈希保持，卸载备份已留。游戏更新后的ABI未验证，目标保持暂停，R194未完成源码保留且未部署。当前实际安装已卸载，dist仍保留，详见STATUS。
 
@@ -195,7 +195,11 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
-### 2026-11-06 — R209：省份归属与replace_path测试（未取得干净结论）
+### 2026-11-06 — R210：省份归属绑定通过
+
+R209把模板索引误当运行省份表索引；修正为读取省份模板+0xC8区域指针（颜色在+0xC4）。基线`x0087C9`→region id=139/geo=154（MAZOVIA），改图后→id=140/geo=155（LOWER_SILESIA）；模板索引23162→19995。改图会话快照1157州、物流页187条、content_load恢复。R209的UPPER_SILESIA结论撤回；replace_path仍未独立证明。证据checkpoint2026-11-06-r207-partial-sea-ids。
+
+### 2026-11-06 — R209：省份归属与replace_path测试（replace_path未证明；省份结论已被R210更正）
 
 省份颜色探针基线`xE165F5`/`x0087C9`→STATE_MAZOVIA；把`x0087C9`移入LOWER_SILESIA的ZIP加载后探针却读到STATE_UPPER_SILESIA（state 1051），模板索引→运行省份表映射或引擎归属规则需专门核对，不作通过。含全部state文件与replace_paths的ZIP加载后州id生效，但1.15 VFS探针报窗口TLS context不可用，替换规则未独立证明。content_load均恢复。证据checkpoint2026-11-06-r207-partial-sea-ids。
 
