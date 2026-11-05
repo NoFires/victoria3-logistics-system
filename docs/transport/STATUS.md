@@ -6,8 +6,8 @@
 - 根因：1.15 port access样条（type3）连接海锚与港口陆侧节点，而该陆侧节点没有任何陆路连接；1.13的keyless port path曾把海锚直接连到主枢纽。迁移时图端点做了掩码归一化但几何未同步，且lane几何重复包含港口样条。
 - 修复：`native_trade_geometry.h`新增seaOnly与startAnchor/endAnchor：模型lane用纯海段几何，图端点取几何实际链端点；`native_domestic_model.h`港口边改为合成bit63路径＝原版港口样条控制点＋（掩码匹配时）主枢纽见证点连接，路径/图端点/长度一致；无port transfer的旧式数据回退原选择器；同海区零距离lane用两条港口样条成链。
 - 实数据复核：水果货流全部相邻边坐标连续（breaks=0）。Bahamas→中英格兰：海段终点(4053.762,2759.913)→港口合成路径到枢纽(4091.022,2801.467)→陆路→…；Jamaica侧港口边同样连续。该连接点是模型假设（港口点到州枢纽的直线连接），两端均为当前见证点。
-- 构建exit0，本地16套测试全PASS。官方等价入口（按`build_tests.ps1`生成的bash版，35项）从仓库根运行时仅剩2项RUNFAIL：native_port_approach_tests（1.13夹具`invalid selected port state`，R193诊断解码器未迁1.15）与native_trade_view_tests（missing visual port一项：缺端口lane被归类unavailable而非partial，但数量／未满足／可绘制拆分均正确）。此前8项中的多数是运行目录相对路径问题，从仓库根运行即通过；arrow_lease_tests已按1.15 RVA更新夹具并通过。阶段1“完整入口无未解释失败”仍差这2项。
-- 主体`7d31584a31302f17b179a4dc4afd259458edef5f2cc0ffdd1d1fde4e3ec94619`／49,735,019B＋引导`fa9ebd38…`（随主体哈希重建）已部署，安装＝dist；游戏实载1.15.0并出帧：市场owner10 ribbons185、伦敦周边state5 owner15 ribbons232（DRAW PERF overrun0）。本轮UI相机导航成本高，像素级港口接缝复看改由数据级坐标连续证据覆盖；不做像素验收声明。
+- 构建exit0，本地16套测试全PASS。官方等价入口（35项，从仓库根运行）现仅剩1项RUNFAIL：native_port_approach_tests（R193诊断解码器仍为1.13布局，需迁移1.15旅行网络）。native_trade_view_tests已全通过：修正了seaOnly完整度短路误用于legacy选择器的问题（单端口缺链现正确归partial），arrow_lease夹具已按1.15 RVA更新；harness等原为运行目录相对路径问题。阶段1只差native_port_approach迁移。
+- 主体`7d31584a31302f17b179a4dc4afd259458edef5f2cc0ffdd1d1fde4e3ec94619`／49,735,019B＋引导`fa9ebd38…`（随主体哈希重建）已部署，安装＝dist；游戏实载1.15.0并出帧：市场owner10 ribbons185、伦敦周边state5 owner15 ribbons232（DRAW PERF overrun0）。本轮UI相机导航成本高，像素级港口接缝复看改由数据级坐标连续证据覆盖；不做像素验收声明。随后partial完整度修复重建为`3c931a306a406a7321cf385a4e220a4bee173f672066175efe9227d9c09d050f`／49,736,555B并再次部署（安装＝dist，引导`fa9ebd38…`不变），源码＝构建＝安装。
 
 ### 2026-11-06 — R198：州面板1.15迁移与双页面实机验收（两处`--`消除）
 
