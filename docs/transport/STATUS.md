@@ -6,7 +6,8 @@
 - 生命周期实测发现真实1.15缺陷：`overlay.cpp`仍从1.13地址`0x0592d5c8`读图形身份，1.15该地址实读为无效值`0x404048404c302440`；而`arrow_lease.h`校验器按1.15读`0x05c080b8`（实机`0x57a50a50000`）。首轮“菜单→载入autosave_exit”重载后，池恢复被误判`native graphics identity changed`，物流页显示`IRONROAD_MAP_RETIRED`且无箭头（世界2模型帧185条仍生成）。修三处读取为`0x05c080b8`后重建`64913eeaadccdbc4dff3ceee484e76b6710f0fe171f68e9ae9e6d46cf70f27d5`／49,737,579B（引导仍`c8020412…`），官方等价原生入口再次35/35、零FAIL；游戏关闭时原子部署，安装＝dist。
 - 修复后实机重载：世界1→菜单→载入world2，`native world retirement event next world=2`、快照world2 rev5/rev7、UI handoff accepted；打开物流页时`native pool recovered world=2 slots=185; old requests cleared`、`freight view gen=7 world=2 rev=7 ribbons=185 compute=91.031 ms`、`DRAW PERF paths=185 uploads=0 reused=185 failed=0 pool=185 visible=185 dropped=0`，页面显示13982.47687／510.99MU且无未就绪横幅、箭头可见。无需重启游戏即恢复正式视图。
 - 缩放：视图开启状态下客户区2560×1440→1920×1080→2560×1440，无池退休、无旧帧残留，数值与185条箭头保持（截图resize-1920x1080／resize-restored）。最小化→恢复由本轮启动/恢复重复覆盖。
-- 边界：本轮不是性能三对验收（未启用IRONROAD_FRAME_TIMING、未控速3、未测模拟速度）；设备重建未做；三处海路末端／海峡权限／改图及最终同构建A01–A27仍未完成。证据：checkpoint2026-11-06-r201-lifecycle-graphics（before overlay.cpp、source-change.diff、cycles.json、draw-perf-cycles.log、build/tests日志、重载与缩放截图）。
+- 三对性能协议（同存档／相机／速度III／2560×1440，`IRONROAD_FRAME_TIMING=1`；每臂重载同存档→可选物流页→暂停热身30秒→运行65秒）：关闭→打开P95为17.712→17.992、17.642→18.049、17.659→18.064 ms，增加0.281／0.407／0.405 ms均≤2；模拟速度11.803→11.731、11.779→11.797、11.821→11.767 date单位/秒，最大降幅0.61%≤5%；窗口61.5–62.6秒，帧流连续且thread/world/swap身份一致。三对门槛在本存档／相机／速度III通过，不外推其他速度／设备。
+- 边界：设备重建未做；三处海路末端／海峡权限／改图及最终同构建A01–A27仍未完成。证据：checkpoint2026-11-06-r201-lifecycle-graphics（PERF-ARMS.md、perf-analysis.log、r201_perf_arms.json、before overlay.cpp、source-change.diff、cycles.json、draw-perf-cycles.log、build/tests日志、重载与缩放截图）。
 
 ### 2026-11-06 — R200：1.15港口接入解码器迁移，阶段1官方等价入口35/35
 
