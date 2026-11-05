@@ -1,5 +1,14 @@
 # 当前状态
 
+### 2026-11-06 — R198：州面板1.15迁移与双页面实机验收（两处`--`消除）
+
+- 用户报告本地价格页物流列也显示`--`。定位：`state_panel.h`仍是1.13值（handler+0xD8/+0xE0/+0xEC、states_panel vtable 0x045CC848），1.15下解码失败、州owner从不激活。1.15实读：states_panel仍在slot14，vtable=`0x0485DB38`，tab=`local_goods`，state=433，bar history kind=14；已迁移解码器，并同步迁移`market_panel_tests`/`state_panel_tests`夹具（handler+0xE8/+0xF0/+0xFC、state vtable），两测试加入本地统一套件后16套全PASS。
+- 重建主体`d36205ed0a2a372e73335d12c1a9b2147fbbef5e614c3f332d7f1b142fc34c57`／49,618,850B。用户授权自主操作后正常关闭游戏（WM_CLOSE）→原子替换部署（安装＝dist）→重新启动，自动操作UI完成双页面验收。
+- 州页：打开本地价格页→`native state owner selected state=433 tab=local_goods`，session frame=1 owner=15，物流列显示0.00／45.422／5.64／17.85593等数值（截图`r198-state.png`）；关闭州面板后打开市场物流页→`native state owner closed`、`native market owner selected panel=0 tab=ironroad_logistics`、`native session gen=71 frame=1 owner=10 ribbons=195`、`DRAW PERF visible=195 dropped=0`，市场页显示贸易量14662.19344／已铺铁路510.99 MU与地图箭头（截图`r198-market.png`）。两处`--`均消除。
+- 面板栈注意：州面板与市场面板同时开时，州owner(15)在我方同一轮询中晚于市场owner(10)设置，会覆盖地图视图；属既有owner优先级行为，不是1.15回归。纯市场验收需先关州面板。
+- 副作用披露：自动化聚焦使游戏从暂停自动恢复，在下达暂停键前以速度6推进约3个月游戏时间（1836-01-13→1836-04-08），随后已暂停并最小化；未主动存档。用户会话经济状态可能已变化，需用户确认是否读档。
+- 仍未做：开态商品行逐项值对照、完整GUI手动矩阵、性能门槛；三处海路末端、权限、改图、生命周期等原有未完成项不变。
+
 ### 2026-11-06 — R197：1.15贸易表语义修正与无主州处理（离线实数据验证，待部署）
 
 - 用户报告物流显示`--`。实机日志显示：面板打开时worker报`err=native detailed and grouped exports differ`（gen21/22），随后快照失败`native state market unavailable`。定位为两处1.15语义差异，而非渲染问题。

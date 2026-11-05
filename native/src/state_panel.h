@@ -8,12 +8,13 @@ struct NativeStatePanelState {
   uint32_t state=UINT32_MAX;
   std::string tab, error;
 };
-// Static 1.13.11 candidate only: no runtime caller until live ownership and
-// state-ID correspondence are verified. Reads owned copies, never calls getters.
+// Exact 1.15.0 profile. Live R197: slot 14 is still states_panel, its vtable
+// moved to 0x485DB38, the handler bar is at +0xE8/+0xF0/+0xFC, and the open
+// history kind equals the panel slot (14). Reads owned copies, never getters.
 inline NativeStatePanelState DecodeNativeStatePanel(const GoodsMemoryReader& reader,uint64_t module) {
   NativeStatePanelState result;
   auto fail=[](const char* why){return NativeStatePanelState{false,false,false,UINT32_MAX,{},why};};
-  constexpr uint32_t stateVtable=0x045CC848;
+  constexpr uint32_t stateVtable=0x0485DB38;
   if(!reader || !module || module>UINT64_MAX-kRvaInterfaceIdlerGlobal-8)
     return fail("invalid interface module or reader");
   struct Copy {uint64_t address;std::vector<uint8_t> bytes;};
@@ -56,8 +57,8 @@ inline NativeStatePanelState DecodeNativeStatePanel(const GoodsMemoryReader& rea
   }
   if(!field(idler,0x10,gfx) || !type(gfx,kRvaInterfaceGfxVtable) ||
      !field(gfx,0x20,handler) || !type(handler,kRvaInterfaceHandlerVtable) ||
-     !field(handler,0xd8,bar) || bar!=handler+0xd8 ||
-     !field(handler,0xe0,panels) || !field(handler,0xec,count) || count!=56 ||
+     !field(handler,0xe8,bar) || bar!=handler+0xe8 ||
+     !field(handler,0xf0,panels) || !field(handler,0xfc,count) || count!=56 ||
      !field(panels,14*8,panel) || !type(panel,stateVtable))return fail("state panel ownership unavailable");
   std::string name;
   if(!text(panel,8,name) || name!="states_panel" || !text(panel,0x30,result.tab) ||

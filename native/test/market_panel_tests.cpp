@@ -19,11 +19,11 @@ struct Fixture {
   Fixture(){
     Put(root,module+kRvaInterfaceIdlerVtable);Put(root+0x18,machine);Put(machine+0x588,int32_t(4));
     Put(root+0x10,gfx);Put(gfx,module+kRvaInterfaceGfxVtable);Put(gfx+0x20,handler);
-    Put(handler,module+kRvaInterfaceHandlerVtable);Put(handler+0xd8,handler+0xd8);
-    Put(handler+0xe0,panels);Put(handler+0xec,int32_t(56));Put(panels+9*8,panel);
+    Put(handler,module+kRvaInterfaceHandlerVtable);Put(handler+0xe8,handler+0xe8);
+    Put(handler+0xf0,panels);Put(handler+0xfc,int32_t(56));Put(panels+9*8,panel);
     Put(panel,module+kRvaMarketPanelVtable);Text(panel,8,"market_panel");Text(panel,0x30,"default");
-    Put(panel+0x70,uint32_t(UINT32_MAX));Put(handler+0xd8+0x40,uint8_t(1));
-    Put(handler+0xd8+0x20,history);
+    Put(panel+0x70,uint32_t(UINT32_MAX));Put(handler+0xe8+0x40,uint8_t(1));
+    Put(handler+0xe8+0x20,history);
     Text(panel,0x88,"");Put(panel+0x110,exclusions);
     Put(registry,entries);Put(registry+8,int32_t(1));Put(registry+12,int32_t(1));Put(entries,marketWrapper);
     Put(marketWrapper,module+kRvaGuiMarketVtable);Put(marketWrapper+0x10,uint32_t(79));
@@ -34,7 +34,7 @@ struct Fixture {
   }
   void Open(uint32_t market=79){
     Put(panel+0x70,market);Text(panel,0x30,"ironroad_logistics");
-    Put(handler+0xd8+0x40,uint8_t(0));Put(handler+0xd8+0x2c,int32_t(2));
+    Put(handler+0xe8+0x40,uint8_t(0));Put(handler+0xe8+0x2c,int32_t(2));
     Put(history,int32_t(3));Put(history+0x30,int32_t(9));
   }
   bool Read(uint64_t a,void* out,size_t n)const{
@@ -69,14 +69,14 @@ int main(){
   Check(!s.visibleGoods,"cache mutation rejects copied membership");
   f=Fixture();f.Open();
   f.Put(Fixture::history+0x30,int32_t(3));s=f.Decode();Check(s.available && !s.marketOpen,"earlier cached market state cannot override another active panel");
-  f.Open();f.Put(Fixture::handler+0xd8+0x40,uint8_t(1));Check(!f.Decode().marketOpen,"closed flag wins over retained history and selected tab");
+  f.Open();f.Put(Fixture::handler+0xe8+0x40,uint8_t(1));Check(!f.Decode().marketOpen,"closed flag wins over retained history and selected tab");
   f.Open();f.Text(Fixture::panel,0x30,"default");s=f.Decode();Check(s.marketOpen && s.tab=="default","market open differs from selected logistics tab");
   f=Fixture();f.Put(Fixture::machine+0x588,int32_t(1));s=f.Decode();Check(s.available && !s.ingame && !s.marketOpen,"non-ingame phase does not follow stale panel pointers");
   f=Fixture();f.Put(Fixture::handler,uint64_t(123));Check(!f.Decode().available,"wrong handler type rejected");
-  f=Fixture();f.Put(Fixture::handler+0xd8,uint64_t(0));Check(!f.Decode().available,"bar ownership identity verified");
+  f=Fixture();f.Put(Fixture::handler+0xe8,uint64_t(0));Check(!f.Decode().available,"bar ownership identity verified");
   f=Fixture();f.Put(Fixture::panels+9*8,uint64_t(UINT64_MAX-3));Check(!f.Decode().available,"bad panel pointer fails safely");
   f=Fixture();f.Open();f.Put(Fixture::panel+0x70,uint32_t(UINT32_MAX));Check(!f.Decode().available,"open panel without market cannot select a guessed market");
-  f=Fixture();f.Put(Fixture::handler+0xd8+0x2c,int32_t(-1));Check(!f.Decode().available,"negative history count rejected");
+  f=Fixture();f.Put(Fixture::handler+0xe8+0x2c,int32_t(-1));Check(!f.Decode().available,"negative history count rejected");
   f=Fixture();f.Text(Fixture::panel,8,"goods_panel");Check(!f.Decode().available,"matching vtable alone cannot replace panel name");
   f=Fixture();int repeats=0;
   s=DecodeNativeMarketPanel([&](auto a,auto p,auto n){

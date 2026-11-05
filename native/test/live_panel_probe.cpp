@@ -231,13 +231,13 @@ int wmain(int argc, wchar_t** argv) {
     bool known = false;
     if (vtable >= module && vtable - module <= 0x800000) {
       rva = static_cast<uint32_t>(vtable - module);
-      known = rva == v3::kRvaMarketPanelVtable || rva == 0x045CC848;
+      known = rva == v3::kRvaMarketPanelVtable || rva == 0x0485DB38;
     }
     if (!known && index != 9 && index != 14) continue;
     std::printf("  slot %2d panel=0x%016llx vtable_rva=0x%08X%s%s\n", index,
                 static_cast<unsigned long long>(panel), rva,
                 rva == v3::kRvaMarketPanelVtable ? "  [market_panel]" : "",
-                rva == 0x045CC848 ? "  [states_panel]" : "");
+                rva == 0x0485DB38 ? "  [states_panel]" : "");
     std::string name;
     if (ReadMsvcString(panel, 8, name)) std::printf("        name=\"%s\"\n", name.c_str());
     std::string tab;

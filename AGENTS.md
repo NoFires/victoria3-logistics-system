@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R198：州面板1.15迁移，双页面实机验收
+
+用户报本地价格页物流列`--`：`state_panel.h`仍是1.13偏移与vtable。1.15实读states_panel仍在slot14、vtable`0x0485DB38`、handler+0xE8/+0xF0/+0xFC、history kind14；迁移解码器与market/state面板测试夹具，16套测试全PASS。主体`d36205ed…`／49,618,850B部署（安装＝dist），用户授权自主操作后自动开页验收：州页owner15 frame1、物流列出数值；市场物流页owner10 frame1 ribbons195、贸易量14662.19344／铁路510.99MU、箭头可见。两处`--`消除。州与市场面板同开时州owner会覆盖市场视图（既有优先级，非回归）。副作用：聚焦导致自动解除暂停，速度6推进约3个月（1836-01-13→04-08）后才暂停，未主动存档，需用户确认是否读档。截图与日志见checkpoint r198/，详见STATUS R198。
+
 ### 2026-11-06 — R197：1.15贸易表语义修正与无主州处理
 
 用户报物流显示`--`：worker报`native detailed and grouped exports differ`，随后快照报`native state market unavailable`。实机证据：1.15两张贸易表键集合相同但数值逐项不同，grouped按目的组近似常量，不再是detailed的等值聚合；`BindNativeTradeRoutes`改为结构校验＋逐州detailed绑定，不再要求两表等值。无主州`STATE_TEXAS`（owner=`UINT32_MAX`、无特殊市场区）现从贸易名册跳过而非整份拒绝；其他市场失败仍拒绝。离线实数据：4350绑定（4348有路由）、facts 1550 shapes、model 3759 shipments、builtRail 719.251863 MU。构建exit0、14套原生测试全PASS；主体`3ddf32cd…`／49,618,850B已部署（安装＝dist）。用户开页实测：owner selected→`publish document=1`→`freight view gen=2 world=1 rev=4 ribbons=196 compute=98.813ms`→`DRAW PERF visible=196 dropped=0`，`--`修复实机通过；该批次peak_frame_us=2255超2ms软预算1帧，不作性能验收。详见STATUS R197。
