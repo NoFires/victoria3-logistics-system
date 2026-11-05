@@ -1,5 +1,14 @@
 # 当前状态
 
+### 2026-11-06 — R200：1.15港口接入解码器迁移，阶段1官方等价入口35/35
+
+- 上一轮唯一失败的`native_port_approach_tests`是R193诊断解码器的1.13夹具。本轮把`native_port_approach.h`整体迁移到1.15：州地区`state+0xF10`（vtable`0x046ba948`，id+0x10／geo+0x40／valid+0x44）、市场经`DecodeNativeStateMarket`、world链`0x05c07c68→+0x608 machine→+0x120 world`、manager=`world+0x5028`（vtable`0x046b1d48`）、省份运行表`machine+0xB0`（vtable`0x046ac1c0`，州int32+0x18）、省份模板注册表`0x5bd7308`（数据+0x2A0／计数+0x2AC，vtable`0x046ab568`，地区+0xC8）、海军连接表`manager+0x58`（行0x40，定义kind+4=5，样条key+0x20类型3，节点定义flags+4／anchor+8／province+0xC／linked+0xE）。陆侧节点由linked省份解析到运行州判定，海侧物理省份取另一节点province；只有物理海区与所选州地区不同才产生查询。重复id、两侧州歧义、错误kind／样条类型、依赖不可读、复制中变化与退休均拒绝。
+- 新1.15夹具替换旧1.13夹具：类型化州槽位、owner→country→market、省份运行表、模板注册表、一条type5海军接入；逐项断言返回的州／市场／两地区／两锚点／逻辑与物理省份／样条，并覆盖重复id、非港口kind、非type3样条、缺海区、缺州地区、退休及源销毁后自有值保持。
+- 官方等价原生入口从仓库根运行35/35 PASS、零FAIL（上一轮34/35）；本地16套保持通过。`verify_embedded`、`test_native_gui`（4项）、`test_flow_gpu`（含负对照）、`test_freight_loader`（有效／缺失／损坏两类引导）全部PASS。PowerShell脚本入口（`build_tests.ps1`、`selftest.ps1`、`test_native_gui_runtime.ps1`、`test_debug_default.ps1`、`deploy.ps1`）受沙箱限制未运行，部署仍按既有`.tmp`+rename原子替换（游戏关闭时），环境允许时应补跑。
+- 新构建主体`86cdaadadbb88aa5a0d11bea060b4c7f14a9c457f465dea70fe5c2b135cfaa7b`／49,737,579B，引导`c80204122791ade4a33f5b61ea28ebb3a96f444bbc6ef215e71a6245af67a107`／779,879B；部署后逐文件哈希安装＝dist，EXE仍`473186e8…`。最小化实机pid39776：loader识别1.15.0、三组hook安装、快照world1 rev2/3/4 states=1157 goods=54。
+- 本构建实机双页面复验：州面板东盎格利亚本地价格页→`native state owner selected state=434 tab=local_goods`、`native session gen=2 frame=1 owner=15 ribbons=161`、`publish document=1`、`freight view gen=2 ribbons=161`、`DRAW PERF visible=161 dropped=0 failed=0 overrun_frames=0 peak_frame_us=685`，物流列显示0.00／173.175／5.00／10.72399／27.534／273.58／138.28等真实值；市场物流页→`native market owner selected panel=0 tab=ironroad_logistics`、`native session gen=4 frame=1 owner=10 ribbons=185`、`freight view gen=4 ribbons=185 compute=1.146 ms`、`DRAW PERF visible=185 dropped=0`，页面显示贸易量13982.47687、已铺铁路510.99 MU与逐商品数值。日期保持1836-01-13暂停，未存档。
+- 边界：港口接入解码器仍是默认关闭的`probe_access`诊断，未接正式worker；三处海路末端／海峡权限／改图字段仍需在1.15独立验证；性能3×60秒、上传、生命周期及最终同构建A01–A27矩阵未做。证据：checkpoint2026-11-06-r200-port-approach-1.15（build／tests-full日志、双页面截图、live-session日志、源码diff、NEXT.md）。
+
 ### 2026-11-06 — R199：1.15港口—州接缝修复（lane纯海段＋港口合成路径）
 
 - 用户报告本地价格路线图在“海外→伦敦周边→中英格兰”处再次中断。只读复现（同一运行游戏）：水果最终货流Bahamas→中英格兰、Jamaica→中英格兰；相邻边端点坐标不连续5处。海段lane几何终点是港口陆侧点`0x8005dc`(4072.5,2779.9)，模型图端点却被掩码归一化到州主枢纽`0x5dc`(4091.0,2801.5)；同时lane几何已包含港口样条，模型又单独加港口边，渲染出现回折/断口。
