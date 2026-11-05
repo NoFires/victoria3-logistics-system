@@ -1,5 +1,13 @@
 # 当前状态
 
+### 2026-11-06 — R197：1.15贸易表语义修正与无主州处理（离线实数据验证，待部署）
+
+- 用户报告物流显示`--`。实机日志显示：面板打开时worker报`err=native detailed and grouped exports differ`（gen21/22），随后快照失败`native state market unavailable`。定位为两处1.15语义差异，而非渲染问题。
+- 贸易表：1.15 detailed(0x898)与grouped(0x870)键集合完全相同（4350对全部一致），但数值逐项不同（same=0／differ=5729）；grouped在目的组内近似常量（3451/3478组单一值）、detailed按州（780组混合值），说明grouped不再是与detailed等值的聚合表。`BindNativeTradeRoutes`不再用detailed==grouped作等值校验，改为结构校验＋逐州detailed绑定＋组代表路由；注释记录该实机证据。
+- 无主州：用户局中`STATE_TEXAS`（运行id93）owner=`UINT32_MAX`且无特殊市场区，`DecodeNativeStateMarket`无结果；`DecodeNativeTradeStates`现仅在该明确情形跳过该州（不伪造市场），其他市场失败仍整份拒绝。新增native_economy_tests用例：跳过无主州、特殊区不可读仍拒绝、无效owner仍拒绝。
+- 离线实数据验证（同一运行游戏，PROCESS_VM_READ）：roster 1157／skip1；trade 67组／9海峡／4350对；bindings 4350（withGroup4350／withRoute4348）；facts shapes1550／shapedBindings4348；domestic 27108订单／419陆路／810州内／32铁路／371港口接入／411枢纽／96航线；model shipments=3759（海1535／陆2224）、builtRail=719.251863 MU、target／allocated／unmet=144803.446／34307.144／110496.302。不是DLL worker帧或绘图验收。
+- 构建exit0，14套原生测试全PASS（含更新后的native_trade_routes_tests与native_economy_tests）。新候选dist主体`3ddf32cd03ae366a3c0701b8305fb34665bb59a25388cb4f94545aa7f8d95233`／49,618,850B，引导`c8020412…`／779,879B。游戏仍在用户手中（未关闭），未强替DLL、未部署。下一步：用户保存退出→原子替换部署→重开最小化→打开物流页核对owner selected／worker帧／ribbon。
+
 ### 2026-11-05 — R196：1.15数据管线全链实机通过；正式面板唯余开页验收
 
 - 本轮把1.15迁移接到正式生产路径并实机验证。UI交接失效的直接原因：`market_panel.h`仍用1.13 handler偏移（+0xD8／+0xE0／+0xEC）；1.15实读handler+0xE8=self、panels+0xF0、count+0xFC=56，改为这三个偏移后解码通过。构建exit0，14组原生测试套件全部PASS（native_domestic／shipping／splines／sea_geography／world_trade／economy／state_market／goods_catalog／snapshot／ports／rail／trade_routes／trade_geometry／access）。

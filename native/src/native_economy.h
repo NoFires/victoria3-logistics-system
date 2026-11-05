@@ -69,7 +69,18 @@ inline std::optional<std::vector<NativeStateEconomy>> DecodeNativeTradeStates(
        id==UINT32_MAX || (id&0xffffff)!=slot || ReadNativeStateObject(read,module,id)!=object)
       return fail("invalid native state type or full handle");
     auto market=DecodeNativeStateMarket(read,module,object,id);
-    if(!market)return fail("native state market unavailable");
+    if(!market){
+      // 1.15.0 live: an unowned state (R197: STATE_TEXAS) has no owner market
+      // and no special market area, so the getter has no result. Such a state
+      // takes part in no market trade and is skipped, not given a fake market.
+      // Every other failure still rejects the whole roster.
+      uint8_t special=0;uint32_t specialId=UINT32_MAX,owner=UINT32_MAX;
+      if(!read(object+0x1258,&special,1) || special>1 || !read(object+0xb78,&specialId,4) ||
+         !read(object+0xed8,&owner,4) || (special && specialId!=UINT32_MAX) || owner!=UINT32_MAX)
+        return fail("native state market unavailable");
+      if(!current())return fail("native state roster retired");
+      continue;
+    }
     result.push_back({id,UINT32_MAX,*market});
   }
   if(result.empty())return fail("empty native state roster");

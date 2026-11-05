@@ -37,11 +37,12 @@ inline std::optional<std::vector<NativeTradeBinding>> BindNativeTradeRoutes(
        !destinations[i].emplace(route.state,j).second ||
        (route.selected && *route.selected>=route.candidates.size()))return fail("invalid native trade destination");
   }
-  using Key=std::tuple<uint32_t,uint32_t,uint32_t>; // source state, destination representative, good
-  std::map<Key,int64_t> detailed,grouped;
-  auto add=[](auto& totals,Key key,int64_t quantity){
-    auto& total=totals[key];if(quantity>INT64_MAX-total)return false;total+=quantity;return true;
-  };
+  // 1.15.0 changed the grouped table's value semantics: it keeps the same
+  // (source,destination,good) key set as the detailed table but its values are
+  // nearly constant per destination group and never equal the per-state detail
+  // (live R197 evidence). The detailed table remains the per-state export
+  // source for the model; the grouped table is retained as native data but is
+  // no longer an equal-valued oracle. Both tables still get structural checks.
   std::vector<NativeTradeBinding> result;
   for(unsigned aggregate=0;aggregate<2;++aggregate){
     const auto& pairs=aggregate?trade.groupPairs:trade.statePairs;
@@ -54,26 +55,21 @@ inline std::optional<std::vector<NativeTradeBinding>> BindNativeTradeRoutes(
       for(const auto& amount:pair.goods)if(amount.valueFixed<=0 || !goods.insert(amount.good).second)
         return fail("invalid native trade amount");
       if(pair.goods.empty())continue;
+      if(aggregate)continue;
       const auto source=trade.centers.find(pair.source),target=trade.centers.find(pair.destination);
       if(source==trade.centers.end() || source->second==UINT32_MAX || !states.count(source->second) ||
-         (!aggregate && (target==trade.centers.end() || target->second==UINT32_MAX || !states.count(target->second))))
+         target==trade.centers.end() || target->second==UINT32_MAX || !states.count(target->second))
         return fail("native export current trade center unavailable");
-      const uint32_t destination=aggregate?pair.destination:target->second;
-      for(const auto& amount:pair.goods)if(!add(aggregate?grouped:detailed,{pair.source,destination,amount.good},amount.valueFixed))
-        return fail("native grouped quantity overflow");
-      if(!aggregate){
-        NativeTradeBinding binding;binding.pair=i;binding.sourceCenter=source->second;binding.destinationCenter=destination;
-        const auto group=anchors.find(source->second);
-        if(group!=anchors.end()){
-          binding.sourceGroup=group->second;
-          const auto route=destinations[group->second].find(destination);
-          if(route!=destinations[group->second].end())binding.route=route->second;
-        }
-        result.push_back(binding);
+      NativeTradeBinding binding;binding.pair=i;binding.sourceCenter=source->second;binding.destinationCenter=target->second;
+      const auto group=anchors.find(source->second);
+      if(group!=anchors.end()){
+        binding.sourceGroup=group->second;
+        const auto route=destinations[group->second].find(target->second);
+        if(route!=destinations[group->second].end())binding.route=route->second;
       }
+      result.push_back(binding);
     }
   }
-  if(detailed!=grouped)return fail("native detailed and grouped exports differ");
   if(error)error->clear();return result;
 }
 } // namespace v3

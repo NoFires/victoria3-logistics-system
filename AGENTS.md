@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R197：1.15贸易表语义修正与无主州处理
+
+用户报物流显示`--`：worker报`native detailed and grouped exports differ`，随后快照报`native state market unavailable`。实机证据：1.15两张贸易表键集合相同但数值逐项不同，grouped按目的组近似常量，不再是detailed的等值聚合；`BindNativeTradeRoutes`改为结构校验＋逐州detailed绑定，不再要求两表等值。无主州`STATE_TEXAS`（owner=`UINT32_MAX`、无特殊市场区）现从贸易名册跳过而非整份拒绝；其他市场失败仍拒绝。离线实数据：4350绑定（4348有路由）、facts 1550 shapes、model 3759 shipments、builtRail 719.251863 MU。构建exit0、14套原生测试全PASS；候选主体`3ddf32cd…`／49,618,850B，游戏未关闭未部署。下一步用户退出→部署→开页核对。详见STATUS R197。
+
 ### 2026-11-05 — R196：1.15数据管线全链实机通过
 
 修正`market_panel.h`的1.15 handler偏移（barSelf+0xE8／panels+0xF0／count+0xFC），构建exit0、14组原生测试套件全PASS。主体e612657d…／49,713,595B＋引导c8020412…／779,879B在游戏关闭时原子替换安装（沙箱禁止PowerShell，未走deploy.ps1；安装＝dist）。最小化实机pid46532：loader识别1.15.0、三hook安装、3次完整快照复制（states=1157 goods=54）、UI handoff、snapshot accepted，会话段WARN／ERROR=0。游戏自启动即最小化时Present不发生，ImGui定时器需一次离屏首帧才初始化；现保持最小化在屏幕外。正式worker仅由面板持有视图时构建，故本会话无frame；开页→worker→箭头仍需一次开页验收。同会话只读生产代码重放模型通过（shipments=3533、builtRail=719.251863 MU、target／allocated／unmet=136989.210／30890.397／106098.813）；面板链CDataMarket／CDataGoods／CMarketPanel vtable与构造已静态复核。详见STATUS R196与checkpoint2026-11-05-r196-v115-adaptation。

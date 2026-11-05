@@ -56,6 +56,18 @@ int main(){
     Check(states && states->size()==2 && states->back().id==Fixture::lastId &&
         states->front().region==UINT32_MAX && states->back().region==UINT32_MAX && states->back().market==0,
         "native roster preserves full runtime handles and explicit market zero without inventing derived-map IDs");
+    {
+      Fixture skip=f;skip.Put(Fixture::last+0xed8,uint32_t(UINT32_MAX));
+      auto unowned=skip.TradeStates();
+      Check(unowned && unowned->size()==1 && unowned->front().id==0,
+          "unowned state without a market area is skipped instead of inventing a market");
+      Fixture broken=f;broken.Put(Fixture::last+0xed8,uint32_t(UINT32_MAX));
+      broken.Put(Fixture::last+0x1258,uint8_t(1));broken.Put(Fixture::last+0xb78,uint32_t(5));
+      Check(!broken.TradeStates(),
+          "an unreadable special market area still rejects the roster instead of skipping");
+      Fixture owned=f;owned.Put(Fixture::last+0xed8,uint32_t(1));
+      Check(!owned.TradeStates(),"an invalid owned country still rejects the roster");
+    }
     auto oldRegions=f.regions;f.regions.clear();
     Check(!f.Decode() && f.TradeStates().has_value(),
         "reproduced legacy embedded-map prerequisite is absent from native trade roster");
