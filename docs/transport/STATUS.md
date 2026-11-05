@@ -1,5 +1,11 @@
 # 当前状态
 
+### 2026-11-06 — R215：1.15原版右键菜单与热度颜色模式实机
+
+- 在市场物流页右键谷物行→原版上下文菜单实见：信息、钉选到概览窗口、大不列颠的谷物、添加消费税、关税/补贴数值、生产者（扩建黑麦/小麦/水稻/玉米/杂谷农场及数量）、消费者（食品厂12、畜牧场27）；卡片总量13982.47687不变。右键悬停同时触发`freight view gen=3 ribbons=34`，移出后`gen=4 ribbons=187`恢复。
+- 颜色模式点击“热度”→显示“市场热度：绿→浅绿→黄→橙→红”提示、按钮进入选中态、数量不变；连同R206的单商品/原生绿，三种颜色模式均已在1.15实机操作。
+- 边界：右键菜单未逐项点击（消费税/钉选不改视图）；热度模式的逐色像素/线宽视觉矩阵未做。证据：checkpoint2026-11-06-r207-partial-sea-ids（r215_rightclick.png、r215_heat.png）。
+
 ### 2026-11-06 — R214：1.15英文locale与双语搜索实机
 
 - 仅将`pdx_settings.json`的`System.language`由`l_simp_chinese`改为`l_english`，测试后按原字节恢复（`bc249507…`，存档未写）。英文界面实见：`BRITISH MARKET`、Goods/Trade/Food Security/Members/Logistics、Show/Hide、Heat/Good/Native、Legend、“Original trade + domestic model allocation”“Trade qty”“Laid track”；账本行`Goods quantity: total / original trade / domestic model allocation 13982.47687 / 3290.11887 / 10692.358`、`Domestic Freight demand: target / fulfilled / unmet 29725.74 / 10692.36 / 19033.39`。
