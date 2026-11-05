@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R213：WM_CHAR搜索与Freight账本实机
+
+游戏文本框可由`WM_CHAR`驱动（SendInput快捷键无效）。中文locale：`grain`无匹配→0.00空列表；`谷物`→仅谷物行、卡片886.935、占比全市场6.3%、账本不变。页面底部账本实读总量/原版贸易/国内模型=13982.47687/3290.11887/10692.358，目标/满足/未满足=29725.74/10692.36/19033.39。英文locale整体切换、切州/切市场未重做。证据checkpoint2026-11-06-r207-partial-sea-ids（search-*.png）。
+
 ### 2026-11-06 — R212：两端缺港口seaOnly回退，unavailableSea 2→1
 
 两端均无港口接续的seaOnly航线按海段key作者方向（只作起点／只作终点的唯一锚点）判定源／终点并标记partial；实机`unavailableSea 2→1`、`partialSea 37→38`，仅剩611→608（MINDANAO→NORTH_BORNEO）保持未知；paths=187、页面数值不变。完整入口35/35、geometry/view套件PASS。构建`2028e03b…`／50,025,206B部署安装＝dist。同构建三对：P95 +0.593／+0.518／+0.671 ms（≤2）、模拟最大降0.46%（≤5%）、窗口61.5–62.6秒。证据checkpoint2026-11-06-r207-partial-sea-ids。
