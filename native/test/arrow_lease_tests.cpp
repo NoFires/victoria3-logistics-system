@@ -12,7 +12,7 @@ struct Memory {
   void Zero(uint64_t address,size_t size){for(size_t i=0;i<size;++i)bytes[address+i]=0;}
   bool Read(uint64_t address,void* out,size_t size){
     for(size_t i=0;i<size;++i){auto it=bytes.find(address+i);if(it==bytes.end())return false;((uint8_t*)out)[i]=it->second;}
-    if(address==0x10000000+0x0592d5c8 && ++graphicsReads==1 && mutate)Put<uint64_t>(address,0x9999);
+    if(address==0x10000000+0x05c080b8 && ++graphicsReads==1 && mutate)Put<uint64_t>(address,0x9999);
     return true;
   }
 };
@@ -21,23 +21,23 @@ int main(){
   const uint64_t base=0x10000000,type=0x10000,arrow=0x20000,path=0x30000;
   NativeArrowLease lease{"ironroadBuildingInputW0",arrow,type,path,0x40000,0x50000,0x60000};
   Memory good;
-  good.Put<uint64_t>(base+0x0592d5c8,0x70000);
-  good.Put<uint8_t>(base+0x0513f2b8,1);
-  good.Put<uint64_t>(base+0x0513f268+0x30,0x80000);
-  good.Put<uint32_t>(base+0x0513f268+0x3c,1);
-  good.Put<uint8_t>(base+0x0513f268+0x40,0);
+  good.Put<uint64_t>(base+0x05c080b8,0x70000);
+  good.Put<uint8_t>(base+0x053ed668,1);
+  good.Put<uint64_t>(base+0x053ed618+0x30,0x80000);
+  good.Put<uint32_t>(base+0x053ed618+0x3c,1);
+  good.Put<uint8_t>(base+0x053ed618+0x40,0);
   good.Zero(0x80000,3*0x30);good.Put<uint8_t>(0x80004,1);
   good.Put<uint64_t>(0x80008,0x90000);good.Put<uint64_t>(0x80018,lease.style.size());
   good.Put<uint64_t>(0x80020,31);good.Put<uint64_t>(0x80028,type);
   for(size_t i=0;i<=lease.style.size();++i)good.Put<uint8_t>(0x90000+i,i==lease.style.size()?0:lease.style[i]);
-  good.Put<uint64_t>(type,base+0x0481daa8);good.Put<uint64_t>(type+0x38,0xa0000);
+  good.Put<uint64_t>(type,base+0x04aa54b8);good.Put<uint64_t>(type+0x38,0xa0000);
   good.Put<uint32_t>(type+0x40,1);good.Put<uint32_t>(type+0x44,1);
-  good.Put<uint64_t>(type+0x48,base+0x0512cdc0);good.Zero(0xa0000,0x48);good.Put<uint64_t>(0xa0000,arrow);
-  good.Put<uint64_t>(arrow,base+0x046588e8);good.Put<uint64_t>(arrow+0x50,type);
+  good.Put<uint64_t>(type+0x48,base+0x053d8dc0);good.Zero(0xa0000,0x48);good.Put<uint64_t>(0xa0000,arrow);
+  good.Put<uint64_t>(arrow,base+0x048d3f90);good.Put<uint64_t>(arrow+0x50,type);
   good.Put<uint64_t>(arrow+0x60,lease.constant);good.Put<uint64_t>(arrow+0x68,lease.vertex);
   good.Put<uint64_t>(arrow+0x70,path);good.Put<uint64_t>(path+0x10,lease.points);
   good.Put<uint32_t>(path+0x18,4096);good.Put<uint32_t>(path+0x1c,4);
-  good.Put<uint64_t>(path+0x20,base+0x0512cdc0);
+  good.Put<uint64_t>(path+0x20,base+0x053d8dc0);
   auto check=[&](Memory& memory,const std::vector<NativeArrowLease>& leases){
     std::string error;
     return ValidateNativeArrowLeases([&](auto a,auto b,auto c){return memory.Read(a,b,c);},
@@ -56,9 +56,9 @@ int main(){
   test([&](auto& m){m.template Put<uint32_t>(path+0x1c,4097);},"invalid path count rejected");
   test([&](auto& m){m.template Put<uint64_t>(type+0x48,base);},"unknown registry allocator rejected");
   test([&](auto& m){m.template Put<uint32_t>(type+0x44,8193);},"registration count bound enforced");
-  test([&](auto& m){m.template Put<uint32_t>(base+0x0513f268+0x3c,65536);},"asset map bound enforced");
-  test([&](auto& m){m.template Put<uint64_t>(base+0x0513f268+0x30,UINT64_MAX-16);},"asset entry pointer overflow rejected");
-  test([&](auto& m){m.template Put<uint64_t>(base+0x0592d5c8,0x70001);},"changed graphics device rejected");
+  test([&](auto& m){m.template Put<uint32_t>(base+0x053ed618+0x3c,65536);},"asset map bound enforced");
+  test([&](auto& m){m.template Put<uint64_t>(base+0x053ed618+0x30,UINT64_MAX-16);},"asset entry pointer overflow rejected");
+  test([&](auto& m){m.template Put<uint64_t>(base+0x05c080b8,0x70001);},"changed graphics device rejected");
   test([&](auto& m){m.bytes.erase(path+0x10);},"unreadable retained state rejected");
   test([&](auto& m){m.mutate=true;m.graphicsReads=0;},"changes during recovery copy rejected");
   test([&](auto& m){m.current=false;},"retired request rejected");
