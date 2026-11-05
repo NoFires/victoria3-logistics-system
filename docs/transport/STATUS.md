@@ -1,5 +1,11 @@
 # 当前状态
 
+### 2026-11-06 — R214：1.15英文locale与双语搜索实机
+
+- 仅将`pdx_settings.json`的`System.language`由`l_simp_chinese`改为`l_english`，测试后按原字节恢复（`bc249507…`，存档未写）。英文界面实见：`BRITISH MARKET`、Goods/Trade/Food Security/Members/Logistics、Show/Hide、Heat/Good/Native、Legend、“Original trade + domestic model allocation”“Trade qty”“Laid track”；账本行`Goods quantity: total / original trade / domestic model allocation 13982.47687 / 3290.11887 / 10692.358`、`Domestic Freight demand: target / fulfilled / unmet 29725.74 / 10692.36 / 19033.39`。
+- 双语搜索：英文locale输入`grain`→3行（886.935/6.3%、485.863/3.5%、3.575585/0.0%），卡片Trade qty=1376.37385；输入`谷物`→空列表、0.00。中文locale（R213）`谷物`→886.935一行、`grain`→空。两种语言下账本与目标/满足/未满足均不变，占比始终按全市场分母。
+- 边界：英文locale只测本页面/搜索；切市场、连续hover与逐商品右键未在本轮重做。证据：checkpoint2026-11-06-r207-partial-sea-ids（r214_english_page.png、r214_english_grain.png、r214_english_cn.png、r214_english.json）。
+
 ### 2026-11-06 — R213：WM_CHAR文本注入与1.15中文搜索／Freight账本实机
 
 - 键盘注入此前对快捷键无效，但`WM_CHAR`消息可驱动游戏文本框。实机：搜索框输入英文键名`grain`（当前中文locale下无匹配）→列表清空、卡片贸易量0.00、账本不变；输入`谷物`→列表仅谷物一行（£19、+489、886.935、6.3%），卡片贸易量886.935、占比仍按全市场分母（886.935/13982.47687≈6.3%）；清空/重开恢复全部商品。
