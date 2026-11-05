@@ -1,5 +1,11 @@
 # 当前状态
 
+### 2026-11-06 — R217：地点查找器导航伦敦与海路接缝目视复核
+
+- 发现并实测地点查找器按钮（底部lens工具栏`position{-177 0}`→原坐标约(1103,1395)）；`WM_CHAR`输入`伦敦`得到结果列表（伦敦/地区首都、伦敦周边地区/地域、东伦敦港口城镇），选择首项后相机移至不列颠。关闭查找器后市场物流页在地图上方显示：英伦三岛与低地国家间青绿/黄/红物流带在伦敦—海峡—大陆一线目视连续，未见断开；卡片13982.47687／510.99MU不变。
+- 这是R199数据级`breaks=0`之外，在用户原报区域（海外→伦敦周边→中英格兰）正常缩放下的一次目视复核；不是逐像素验收，也不覆盖其他相机/缩放级别。剩余unavailable/partial海路端点与R212一致。
+- 边界：查找器快捷键（F，input profile scancode9）经WM_KEYDOWN未能触发，按钮点击可用。证据：checkpoint2026-11-06-r207-partial-sea-ids（r217_finder_london.png、r217_london_final.png）。
+
 ### 2026-11-06 — R216：freight目录不可写降级实机
 
 - 用icacls对`binaries\freight`拒绝Everyone写（新建文件被拒：touch Permission denied），并对`freight.log`／`loader.log`／`freight.ini`拒绝写；正常入口启动`-continuelastsave`，pid6452在55秒后仍存活（内存7.8→7.65GB，世界已加载），15秒内三个文件大小与mtime均不变——负载在无法写日志／配置时静默丢弃写入、未崩溃。

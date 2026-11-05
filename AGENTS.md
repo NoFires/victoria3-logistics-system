@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R217：伦敦海路接缝目视复核
+
+地点查找器按钮（lens工具栏，约(1103,1395)）打开后可WM_CHAR输入`伦敦`；选择首项相机移至不列颠。关闭查找器后物流带在伦敦—海峡—大陆一线目视连续，卡片13982.47687/510.99MU不变。正常缩放目视复核，非逐像素/多相机矩阵；数据级breaks=0见R199。证据checkpoint2026-11-06-r207-partial-sea-ids（r217_*）。
+
 ### 2026-11-06 — R216：freight目录不可写降级
 
 icacls拒绝Everyone对freight目录新建写、并对freight.log/loader.log/freight.ini拒绝写；正常入口启动后pid6452存活55秒（世界加载），15秒内三文件大小/mtime不变（写入静默丢弃、无崩溃）；关闭后/reset恢复可写，安装＝dist不变。未做经济交互，只证明只读目录不阻止加载。证据checkpoint2026-11-06-r207-partial-sea-ids（r216-read-only-dir.txt）。

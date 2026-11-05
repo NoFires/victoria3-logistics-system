@@ -15,9 +15,9 @@
 | A07 | GUI 生效 | PASS | GUI 锚点/回调/布局 4 项 PASS；实机无 ironroad GUI 报错 |
 | A08 | ABI 与对象 | PASS | 1.15 状态/市场/贸易/旅行网络/样条/渲染/资源租约静态+实机解码链，检查点含完整证据 |
 | A09 | 单线与 pass | PASS | D3D11 harness 在统一入口通过；实机渲染 pass 与默认关闭 ImGui（无调试窗口） |
-| A10 | 几何贴合 | PARTIAL | flow GPU 八档/方向/负对照 PASS；1.15 海路-港口接缝数据连续 breaks=0；像素级多相机复看未做 |
+| A10 | 几何贴合 | PARTIAL | flow GPU 八档/方向/负对照 PASS；1.15 海路-港口接缝数据连续 breaks=0；正常缩放伦敦—海峡—大陆目视连续（R217）；像素级多相机矩阵未做 |
 | A11 | 河流与海岸 | PASS（离线） | spline_tests 通过；1.15 港口合成路径和样条点绑定实机 |
-| A12 | 铁路与断路 | PARTIAL | 当前铁路 MU 510.99 来自实机数据；三处海路末端仍未修 |
+| A12 | 铁路与断路 | PARTIAL | 当前铁路 MU 510.99 来自实机数据；seaOnly端点回退后unavailableSea 1／partialSea 38（未知端口端保留），伦敦—海峡目视连续（R217） |
 | A13 | 快照安全 | PASS（读取窗口） | 实机 states=1157 goods=54；复制期变化/退休拒绝；非原子 epoch 证明 |
 | A14 | 数量与守恒 | PARTIAL | 正式市场/州数量实机；1.15 未重跑全场景守恒矩阵 |
 | A15 | 模型来源标识 | PASS（双语标签与账本） | 中英页面显示“原版贸易＋国内模型分配/Original trade + domestic model allocation”及目标/满足/未满足账本；已知零/未知--语义沿用 |
