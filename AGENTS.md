@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R205：1.15市场页分类／显示隐藏／原版排序实机
+
+日用品分类→卡片贸易量13982.47687→5191.02128、列表切换，取消恢复；隐藏按钮进入选中态（箭头隐藏，数量不变），显示恢复；原版结余排序改变行序并显示原版提示，总量与全市场占比分母不变；关闭面板`native market owner closed`。搜索（键盘注入不可用）／切州／双语未在本轮重做，A18仍PARTIAL。证据checkpoint2026-11-06-r201-lifecycle-graphics（r205_*.png）。
+
 ### 2026-11-06 — R204：默认关闭ImGui官方等价复验
 
 无游戏进程且清除调试/计时环境变量后运行`harness.exe dist/version.dll`（等价`test_debug_default.ps1`）：exit0、导出对等、`ImGui ready`、`present #1 hr=0`、后续`imgui=1 vtx=0`、`lists=0 vtx=0`、无`FRAME PERF`，loader `error=0`。PowerShell脚本本身仍受沙箱限制未执行。证据checkpoint2026-11-06-r201-lifecycle-graphics。

@@ -1,5 +1,13 @@
 # 当前状态
 
+### 2026-11-06 — R205：1.15市场页分类／显示隐藏／原版排序实机
+
+- 商品分类：点击“日用品”分类→页头变为日用品、卡片贸易量由13982.47687变为5191.02128（按当前分类汇总），货物列表切换为该分类商品；再次点击取消→恢复13982.47687与`全部商品`。
+- 显示/隐藏：点击“隐藏”按钮进入选中态（地图箭头隐藏，卡片数量不变）；点击“显示”恢复。
+- 原版排序：点击结余排序按钮→行顺序改变、显示原版“按结余排序”提示，卡片总量13982.47687保持不变；`占比`分母仍为全市场（行内6.3%等不变）。
+- 关闭面板→`native market owner closed panel=0 tab=ironroad_logistics`。证明1.15下分类汇总、视图开关与原版排序均工作且不改变统计。
+- 边界：搜索框需键盘输入（当前注入不可用）未测；切州／切市场与双语未在本轮重做；分类/排序只测一项，A18仍未全矩阵。证据：checkpoint2026-11-06-r201-lifecycle-graphics（r205_cat2.png、r205_cat_off.png、r205_hide.png、r205_sort.png）。
+
 ### 2026-11-06 — R204：默认关闭ImGui的官方等价harness复验
 
 - 在无游戏进程、清除`IRONROAD_DEBUG_UI`／`IRONROAD_READBACK`／`IRONROAD_FRAME_TIMING`后运行`native/build/tests/harness.exe dist/version.dll`（等价`tools/test_debug_default.ps1`）：exit=0，`loaded dist/version.dll`、导出对等、`ImGui ready (960x960)`、`present #1 hr=0x00000000`、`present #2…#6 imgui=1 vtx=0`、`drawdata lists=0 vtx=0`，无`FRAME PERF`；loader.log`loaded freight.dll (error=0)`。独立harness中`native profile not ready; arrow hooks disabled`属预期（进程非victoria3）。证明默认关闭调试面板、无帧计时采集。
