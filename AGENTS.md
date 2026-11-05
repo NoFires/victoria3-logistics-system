@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R204：默认关闭ImGui官方等价复验
+
+无游戏进程且清除调试/计时环境变量后运行`harness.exe dist/version.dll`（等价`test_debug_default.ps1`）：exit0、导出对等、`ImGui ready`、`present #1 hr=0`、后续`imgui=1 vtx=0`、`lists=0 vtx=0`、无`FRAME PERF`，loader `error=0`。PowerShell脚本本身仍受沙箱限制未执行。证据checkpoint2026-11-06-r201-lifecycle-graphics。
+
 ### 2026-11-06 — R203：1.15市场物流页hover作用域
 
 市场物流页gen2 owner10 ribbons185；悬停首个商品行→gen3 owner20 ribbons34（uploads33/reused1/visible34），卡片总量13982.47687／510.99MU不变；移出→gen4 owner10 ribbons185（compute0.008ms缓存）。证明1.15下hover只改地图贡献并恢复。分类／显示隐藏／搜索（键盘注入不可用）／切州／双语未在1.15重做，A18–A19仍PARTIAL。证据checkpoint2026-11-06-r201-lifecycle-graphics（hover-*.png、hover-log.txt）。

@@ -1,5 +1,10 @@
 # 当前状态
 
+### 2026-11-06 — R204：默认关闭ImGui的官方等价harness复验
+
+- 在无游戏进程、清除`IRONROAD_DEBUG_UI`／`IRONROAD_READBACK`／`IRONROAD_FRAME_TIMING`后运行`native/build/tests/harness.exe dist/version.dll`（等价`tools/test_debug_default.ps1`）：exit=0，`loaded dist/version.dll`、导出对等、`ImGui ready (960x960)`、`present #1 hr=0x00000000`、`present #2…#6 imgui=1 vtx=0`、`drawdata lists=0 vtx=0`，无`FRAME PERF`；loader.log`loaded freight.dll (error=0)`。独立harness中`native profile not ready; arrow hooks disabled`属预期（进程非victoria3）。证明默认关闭调试面板、无帧计时采集。
+- 边界：PowerShell脚本本身仍因沙箱未执行；此为同参数同二进制的手工等价复验。证据：checkpoint2026-11-06-r201-lifecycle-graphics（default-visibility-harness.log、default-visibility-loader.log）。
+
 ### 2026-11-06 — R203：1.15市场物流页hover作用域实机
 
 - 市场物流页打开后`freight view gen=2 world=1 rev=4 ribbons=185`（owner10）。悬停首个商品行（谷物）→`freight view gen=3 ribbons=34 compute=0.732 ms`、`native session gen=3 owner=20 ribbons=34`、`DRAW PERF paths=34 uploads=33 reused=1 visible=34 dropped=0`；市场卡片总量13982.47687／510.99MU不变。移出→`freight view gen=4 ribbons=185 compute=0.008 ms`、`owner=10 ribbons=185`（缓存命中）。证明1.15下hover只改地图贡献并在移出后恢复，不改数量。
