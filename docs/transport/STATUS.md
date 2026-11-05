@@ -1,5 +1,11 @@
 # 当前状态
 
+### 2026-11-06 — R211：replace_path整目录替换通过（省略差分）
+
+- 构造对照ZIP：`map_data/state_regions`含全部17份文件中除`02_east_europe.txt`外的16份，`.metadata`声明`replace_paths=["map_data/state_regions"]`。实机pid37156：`world_ready=false`、探针`state db unavailable`，error.log出现成片`travel_network_pathfinder.cpp:162 Couldn't find travel connection ...`，世界因缺少02州定义而无法建立，游戏随后退出（进程不再存活）；content_load恢复原字节、ZIP删除，原存档未写。
+- 对照：同结构但含全部17份文件（仅STATE_BEKES id 164→901）的替换ZIP正常加载，`world_ready=true`、probe geo=901（R209记录）。省略差分证明1.15确实执行了整目录replace_path替换，而不是与原版目录合并。
+- 边界：替换目录内其余文件为原样副本；增删省份、拆并省、热重载与存档迁移仍未测。证据：checkpoint2026-11-06-r207-partial-sea-ids（r211_omit_test.json、omit-test.log、ironroad_omit.zip、R209 replace-test.log）。
+
 ### 2026-11-06 — R210：省份归属绑定通过，撤回R209的UPPER_SILESIA结论
 
 - R209的省份探针把“省份模板索引”当作“运行省份表索引”读取+0x18州指针，得到错误的STATE_UPPER_SILESIA。修正：省份模板对象的颜色在+0xC4，其权威归属是+0xC8的区域指针（vtable 0x046ba948，id+0x10/geo+0x40）。基线实机pid32876：`x0087C9`→`colorRegion id=139 geo=154`（STATE_MAZOVIA）；改图ZIP（该省移入LOWER_SILESIA）pid48100：同一省份`colorRegion id=140 geo=155`（STATE_LOWER_SILESIA，definition=140/geo=155），模板索引由23162变为19995，因此运行省份表按模板索引读取必然错位。
