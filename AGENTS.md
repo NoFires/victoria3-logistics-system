@@ -115,7 +115,7 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 ## 5. 当前状态与恢复入口
 
-截至R202：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_frame_us=685`、`overrun_frames=0`；三对性能P95增加0.281／0.407／0.405 ms（≤2）、模拟速度最大降幅0.61%（≤5%）；生命周期修复1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），重载world2池恢复、缩放往返无旧帧。部署矩阵：主体缺失126／损坏193／整套卸载无loader／重装0，游戏均存活且安装＝dist、存档与content_load字节保持。改图身份：1.15目录Mod仅改`STATE_BEKES` id 164→901，实机读到`key=STATE_BEKES definition=150 geo=901`，快照与正式物流页仍构建（185 ribbons、13982.47687／510.99MU），content_load恢复原字节。当前主体`64913eea…`／49,737,579B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。同key样条／省份交换／ZIP、设备重建、三处海路末端／海峡权限、最终同构建A01–A27未做，详见STATUS R202。
+截至R202：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_frame_us=685`、`overrun_frames=0`；三对性能P95增加0.281／0.407／0.405 ms（≤2）、模拟速度最大降幅0.61%（≤5%）；生命周期修复1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），重载world2池恢复、缩放往返无旧帧。部署矩阵：主体缺失126／损坏193／整套卸载无loader／重装0，游戏均存活且安装＝dist、存档与content_load字节保持。改图身份：1.15目录Mod仅改`STATE_BEKES` id 164→901，实机读到`key=STATE_BEKES definition=150 geo=901`；同key样条Mod把点268437460的X 4072.966→4082.966，运行时读数delta=0、网络计数不变；两种改图下快照与正式物流页均构建（185 ribbons、13982.47687／510.99MU），content_load恢复原字节。当前主体`64913eea…`／49,737,579B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。省份交换／ZIP、设备重建、三处海路末端／海峡权限、最终同构建A01–A27未做，详见STATUS R202。
 
 截至2026-11-05：按用户要求在保存退出后经deploy.ps1卸载引导和主体；配置、日志、缓存及可编辑资源逐项哈希保持，卸载备份已留。游戏更新后的ABI未验证，目标保持暂停，R194未完成源码保留且未部署。当前实际安装已卸载，dist仍保留，详见STATUS。
 
@@ -198,7 +198,8 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 ### 2026-11-06 — R202：1.15部署矩阵与改图身份
 
 - 部署矩阵（同构建、游戏关闭逐例准备）：主体缺失→loader.log `error=126`、主体损坏→`error=193`、整套卸载→无新loader条目、重装→`loaded freight.dll (error=0)`；四例游戏进程均存活≥50秒。事后安装＝dist、EXE／存档／content_load哈希保持。
-- 改图身份：1.15目录Mod仅改`STATE_BEKES`的`id` 164→901（其余字节相同），content_load绝对路径启用并在测试后恢复原字节、删除Mod。实机`state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`（无Mod为geo=164）；快照states=1157 goods=54，市场物流页`owner selected`、`freight view gen=2 world=1 rev=4 ribbons=185`、`DRAW PERF uploads=185 visible=185 dropped=0`，显示13982.47687／510.99MU。证明正式模型／视图跟随改图geo身份且不复用旧缓存。同key样条／省份交换／ZIP／设备重建与A01–A27未做。证据checkpoint2026-11-06-r201-lifecycle-graphics。
+- 改图身份：1.15目录Mod仅改`STATE_BEKES`的`id` 164→901（其余字节相同），content_load绝对路径启用并在测试后恢复原字节、删除Mod。实机`state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`（无Mod为geo=164）；快照states=1157 goods=54，市场物流页`owner selected`、`freight view gen=2 world=1 rev=4 ribbons=185`、`DRAW PERF uploads=185 visible=185 dropped=0`，显示13982.47687／510.99MU。证明正式模型／视图跟随改图geo身份且不复用旧缓存。
+- 同key样条几何：覆盖`spline_network.splnet`仅改点`268437460`的X +10；实机运行时`point=268437460 x=4082.966309`、`expected 4082.966309 delta=0.000000`，网络计数33765／4281／4279不变，快照与物流页（185 ribbons、uploads=185、dropped=0）正常。省份交换／ZIP／设备重建与A01–A27未做。证据checkpoint2026-11-06-r201-lifecycle-graphics。
 
 ### 2026-11-06 — R201：稳定视图缓存门槛与1.15重载池恢复修复
 
