@@ -1,81 +1,86 @@
-// Build-specific profile for Victoria 3 1.13.11 (steam release/1.13.11).
-// Every address is an RVA; runtime resolves base + RVA and verifies the file hash
-// and the first bytes of each entry point before any call is enabled.
+// Victoria 3 1.15.0 profile. All entry RVAs and their first bytes are verified
+// against SHA256 473186e8d8deba99...; every address is resolved as base + RVA
+// and re-verified at load. The capture hook, renderer, GUI and VFS entries are
+// the 1.15 build; the original trade-path selector keeps its old adapter
+// disabled because 1.15 changed it to (candidate descriptor, hash).
 #pragma once
 #include <cstdint>
 
 namespace v3 {
 
-constexpr const char* kGameVersion = "1.13.11";
+constexpr bool kNativeProfileComplete = true; // 1.15 entry signatures verified
+constexpr bool kNativeDiagnosticsVerified = false; // legacy opt-in probes stay off
+
+constexpr const char* kGameVersion = "1.15.0";
 constexpr const char* kExpectedExeSha256 =
-    "7f53e3260cf46b6247f6906837464944038c4f74e860274ad3d394e0c04f811f";
+    "473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa";
 
 // Discovery source (tools/discover_local.py against the installed executable):
 //   RTTI CArrowObject -> constructor, subclass vtables, SetPath, bucket append,
 //   render pass, CPdxNewDeleteAllocator singleton.
-constexpr uint32_t kRvaArrowCtor          = 0x037FD4D0;  // CArrowObject::CArrowObject(CPdxArrowType const*)
-constexpr uint32_t kRvaCreateSupplyArrow  = 0x026D0A20;  // new(0xC0) + base ctor + supply vtable + field 0xB0
-constexpr uint32_t kRvaSetPath            = 0x037FD5B0;  // CArrowObject::SetPath(ArrowPath const*)
-constexpr uint32_t kRvaOffsetPathPoints   = 0x037FCCD0;  // ribbon edge generation (used by SetPath)
-constexpr uint32_t kRvaBuildVertexBuffer  = 0x037FDC50;  // vertex buffer upload (used by SetPath)
-constexpr uint32_t kRvaEnsureConstants    = 0x026CEF30;  // per-object constant buffer creation
-constexpr uint32_t kRvaGetArrowType       = 0x037E7D60;  // CAssetFactory::GetArrowType(std::string const*)
-constexpr uint32_t kRvaBucketAppend       = 0x037FE620;  // append arrow to pass bucket (this, passContext)
-constexpr uint32_t kRvaRenderPass         = 0x037FD860;  // arrow render pass (passContext triple)
-constexpr uint32_t kRvaAllocator          = 0x0512CDC0;  // CPdxNewDeleteAllocator singleton
+constexpr uint32_t kRvaArrowCtor          = 0x03AA27A0;  // CArrowObject::CArrowObject(CPdxArrowType const*)
+constexpr uint32_t kRvaCreateSupplyArrow  = 0x02949AF0;  // new(0xE0) + base ctor + supply vtable + constants 0xB0..0xDA
+constexpr uint32_t kRvaSetPath            = 0x03AA2880;  // CArrowObject::SetPath(ArrowPath const*)
+constexpr uint32_t kRvaOffsetPathPoints   = 0x03AA1FA0;  // ribbon edge generation (used by SetPath)
+constexpr uint32_t kRvaBuildVertexBuffer  = 0x03AA2F20;  // vertex buffer upload (used by SetPath)
+constexpr uint32_t kRvaEnsureConstants    = 0x02943310;  // per-object constant buffer creation
+constexpr uint32_t kRvaGetArrowType       = 0x03A8CEC0;  // CAssetFactory::GetArrowType(std::string const*)
+constexpr uint32_t kRvaBucketAppend       = 0x03AA38F0;  // append arrow to pass bucket (this, passContext)
+constexpr uint32_t kRvaRenderPass         = 0x03AA2B30;  // arrow render pass (passContext triple)
+constexpr uint32_t kRvaAllocator          = 0x053D8DC0;  // CPdxNewDeleteAllocator singleton
 // GUI variable system singleton getter ("GetVariableSystem"). Returns a
 // non-polymorphic string->string hash map; probe-only for now (see D17).
-constexpr uint32_t kRvaVariableSystem     = 0x03A92920;
+constexpr uint32_t kRvaVariableSystem     = 0x03D3B4F0;
 // Script function registration helper; debug probe only (name, flags, callback).
-constexpr uint32_t kRvaScriptRegister     = 0x03AB6D00;
+constexpr uint32_t kRvaScriptRegister     = 0x03D5F8E0;
 // R99/R100: CPartialDailyTickCommand secondary virtual Execute; observation
 // only, opt-in. Completion has not yet authorized the economy collector.
-constexpr uint32_t kRvaPartialDailyTick   = 0x0139E220;
-constexpr uint32_t kRvaAccessScopeEnd     = 0x033BD750;
-constexpr uint32_t kRvaCommandScopeReturn = 0x00CD2BC1;
+constexpr uint32_t kRvaPartialDailyTick   = 0x00C9E210;
+constexpr uint32_t kRvaAccessScopeEnd     = 0x036627C0;
+constexpr uint32_t kRvaCommandScopeReturn = 0x01078EA6;
 // Native world aggregate destructor; machine+120 owns this exact object.
 // Called before any contained manager (including state DB at world+1C10).
-constexpr uint32_t kRvaDestroyNativeWorld = 0x00811660;
+constexpr uint32_t kRvaDestroyNativeWorld = 0x014A3360;
 // Original current world-market candidate selection. Read-only borrowed input;
 // call only inside CopyNativeSnapshot's completed-command access scope.
-constexpr uint32_t kRvaSelectTradePath     = 0x013BDBE0;
-constexpr uint32_t kRvaTradePathCost       = 0x013BD930;
-constexpr uint32_t kRvaTradeStraitCost     = 0x013BD840;
-constexpr uint32_t kRvaTradeStraitLookup   = 0x00CF6B70;
+constexpr uint32_t kRvaSelectTradePath     = 0x00CFBA00;
+constexpr uint32_t kRvaTradePathCost       = 0x00CFB440;
+constexpr uint32_t kRvaTradeStraitCost     = 0x00CFB310;
+constexpr uint32_t kRvaTradeStraitLookup   = 0x00B04970;
 // R71 static + R72 live catalog/TLS validation; read-only, never call the
 // singleton getter (it may initialize TLS and lock). Context-selected slot only.
-constexpr uint32_t kRvaGoodsDatabaseSlots = 0x0514E0D8;
-constexpr uint32_t kRvaGoodsDatabaseVtable = 0x04517DF0;
-constexpr uint32_t kRvaGoodVtable = 0x04517F80;
+constexpr uint32_t kRvaGoodsDatabaseSlots = 0x05400BB8;
+constexpr uint32_t kRvaGoodsDatabaseVtable = 0x0475F0B8;
+constexpr uint32_t kRvaGoodVtable = 0x0475DB30;
 // R73: original InformationPanelBar.IsPanelOpen and constructor ownership chain.
 // Read-only copied state; no RTTI cast/getter or GUI effect is called.
-constexpr uint32_t kRvaInterfaceIdlerGlobal = 0x0592D0E0;
-constexpr uint32_t kRvaInterfaceIdlerVtable = 0x04431500;
-constexpr uint32_t kRvaInterfaceGfxVtable = 0x045B13D8;
-constexpr uint32_t kRvaInterfaceHandlerVtable = 0x045AE328;
-constexpr uint32_t kRvaMarketPanelVtable = 0x045CC9C0;
-constexpr uint32_t kRvaGuiMarketRegistry = 0x059684A0;
-constexpr uint32_t kRvaGuiMarketVtable = 0x045850B0;
-constexpr uint32_t kRvaGuiGoodsVtable = 0x04552218;
+constexpr uint32_t kRvaInterfaceIdlerGlobal = 0x05C07C18;
+constexpr uint32_t kRvaInterfaceIdlerVtable = 0x04678BC0;
+constexpr uint32_t kRvaInterfaceGfxVtable = 0x04833458;
+constexpr uint32_t kRvaInterfaceHandlerVtable = 0x0482CA08;
+constexpr uint32_t kRvaMarketPanelVtable = 0x04849150;
+constexpr uint32_t kRvaGuiMarketRegistry = 0x05C43760;
+constexpr uint32_t kRvaGuiMarketVtable = 0x0480C528;
+constexpr uint32_t kRvaGuiGoodsVtable = 0x0480D108;
 // Same non-polymorphic string-map template, used by another engine subsystem.
 // Read-only research probe target; the GUI variable map is the authority.
 constexpr uint32_t kRvaGlobalStringMap    = 0x0595BE60;
-constexpr uint32_t kRvaStringMapInsert    = 0x0079C0D0;  // insert-or-find(map, out, hash, pair)
-constexpr uint32_t kRvaStringAssign        = 0x0061F280;  // std::string::assign(dst, src, size)
+constexpr uint32_t kRvaStringMapInsert    = 0x0083D070;  // insert-or-find(map, out, hash, pair)
+constexpr uint32_t kRvaStringAssign        = 0x00677A30;  // std::string::assign(dst, src, size)
 // Engine-owned asset loading window and its native VFS. Used to register our
 // embedded adapters without launcher/playset entries or modified game files.
-constexpr uint32_t kRvaPreEnumerateAssets = 0x03B42800;
-constexpr uint32_t kRvaMountData          = 0x03B47C40;
-constexpr uint32_t kRvaMountAssetPath     = 0x03B2F4D0;
-constexpr uint32_t kRvaRefreshAssetRoots  = 0x03B46FF0;
+constexpr uint32_t kRvaPreEnumerateAssets = 0x03DEB040;
+constexpr uint32_t kRvaMountData          = 0x03DF0480;
+constexpr uint32_t kRvaMountAssetPath     = 0x03DD7D10;
+constexpr uint32_t kRvaRefreshAssetRoots  = 0x03DEF830;
 // These are live index handles, NOT pass numbers. Both vanilla arrow submission
 // routines load them into the native context before BucketAppend. See
-// 0x26D0596..0x26D05C3 and 0x26D6F6E..0x26D6F9B on this executable.
-constexpr uint32_t kRvaArrowSubmitDomain  = 0x0513CB18;
-constexpr uint32_t kRvaArrowSubmitStage   = 0x051389D0;
+// 0x2945335..0x2945360 and 0x29453AE..0x2945410 on this executable.
+constexpr uint32_t kRvaArrowSubmitDomain  = 0x053EAE70;
+constexpr uint32_t kRvaArrowSubmitStage   = 0x053E6A70;
 
 // Object layout observed from the constructor and both constructor wrappers.
-constexpr uint32_t kObjectSize            = 0xC0;
+constexpr uint32_t kObjectSize            = 0x000000E0;
 constexpr uint32_t kOffType               = 0x50;
 constexpr uint32_t kOffPath               = 0x70;
 constexpr uint32_t kOffMatrix             = 0x10;
@@ -87,10 +92,10 @@ constexpr uint32_t kOffTotalLength        = 0xA8;
 // First bytes of each entry point, verified against the running image.
 struct Sig { uint32_t rva; uint8_t bytes[8]; const char* name; };
 constexpr Sig kSigs[] = {
-    {kRvaSelectTradePath,   {0x40,0x55,0x56,0x48,0x83,0xEC,0x28,0x83}, "select-trade-path"},
+    {kRvaSelectTradePath,   {0x40,0x56,0x41,0x55,0x41,0x57,0x48,0x83}, "select-trade-path"},
     {kRvaTradePathCost,     {0x48,0x89,0x5C,0x24,0x10,0x48,0x89,0x6C}, "trade-path-cost"},
-    {kRvaTradeStraitCost,   {0x48,0x89,0x5C,0x24,0x10,0x48,0x89,0x74}, "trade-strait-cost"},
-    {kRvaTradeStraitLookup, {0x48,0x83,0xEC,0x58,0x48,0x8B,0x05,0x7D}, "trade-strait-lookup"},
+    {kRvaTradeStraitCost,   {0x40,0x53,0x55,0x57,0x48,0x83,0xEC,0x20}, "trade-strait-cost"},
+    {kRvaTradeStraitLookup, {0x48,0x83,0xEC,0x58,0x48,0x8B,0x05,0xBD}, "trade-strait-lookup"},
     {kRvaAccessScopeEnd,    {0x40,0x53,0x48,0x83,0xEC,0x20,0x48,0x8B}, "access-scope-end"},
     {kRvaDestroyNativeWorld,{0x48,0x89,0x5C,0x24,0x08,0x48,0x89,0x74}, "native-world-destructor"},
     {kRvaPartialDailyTick,   {0x40,0x55,0x53,0x56,0x57,0x41,0x54,0x41}, "partial-daily-tick"},
