@@ -1,5 +1,11 @@
 # 当前状态
 
+### 2026-11-06 — R216：freight目录不可写降级实机
+
+- 用icacls对`binaries\freight`拒绝Everyone写（新建文件被拒：touch Permission denied），并对`freight.log`／`loader.log`／`freight.ini`拒绝写；正常入口启动`-continuelastsave`，pid6452在55秒后仍存活（内存7.8→7.65GB，世界已加载），15秒内三个文件大小与mtime均不变——负载在无法写日志／配置时静默丢弃写入、未崩溃。
+- WM_CLOSE关闭后对文件与目录`icacls /reset`，touch恢复成功，ACL回到继承的Users完全控制；安装仍＝dist（`2028e03b…`），EXE/存档/content_load未变。
+- 边界：该会话未做经济交互；只证明只读目录不阻止加载与运行，不是权限持久化或写失败可见性验收。证据：checkpoint2026-11-06-r207-partial-sea-ids（r216-read-only-dir.txt）。
+
 ### 2026-11-06 — R215：1.15原版右键菜单与热度颜色模式实机
 
 - 在市场物流页右键谷物行→原版上下文菜单实见：信息、钉选到概览窗口、大不列颠的谷物、添加消费税、关税/补贴数值、生产者（扩建黑麦/小麦/水稻/玉米/杂谷农场及数量）、消费者（食品厂12、畜牧场27）；卡片总量13982.47687不变。右键悬停同时触发`freight view gen=3 ribbons=34`，移出后`gen=4 ribbons=187`恢复。

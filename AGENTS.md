@@ -195,6 +195,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R216：freight目录不可写降级
+
+icacls拒绝Everyone对freight目录新建写、并对freight.log/loader.log/freight.ini拒绝写；正常入口启动后pid6452存活55秒（世界加载），15秒内三文件大小/mtime不变（写入静默丢弃、无崩溃）；关闭后/reset恢复可写，安装＝dist不变。未做经济交互，只证明只读目录不阻止加载。证据checkpoint2026-11-06-r207-partial-sea-ids（r216-read-only-dir.txt）。
+
 ### 2026-11-06 — R215：原版右键菜单与热度颜色模式
 
 市场物流页右键谷物行→原版上下文菜单（信息/钉选/大不列颠的谷物/添加消费税/关税/生产者扩建/消费者）实见，卡片13982.47687不变；右键悬停gen3 ribbons34→移出gen4 187。点击热度→绿→浅绿→黄→橙→红提示、按钮选中、数量不变；Heat/Single/Native三模式均已在1.15操作。右键菜单未逐项点击、逐色像素矩阵未做。证据checkpoint2026-11-06-r207-partial-sea-ids（r215_*）。
