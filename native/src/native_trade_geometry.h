@@ -140,7 +140,24 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
       const bool hasStart=incident.count(start)!=0,hasEnd=incident.count(end)!=0;
       if(hasStart && !hasEnd)end=loose[0]==start?loose[1]:loose[0];
       else if(!hasStart && hasEnd)start=loose[0]==end?loose[1]:loose[0];
-      if((hasStart && !hasEnd) || (!hasStart && hasEnd))complete=false;
+      else if(!hasStart && !hasEnd){
+        // Both endpoints lack a current port transfer. The selected sea keys
+        // are authored from source to destination, so the only anchor that
+        // appears as a start and never as an end is the source; likewise for
+        // the destination. Use them only when they are the chain's two ends.
+        std::set<uint32_t> starts,ends;
+        for(uint64_t key:connections.sea.keys){
+          starts.insert(uint32_t(key>>6)&0x1fffffff);ends.insert(uint32_t(key>>35));
+        }
+        std::vector<uint32_t> sources,destinations;
+        for(uint32_t anchor:starts)if(!ends.count(anchor))sources.push_back(anchor);
+        for(uint32_t anchor:ends)if(!starts.count(anchor))destinations.push_back(anchor);
+        if(sources.size()==1 && destinations.size()==1 && sources[0]!=destinations[0] &&
+           incident.count(sources[0]) && incident.count(destinations[0])){
+          start=sources[0];end=destinations[0];
+        }
+      }
+      if((hasStart && !hasEnd) || (!hasStart && hasEnd) || (!hasStart && !hasEnd))complete=false;
     }
   }
   if(start==end || !incident.count(start) || !incident.count(end))return fail("native route endpoints are not distinct current port anchors");

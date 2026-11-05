@@ -1,5 +1,12 @@
 # 当前状态
 
+### 2026-11-06 — R212：两端均缺港口的seaOnly回退，unavailableSea 2→1
+
+- 对两端都没有当前港口接续的seaOnly航线增加方向推理：所选海段keys的作者方向中，只作为起点出现、从不作为终点出现的锚点判为源端，反之判为终点；仅当各唯一且均为链的端点时采用，标记partial。不造岸点。
+- 实机（构建`2028e03bc288cd89ff1df23c3dd4f94b9413594636ca2781a183d916c7d9d4a7`／50,025,206B，引导`c8020412…`）：`unavailableSea 2→1`、`partialSea 37→38`，剩余唯一unavailable为`611→608`（MINDANAO→NORTH_BORNEO，方向推理不唯一，保持未知）；`DRAW PERF paths=187`，页面13982.47687／510.99MU不变。完整官方等价原生入口35/35 PASS，trade_geometry／trade_view套件PASS；安装＝dist。
+- 同构建三对性能（同存档／相机／速度III）：关闭→打开P95为17.664→18.257、17.691→18.209、17.678→18.348 ms，增加0.593／0.518／0.671 ms均≤2；模拟速度11.743→11.767、11.834→11.779、11.821→11.815 date单位/秒，最大降幅0.46%≤5%；窗口61.5–62.6秒、帧流连续且身份一致。
+- 边界：1条unavailable与38条partial的一端仍缺见证港口（数量保留、几何标注未知）；三处海路末端像素复看未做。证据：checkpoint2026-11-06-r207-partial-sea-ids（allocation-after-both-invalid.txt、r212_perf_arms.json、perf-analysis-r212.log、tests-full-r212.log）。
+
 ### 2026-11-06 — R211：replace_path整目录替换通过（省略差分）
 
 - 构造对照ZIP：`map_data/state_regions`含全部17份文件中除`02_east_europe.txt`外的16份，`.metadata`声明`replace_paths=["map_data/state_regions"]`。实机pid37156：`world_ready=false`、探针`state db unavailable`，error.log出现成片`travel_network_pathfinder.cpp:162 Couldn't find travel connection ...`，世界因缺少02州定义而无法建立，游戏随后退出（进程不再存活）；content_load恢复原字节、ZIP删除，原存档未写。
