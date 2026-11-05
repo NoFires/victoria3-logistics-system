@@ -1,5 +1,11 @@
 # 当前状态
 
+### 2026-11-06 — R202：1.15部署矩阵与改图身份（州定义geo 164→901实机绑定）
+
+- 部署矩阵（同一`64913eea…`／`c8020412…`构建，游戏关闭时逐例准备，每例启动后保持运行≥50秒）：主体缺失→loader.log最后一行`LoadLibraryExW failed (error=126)`、无payload日志、游戏进程存活；主体损坏（256字节零）→`error=193`、游戏存活；整套卸载（version.dll＋freight.dll移开）→无新loader条目、游戏以原版界面存活；重新安装→`loaded freight.dll (error=0)`且`loader attached`/渲染pass日志出现。全部用例后dist＝安装逐文件哈希相同，EXE`473186e8…`、存档`458e7780…`、content_load`f8c89f83…`字节保持。
+- 改图身份：1.15目录Mod覆盖`map_data/state_regions/02_east_europe.txt`，仅将`STATE_BEKES`的`id`由164改为901（与base文件相比仅3字节不同，保留BOM/其余内容）；content_load以绝对路径启用，测试后恢复原字节（`f8c89f83…`）并删除Mod目录。实机pid11200：`state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`——运行州key与定义索引不变、地图geo身份按Mod变为901（无Mod时为164）；快照`states=1157 goods=54`正常，市场物流页`native market owner selected panel=0 tab=ironroad_logistics`、`freight view gen=2 world=1 rev=4 ribbons=185 compute=95.082 ms`、`DRAW PERF paths=185 uploads=185 reused=0 visible=185 dropped=0`，页面显示13982.47687／510.99MU。证明正式模型／视图按改图后的geo身份重建，未复用改前缓存。
+- 边界：本轮只改一个州的地图id；同key样条几何、省份归属交换、ZIP／replace_path及运行中改图缓存失效仍未在1.15验证；部署矩阵的“目录不可写”及真实设备重建未做；最终同构建A01–A27仍未完成。证据：checkpoint2026-11-06-r201-lifecycle-graphics（r201_deploy_matrix.json、deploy-matrix.log、r201_mod_test.json、mod-test.log、mod-panel.png、mod-fixture/）。
+
 ### 2026-11-06 — R201：稳定视图缓存门槛与1.15重载池恢复修复（缩放往返通过）
 
 - 缓存／压力：市场物流页保持打开65秒，`SUBMIT … uploads=346`持续不变、无新`DRAW PERF`批次，即稳定视图零新增几何上传。随后20轮关闭→重开市场→物流页，逐轮`DRAW PERF paths=185 uploads=0 reused=185 failed=0 pool=346 … repeats_skipped=1…20 state=complete gen=6…44`：20轮零上传、池恒346（≤8192）、每帧上传0（≤16）、`peak_attempts=16`、`peak_frame_us=685`（软2 ms预算内）、`overrun_frames=0`。内存采样20轮：RSS 8,155,156,480–8,156,925,952B（Δ1.9MB），private 15,801,597,952–15,888,187,392B，末6轮在15.86–15.89GB间波动无单调增长，末4轮完全相同→平台。

@@ -115,7 +115,7 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 ## 5. 当前状态与恢复入口
 
-截至R201：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_attempts=16`、`peak_frame_us=685`、`overrun_frames=0`，20轮内存趋于平台。生命周期实测修复1.15图形身份偏移：`overlay.cpp`由1.13`0x0592d5c8`（实读无效值）改为1.15`0x05c080b8`，重载world2后`native pool recovered world=2 slots=185`、`freight view gen=7 world=2 ribbons=185`且页面真实数值与箭头恢复；缩放2560×1440→1920×1080→2560×1440无池退休、无旧帧。三对性能（同存档／相机／速度III）P95增加0.281／0.407／0.405 ms（≤2），模拟速度最大降幅0.61%（≤5%），窗口61.5–62.6秒。当前主体`64913eea…`／49,737,579B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。设备重建、三处海路末端／海峡权限／改图、最终同构建A01–A27未做，详见STATUS R201。
+截至R202：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_frame_us=685`、`overrun_frames=0`；三对性能P95增加0.281／0.407／0.405 ms（≤2）、模拟速度最大降幅0.61%（≤5%）；生命周期修复1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），重载world2池恢复、缩放往返无旧帧。部署矩阵：主体缺失126／损坏193／整套卸载无loader／重装0，游戏均存活且安装＝dist、存档与content_load字节保持。改图身份：1.15目录Mod仅改`STATE_BEKES` id 164→901，实机读到`key=STATE_BEKES definition=150 geo=901`，快照与正式物流页仍构建（185 ribbons、13982.47687／510.99MU），content_load恢复原字节。当前主体`64913eea…`／49,737,579B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。同key样条／省份交换／ZIP、设备重建、三处海路末端／海峡权限、最终同构建A01–A27未做，详见STATUS R202。
 
 截至2026-11-05：按用户要求在保存退出后经deploy.ps1卸载引导和主体；配置、日志、缓存及可编辑资源逐项哈希保持，卸载备份已留。游戏更新后的ABI未验证，目标保持暂停，R194未完成源码保留且未部署。当前实际安装已卸载，dist仍保留，详见STATUS。
 
@@ -194,6 +194,11 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 **最新操作授权（2026-10-25）**：用户明确“我现在不在电脑旁边，请你自主验证”，允许自主启动及操作测试，覆盖此前手动操控限制；保留不强制结束可能有未保存进度会话的部署约束。
 
 ## 6. 进度日志（简要记录，最新在上）
+
+### 2026-11-06 — R202：1.15部署矩阵与改图身份
+
+- 部署矩阵（同构建、游戏关闭逐例准备）：主体缺失→loader.log `error=126`、主体损坏→`error=193`、整套卸载→无新loader条目、重装→`loaded freight.dll (error=0)`；四例游戏进程均存活≥50秒。事后安装＝dist、EXE／存档／content_load哈希保持。
+- 改图身份：1.15目录Mod仅改`STATE_BEKES`的`id` 164→901（其余字节相同），content_load绝对路径启用并在测试后恢复原字节、删除Mod。实机`state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`（无Mod为geo=164）；快照states=1157 goods=54，市场物流页`owner selected`、`freight view gen=2 world=1 rev=4 ribbons=185`、`DRAW PERF uploads=185 visible=185 dropped=0`，显示13982.47687／510.99MU。证明正式模型／视图跟随改图geo身份且不复用旧缓存。同key样条／省份交换／ZIP／设备重建与A01–A27未做。证据checkpoint2026-11-06-r201-lifecycle-graphics。
 
 ### 2026-11-06 — R201：稳定视图缓存门槛与1.15重载池恢复修复
 
