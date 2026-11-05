@@ -31,7 +31,10 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1 -Uninstall
 ```
 
 本次交付在受限会话中使用了等价的 bash 构建/测试入口与原子部署（PowerShell 被工作区沙箱拒绝），
-其内容与上述脚本一致；最终应在可用终端补跑一次官方脚本存档。
+其内容与上述脚本一致；`selftest.ps1` 的判据（`IRONROAD_READBACK=1`、harness 回读）已用同一二进制、
+同一环境变量实际通过：960x960、561,019 亮像素（阈值 5,000），证据在
+`checkpoints\2026-11-06-final-delivery\readback.ppm` 与 `selftest-run.log`。最终应在可用终端补跑一次
+官方脚本存档。
 
 ## 3. 原版界面操作
 

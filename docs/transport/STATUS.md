@@ -1,5 +1,10 @@
 # 当前状态
 
+### 2026-11-06 — R219：官方selftest等价回读复验
+
+- 以`IRONROAD_READBACK=1`运行真实D3D11 harness（`native/build/tests/harness.exe dist/version.dll`，等价`tools/selftest.ps1`）：exit 0、presented 262帧、日志`ImGui ready`、`present #1 hr=0x00000000`、`readback written: 960x960, 561019 bright pixels`；独立解析`readback.ppm`得到921600像素、561019亮像素（阈值5000）与日志一致。
+- 该结果补齐A09自检子项；官方PowerShell包装脚本本身仍未执行（沙箱），但同一二进制、同一env、同一判据已实际通过。证据：checkpoint2026-11-06-final-delivery（readback.ppm、selftest-run.log、dist-freight.log）。
+
 ### 2026-11-06 — R218：物流带显示/隐藏的纯视图验证
 
 - 同R217伦敦视角：初始物流带可见（英伦—海峡—低地连续，卡片13982.47687／510.99MU）；点击“隐藏”后地图上所有物流带消失而卡片数值不变；点击“显示”后全部物流带恢复、数值不变。证明显示/隐藏只改视图，不触碰分配、数量或市场分母。

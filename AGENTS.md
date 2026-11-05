@@ -197,6 +197,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R219：官方selftest等价回读复验
+
+`IRONROAD_READBACK=1`运行真实harness：exit0、262帧、ImGui ready、present#1 hr=0、readback 960x960/561019亮像素；独立PPM解析同样561019（阈值5000）。同一二进制/env/判据通过；PowerShell包装脚本本身仍未执行。证据checkpoint2026-11-06-final-delivery（readback.ppm、selftest-run.log）。
+
 ### 2026-11-06 — R218：物流带显示/隐藏纯视图验证
 
 伦敦视角下初始物流带可见；点“隐藏”后全部消失、卡片13982.47687/510.99MU不变；点“显示”后全部恢复、数值不变。显示/隐藏只改视图。未做颜色/线宽组合逐像素矩阵。证据checkpoint2026-11-06-r207-partial-sea-ids（r218_visible/hidden/shown.png）。
