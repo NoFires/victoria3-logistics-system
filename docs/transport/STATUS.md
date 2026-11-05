@@ -1,5 +1,14 @@
 # 当前状态
 
+### 2026-11-06 — R199：1.15港口—州接缝修复（lane纯海段＋港口合成路径）
+
+- 用户报告本地价格路线图在“海外→伦敦周边→中英格兰”处再次中断。只读复现（同一运行游戏）：水果最终货流Bahamas→中英格兰、Jamaica→中英格兰；相邻边端点坐标不连续5处。海段lane几何终点是港口陆侧点`0x8005dc`(4072.5,2779.9)，模型图端点却被掩码归一化到州主枢纽`0x5dc`(4091.0,2801.5)；同时lane几何已包含港口样条，模型又单独加港口边，渲染出现回折/断口。
+- 根因：1.15 port access样条（type3）连接海锚与港口陆侧节点，而该陆侧节点没有任何陆路连接；1.13的keyless port path曾把海锚直接连到主枢纽。迁移时图端点做了掩码归一化但几何未同步，且lane几何重复包含港口样条。
+- 修复：`native_trade_geometry.h`新增seaOnly与startAnchor/endAnchor：模型lane用纯海段几何，图端点取几何实际链端点；`native_domestic_model.h`港口边改为合成bit63路径＝原版港口样条控制点＋（掩码匹配时）主枢纽见证点连接，路径/图端点/长度一致；无port transfer的旧式数据回退原选择器；同海区零距离lane用两条港口样条成链。
+- 实数据复核：水果货流全部相邻边坐标连续（breaks=0）。Bahamas→中英格兰：海段终点(4053.762,2759.913)→港口合成路径到枢纽(4091.022,2801.467)→陆路→…；Jamaica侧港口边同样连续。该连接点是模型假设（港口点到州枢纽的直线连接），两端均为当前见证点。
+- 构建exit0，本地16套测试全PASS。官方等价入口（按`build_tests.ps1`生成的bash版，35项）最终：0 BUILDFAIL／8 RUNFAIL——harness（`load dist\version.dll err=126`）、native_port_approach（`invalid selected port state`，1.13夹具）、spline_tests、arrow_lease_tests（asset registration恢复）、native_trade_view（missing visual port夹具，已修编译并加入港口连续性回归）、dev_snapshot_tests、freight_scale_tests、preview_worker_tests。均为1.15迁移期夹具/环境缺口，未影响本轮产品修复；阶段1“完整入口无未解释失败”仍未达成。
+- 主体`7d31584a31302f17b179a4dc4afd259458edef5f2cc0ffdd1d1fde4e3ec94619`／49,735,019B＋引导`fa9ebd38…`（随主体哈希重建）已部署，安装＝dist；游戏实载1.15.0并出帧：市场owner10 ribbons185、伦敦周边state5 owner15 ribbons232（DRAW PERF overrun0）。本轮UI相机导航成本高，像素级港口接缝复看改由数据级坐标连续证据覆盖；不做像素验收声明。
+
 ### 2026-11-06 — R198：州面板1.15迁移与双页面实机验收（两处`--`消除）
 
 - 用户报告本地价格页物流列也显示`--`。定位：`state_panel.h`仍是1.13值（handler+0xD8/+0xE0/+0xEC、states_panel vtable 0x045CC848），1.15下解码失败、州owner从不激活。1.15实读：states_panel仍在slot14，vtable=`0x0485DB38`，tab=`local_goods`，state=433，bar history kind=14；已迁移解码器，并同步迁移`market_panel_tests`/`state_panel_tests`夹具（handler+0xE8/+0xF0/+0xFC、state vtable），两测试加入本地统一套件后16套全PASS。

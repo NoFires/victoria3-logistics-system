@@ -167,10 +167,6 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
       path.straits=found->second;
     }else for(const auto& strait:trade.straits)path.straits.push_back(strait.id);
     destination.candidates.push_back(std::move(path));
-    auto shape=BuildNativeTradeGeometry(trade,lane.fromState,destination,nullptr,cancelled,true);
-    NativeTradeGeometry available;
-    if(!shape){if(cancelled && cancelled())return fail("cancelled");++result.unavailableSea;available.complete=false;}
-    else {available=std::move(*shape);if(!available.complete)++result.partialSea;}
     // Current CShippingLane is the connectivity fact. Original native travel
     // distance(+60), including a valid zero within one sea region, is its model
     // route metric. A missing graphics key cannot erase this known connection.
@@ -187,8 +183,20 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
       // from roads/other lanes, rather than using a loose graphics end as a port.
       return (uint64_t(1)<<63)|(uint64_t(lane.id)<<1)|side;
     };
+    // The port access splines are added as their own edges below; keep the
+    // lane geometry sea-only and let its resolved chain ends define the graph
+    // endpoints, so geometry and graph stay identical even without transfers.
+    auto shape=BuildNativeTradeGeometry(trade,lane.fromState,destination,nullptr,cancelled,true,true);
+    NativeTradeGeometry available;
+    std::array<uint64_t,2> laneEndpoints{endpoint(lane.fromState,0),endpoint(lane.toState,1)};
+    if(!shape){if(cancelled && cancelled())return fail("cancelled");++result.unavailableSea;available.complete=false;}
+    else{
+      available=std::move(*shape);
+      laneEndpoints={available.startAnchor,available.endAnchor};
+      if(!available.complete)++result.partialSea;
+    }
     if(!add(lane.fromState,lane.toState,2,std::move(available),double(lane.travelDistanceFixed)/kNativeShippingDistanceScale,
-        std::array<uint64_t,2>{endpoint(lane.fromState,0),endpoint(lane.toState,1)}))
+        laneEndpoints))
       return fail("invalid domestic port lane scope or distance");
     ++result.seaConnections;
   }
@@ -205,25 +213,72 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     const auto binding=network.connections.find(transfer->spline);
     if(binding==network.connections.end() || binding->second.empty())
       return fail("current port transfer has no native geometry");
-    NativeTradeGeometry shape;uint32_t anchor=uint32_t(transfer->spline>>6)&0x1fffffff;const auto start=anchor;
-    for(uint64_t strip:binding->second){
-      const auto controls=network.strips.find(strip);
-      if(controls==network.strips.end() || controls->second.size()<2 || (strip&63)!=(transfer->spline&63))
-        return fail("invalid current port transfer strip");
-      const auto& points=controls->second;const bool along=points.front()==anchor;
-      if(!along && points.back()!=anchor)return fail("disconnected current port transfer spline");
-      shape.strips.push_back({strip,along});anchor=along?points.back():points.front();
+    // Walk the current port spline in its authored direction from the key
+    // start to its key end. 1.15.0 ends this spline at the port-side land node
+    // (a naval-anchor control) which has no land connection of its own; the
+    // state's roads and trade access use the witnessed primary land hub.
+    std::vector<uint32_t> controls;
+    {
+      uint32_t anchor=uint32_t(transfer->spline>>6)&0x1fffffff;const auto start=anchor;
+      for(uint64_t strip:binding->second){
+        const auto found=network.strips.find(strip);
+        if(found==network.strips.end() || found->second.size()<2 || (strip&63)!=(transfer->spline&63))
+          return fail("invalid current port transfer strip");
+        const auto& points=found->second;const bool along=points.front()==anchor;
+        if(!along && points.back()!=anchor)return fail("disconnected current port transfer spline");
+        if(along){for(uint32_t c:points)controls.push_back(c);anchor=points.back();}
+        else{for(size_t i=points.size();i-->0;)controls.push_back(points[i]);anchor=points.front();}
+      }
+      if(anchor!=uint32_t(transfer->spline>>35) || anchor==start)
+        return fail("current port transfer endpoints differ");
     }
-    if(anchor!=uint32_t(transfer->spline>>35) || anchor==start)
-      return fail("current port transfer endpoints differ");
-    // 1.15.0 port access uses its own model fee1, not the sea tariff0.25.
-    // The raw land anchor carries the 0x800000 flag; the graph joins the
-    // witnessed primary land hub instead.
+    std::vector<uint32_t> distinct;
+    for(uint32_t c:controls)if(distinct.empty()||distinct.back()!=c)distinct.push_back(c);
+    if(distinct.size()<2 || transfer->anchors[0]!=distinct.front() && transfer->anchors[0]!=distinct.back())
+      return fail("native port transfer land anchor not on spline");
+    NativeTradeGeometry shape;
+    std::optional<std::vector<NativeSplinePoint>> synthetic;
+    uint64_t syntheticId=0;
     uint32_t landAnchor=transfer->anchors[0];
     if(const auto hubAnchor=trade.domestic->landHubs.find(transfer->state);
-       hubAnchor!=trade.domestic->landHubs.end() && (landAnchor&~0x800000u)==hubAnchor->second)
+       hubAnchor!=trade.domestic->landHubs.end() && (landAnchor&~0x800000u)==hubAnchor->second){
+      // The witnessed hub is the state's model access point, so the port edge
+      // must reach it. Keep the authored port spline and append/prepend the
+      // witnessed hub point as the last, straight model connector. This is the
+      // same substitution the graph edge already performs; it is not a newly
+      // invented road, and both endpoints remain witnessed current points.
+      const auto hubPoint=network.points.find(hubAnchor->second);
+      if(hubPoint==network.points.end())return fail("current domestic land hub has no point");
+      std::vector<NativeSplinePoint> path;path.reserve(distinct.size()+1);
+      for(uint32_t c:distinct){
+        const auto point=network.points.find(c);
+        if(point==network.points.end() || !std::isfinite(point->second.x) || !std::isfinite(point->second.z))
+          return fail("unavailable current port transfer control");
+        path.push_back(point->second);
+      }
+      const bool landIsStart=transfer->anchors[0]==distinct.front();
+      if(landIsStart)path.insert(path.begin(),hubPoint->second);else path.push_back(hubPoint->second);
       landAnchor=hubAnchor->second;
-    if(!add(transfer->state,transfer->state,4,std::move(shape),{},
+      syntheticId=(uint64_t(1)<<63)|transfer->id;
+      shape.strips.push_back({syntheticId,landIsStart});
+      synthetic=std::move(path);
+    }else{
+      uint32_t anchor=uint32_t(transfer->spline>>6)&0x1fffffff;
+      for(uint64_t strip:binding->second){
+        const auto found=network.strips.find(strip);
+        const auto& points=found->second;const bool along=points.front()==anchor;
+        shape.strips.push_back({strip,along});anchor=along?points.back():points.front();
+      }
+    }
+    // 1.15.0 port access uses its own model fee1, not the sea tariff0.25.
+    double length=0;
+    if(synthetic){
+      for(size_t i=1;i<synthetic->size();++i)
+        length+=std::hypot(double((*synthetic)[i].x)-(*synthetic)[i-1].x,double((*synthetic)[i].z)-(*synthetic)[i-1].z);
+      result.portPaths.emplace(syntheticId,*synthetic);
+    }
+    if(!add(transfer->state,transfer->state,4,std::move(shape),
+        synthetic?std::optional<double>(length):std::nullopt,
         std::array<uint64_t,2>{landAnchor,transfer->anchors[1]}))
       return fail("invalid native port transfer scope or distance");
   }

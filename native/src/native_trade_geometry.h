@@ -11,6 +11,10 @@ struct NativeTradeGeometry {
   NativeRouteConnections connections;
   std::vector<NativeDirectedStrip> strips;
   bool complete=true; // false for partial original port geometry or a missing physical transfer
+  // Resolved chain ends in the current spline control space. A sea-only lane
+  // uses exactly these as its graph endpoints, so geometry and graph never
+  // disagree when a current port transfer is absent.
+  uint32_t startAnchor=0,endAnchor=0;
 };
 // Compose the original port-connection mapping with the CURRENT endpoints used
 // by013C4E70 and its selected native ProvinceSet. Order only an unambiguous chain
@@ -19,23 +23,50 @@ struct NativeTradeGeometry {
 // original world-market renderer (025E8450 callers observed CShippingLane).
 inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeWorldTradeSnapshot& trade,
     uint32_t source,const NativeTradeDestination& destination,std::string* error=nullptr,
-    const std::function<bool()>& cancelled={},bool allowPartialPort=false) {
+    const std::function<bool()>& cancelled={},bool allowPartialPort=false,bool seaOnly=false) {
   auto fail=[&](const char* why)->std::optional<NativeTradeGeometry>{if(error)*error=why;return {};};
   if(cancelled && cancelled())return fail("cancelled");
   if(!trade.geometry || !trade.seaGeography)return fail("current native route geography unavailable");
   NativeRouteConnections connections;
   std::array<uint32_t,2> endpointAnchors{};
-  if(trade.domestic){
-    // 1.15.0: port access is a current type-5 spline between the state's land
-    // hub and its sea-side anchor. Use that key instead of the removed hub
-    // locator lookup; the chain then runs hub->sea->lane->sea->hub.
+  // 1.15 port access splines are the authoritative port data only when the
+  // current capture actually produced them. Synthetic/legacy inputs without
+  // any transfer keep the original sea-geography port selection instead of
+  // silently losing every international shape.
+  const bool domesticPorts=trade.domestic && !trade.domestic->portTransfers.empty();
+  bool intraRegion=false;
+  if(domesticPorts){
+    // 1.15.0: port access is a current type-5 spline between a port-side land
+    // node and its sea-side anchor. The domestic model draws those access
+    // splines as their own port edges, so a lane geometry built for the model
+    // must stay sea-only and end at the same sea anchors its graph edge uses.
+    // Native international route shapes still include the port splines.
     auto sea=SelectNativeSeaConnections(trade,*trade.seaGeography,destination,error);
     if(!sea)return {};
     connections.sea=std::move(*sea);
+    // A lane whose selected path stays inside one sea region has no sea spline;
+    // its two port access splines then form the authored chain (valid zero
+    // within one region). Only that explicit case keeps the land anchors.
+    intraRegion=seaOnly && connections.sea.keys.empty();
     for(size_t i=0;i<2;++i){
       const uint32_t state=i?destination.state:source;
+      bool found=false;
       for(const auto& transfer:trade.domestic->portTransfers)
-        if(transfer.state==state){connections.ports[i]=transfer.spline;endpointAnchors[i]=transfer.anchors[0];break;}
+        if(transfer.state==state){
+          found=true;
+          if(seaOnly && !intraRegion)endpointAnchors[i]=transfer.anchors[1];
+          else{connections.ports[i]=transfer.spline;endpointAnchors[i]=transfer.anchors[0];}
+          break;
+        }
+      if(seaOnly && !intraRegion && !found){
+        // A state without a current port access still uses the original
+        // naval-anchor encoding, matching the model's own endpoint fallback.
+        const auto& regions=trade.seaGeography->states;
+        const auto region=regions.find(state);
+        if(region==regions.end() || region->second.geo==UINT32_MAX)
+          return fail("native lane sea anchor unavailable");
+        endpointAnchors[i]=((region->second.geo*100)&0x1fffffff)|0x800000;
+      }
     }
   }else{
     auto legacy=SelectNativeRouteConnections(trade,*trade.seaGeography,source,destination,error);
@@ -45,8 +76,8 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
     endpointAnchors[0]=((regions.at(source).geo*100)&0x1fffffff)|0x800000;
     endpointAnchors[1]=((regions.at(destination.state).geo*100)&0x1fffffff)|0x800000;
   }
-  const bool complete=connections.ports[0] && connections.ports[1];
-  if((!complete && !allowPartialPort) || (!connections.ports[0] && !connections.ports[1]))
+  const bool complete=(seaOnly && !intraRegion)?true:(connections.ports[0] && connections.ports[1]);
+  if((!complete && !allowPartialPort) || (!seaOnly && !connections.ports[0] && !connections.ports[1]))
     return fail("native endpoint port connection unavailable");
   const auto& network=*trade.geometry;
   if(!network.width || !network.height)return fail("current native map dimensions unavailable");
@@ -97,6 +128,7 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
   for(const auto& [point,edges]:incident)if(edges.size()!=(point==start || point==end?1u:2u))
     return fail("native route geometry is not a unique endpoint chain");
   NativeTradeGeometry result;result.connections=std::move(connections);result.complete=complete;
+  result.startAnchor=start;result.endAnchor=end;
   std::set<uint64_t> visited;uint32_t current=start;
   while(current!=end){
     if(cancelled && cancelled())return fail("cancelled");

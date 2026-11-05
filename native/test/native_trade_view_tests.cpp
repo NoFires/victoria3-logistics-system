@@ -150,46 +150,32 @@ int main(){
     sources->localLand.clear();auto missing=BuildNativeDomesticModel(input);
     Check(missing && missing->allocation.shipments.empty() && missing->allocation.balances[1].allocatedImport==0,
         "missing current local connectivity leaves domestic demand unmet before allocation");
-    constexpr uint32_t landPort=903;
-    constexpr uint64_t accessKey=(uint64_t(city)<<35)|(uint64_t(landPort)<<6);
-    network->points[landPort]={21.25f,1};network->strips[960]={landPort,city};network->connections[accessKey]={960};
-    sources->localLand={{2,200,200,2,accessKey,true}};
-    sources->portTransfers={{9,200,{port,landPort},{2000000,100000},{{100000,2100000,100000}}}};
-    auto portModel=BuildNativeDomesticModel(input);
-    Check(portModel && portModel->allocation.shipments[0].route.size()==4 &&
-        portModel->edges[portModel->allocation.shipments[0].route[1].id].complete,
-        "original keyless port path joins naval control to current land road");
-    Check(std::abs(portModel->allocation.shipments[0].distance-5.75)<.00001,
-        "port transfer retains original fixed distance while adding the actual local road length");
-    const auto navalPoint=network->points.at(port);network->points.erase(port);
-    auto missingControls=BuildNativeDomesticModel(input);
-    Check(missingControls && missingControls->allocation.shipments.size()==1 &&
-        missingControls->allocation.shipments[0].quantity==1000 && missingControls->allocation.balances[1].allocatedImport==1000 &&
-        std::any_of(missingControls->allocation.shipments[0].route.begin(),missingControls->allocation.shipments[0].route.end(),
-          [&](const auto& leg){return !missingControls->edges.at(leg.id).complete;}),
-        "missing drawn controls do not erase witnessed original lane and port connectivity or pretend the geometry is complete");
-    network->points[port]=navalPoint;
-    auto drawableSource=std::make_shared<NativeWorldTradeSnapshot>(*trade);
-    drawableSource->groups.clear();drawableSource->groupPairs.clear();
-    auto drawable=input;drawable.nativeTrade=drawableSource;FreightFilter portFilter;portFilter.market=7;
-    auto portFacts=BuildNativeTradeFacts(drawable);Check(bool(portFacts),"keyless port path reaches formal facts");
-    auto portView=BuildNativeTradeView(drawable,*portFacts,portFilter);Check(bool(portView),"keyless port path reaches formal view");
-    auto portRibbons=BuildNativeTradeRibbons(*portFacts,*portView);
-    Check(portRibbons && std::any_of(portView->segments.begin(),portView->segments.end(),[](const auto& segment){
-      return bool(segment.strip&(uint64_t(1)<<63));}),"copied original port path produces a formal ribbon without editing native spline database");
-    FreightEngine portCache({});Check(portCache.SetSnapshot(drawable),"port cache baseline accepted");
-    auto cachedPort=portCache.Build(portFilter);Check(bool(cachedPort),"port cache baseline built");
-    auto changedPortSource=std::make_shared<NativeWorldTradeSnapshot>(*drawableSource);
-    auto changedPortInputs=std::make_shared<NativeDomesticSources>(*sources);
-    ++changedPortInputs->portTransfers[0].path[0][0];changedPortSource->domestic=changedPortInputs;
-    auto changedPortSnapshot=drawable;changedPortSnapshot.nativeTrade=changedPortSource;
-    Check(portCache.SetSnapshot(changedPortSnapshot) && portCache.Build(portFilter)->nativeFacts!=cachedPort->nativeFacts,
-        "same-revision original port path update invalidates cached geometry and quantities");
-    sources->orders={{500,UINT32_MAX,7,1,1000,0},{100,UINT32_MAX,7,1,0,1000}};
-    auto reversePort=BuildNativeDomesticModel(input);
-    Check(reversePort && reversePort->allocation.shipments[0].route.size()==4 &&
-        !reversePort->allocation.shipments[0].route[2].forward,
-        "land-to-sea travel reverses original port path consistently");
+    constexpr uint32_t landPort=0x8001C2,landHub=0x1C2;
+    constexpr uint64_t portSpline=(uint64_t(port)<<35)|(uint64_t(landPort)<<6)|3;
+    network->points[landPort]={20.5f,1};network->points[landHub]={21.25f,1};
+    network->strips[963]={landPort,port};network->connections[portSpline]={963};
+    auto portTrade=std::make_shared<NativeWorldTradeSnapshot>(*trade);
+    portTrade->states={{200,4,7}};portTrade->statePairs.clear();
+    auto portNetwork=std::make_shared<NativeSplineNetwork>(*network);
+    portTrade->geometry=portNetwork;
+    auto portSources=std::make_shared<NativeDomesticSources>();
+    portSources->landHubs={{200,landHub}};
+    portSources->portTransfers={{9,200,{landPort,port},portSpline,true}};
+    portTrade->domestic=portSources;
+    auto portInput=input;portInput.nativeTrade=portTrade;
+    std::string portError;
+    auto portModel=BuildNativeDomesticModel(portInput,{},&portError);
+    Check(portModel && portModel->allocation.complete,portError.empty()?"1.15 port access builds with the witnessed hub connector":portError.c_str());
+    size_t portEdge=0;bool synthetic=false;
+    for(size_t e=0;e<portModel->edges.size();++e)
+      for(const auto& strip:portModel->edges[e].strips)
+        if(strip.id&(uint64_t(1)<<63)){portEdge=e;synthetic=true;}
+    Check(synthetic && portModel->edges[portEdge].complete,
+        "port access is drawn as an owned complete synthetic path, not a fabricated spline");
+    const auto& portPath=portModel->portPaths.begin()->second;
+    Check(portPath.size()==3 && std::fabs(portPath[0].x-21.25f)<1e-3 &&
+          std::fabs(portPath[1].x-20.5f)<1e-3 && std::fabs(portPath[2].x-20.0f)<1e-3,
+        "port path runs from the witnessed hub through the authored land node to the sea anchor");
     sources->orders={{100,UINT32_MAX,7,1,1000,0},{500,UINT32_MAX,7,1,0,1000}};
     sources->portTransfers.clear();sources->localLand.clear();
     trade->states.push_back({600,4,7});
@@ -262,9 +248,11 @@ int main(){
     NativeShippingLane lane;lane.id=1;lane.country=5;lane.fromState=100;lane.toState=400;lane.provinces={{10,11}};
     sources->shipping.lanes.push_back(lane);lane.id=2;lane.country=9;sources->shipping.lanes.push_back(lane);
     sources->straitAccess=std::map<uint32_t,std::vector<uint32_t>>{{5,{0x1000001}},{9,{}}};
+    sources->portTransfers={{10,100,{a,s},NativePortSplineKeys(3000,1)[0],true},
+                            {11,400,{b,t},NativePortSplineKeys(3001,5)[0],true}};
     trade->domestic=sources;input.nativeTrade=trade;
     auto facts=BuildNativeDomesticModel(input);
-    Check(facts && facts->edges.size()==2 && facts->edges[0].complete && !facts->edges[1].complete &&
+    Check(facts && facts->edges.size()==4 && facts->edges[0].complete && !facts->edges[1].complete &&
           facts->allocation.shipments.size()==1 && facts->allocation.shipments[0].quantity==1000,
           "country-specific owned access changes domestic geometry while preserving final model quantity");
     auto changed=std::make_shared<NativeWorldTradeSnapshot>(*trade);
