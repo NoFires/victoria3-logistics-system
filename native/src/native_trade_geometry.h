@@ -76,8 +76,11 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
     endpointAnchors[0]=((regions.at(source).geo*100)&0x1fffffff)|0x800000;
     endpointAnchors[1]=((regions.at(destination.state).geo*100)&0x1fffffff)|0x800000;
   }
-  const bool complete=(seaOnly && !intraRegion)?true:(connections.ports[0] && connections.ports[1]);
-  if((!complete && !allowPartialPort) || (!seaOnly && !connections.ports[0] && !connections.ports[1]))
+  // The sea-only shortcut applies only to the domestic transfer path;
+  // the legacy port selector must still report a missing endpoint as partial.
+  const bool seaOnlyPorts=domesticPorts && seaOnly && !intraRegion;
+  const bool complete=seaOnlyPorts?true:(connections.ports[0] && connections.ports[1]);
+  if((!complete && !allowPartialPort) || (!seaOnlyPorts && !connections.ports[0] && !connections.ports[1]))
     return fail("native endpoint port connection unavailable");
   const auto& network=*trade.geometry;
   if(!network.width || !network.height)return fail("current native map dimensions unavailable");
