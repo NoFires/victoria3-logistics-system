@@ -31,7 +31,7 @@ template<class Reader,class Current>
 std::optional<NativeShippingSnapshot> DecodeNativeShipping(const Reader& reader,uint64_t module,
     const Current& current,std::string* error=nullptr) {
   auto fail=[&](const char* why)->std::optional<NativeShippingSnapshot>{if(error)*error=why;return {};};
-  if(!current() || !module || module>UINT64_MAX-0x05966768)return fail("missing current shipping identity");
+  if(!current() || !module || module>UINT64_MAX-0x05c42d90)return fail("missing current shipping identity");
   struct Copy {uint64_t address;std::vector<uint8_t> bytes;};
   std::vector<Copy> copies;size_t total=0;
   auto read=[&](uint64_t address,void* out,size_t size){
@@ -43,7 +43,10 @@ std::optional<NativeShippingSnapshot> DecodeNativeShipping(const Reader& reader,
   auto u32=[](const auto& bytes,size_t at){uint32_t n=0;std::memcpy(&n,bytes.data()+at,4);return n;};
   auto u16=[](const auto& bytes,size_t at){uint16_t n=0;std::memcpy(&n,bytes.data()+at,2);return n;};
   uint64_t db=0,type=0,entries=0;uint32_t slots=0,active=0;
-  if(!field(module,0x05966760,db) || !field(db,0,type) || type!=module+0x04439410 ||
+  // 1.15.0: CShippingLane database global and RTTI. The lane object layout is
+  // unchanged from 1.13.11 (verified on the current save: ids, countries,
+  // kind 0 endpoints, +0x58 demand, +0x60 distance and province ranges).
+  if(!field(module,0x05c42d88,db) || !field(db,0,type) || type!=module+0x0470cc00 ||
      !field(db,0x20,entries) || !field(db,0x2c,slots) || !field(db,0x3c,active) ||
      slots>131072 || active>slots)return fail("invalid shipping database type or bounds");
   std::vector<uint64_t> roster(size_t(slots)*2);
@@ -53,7 +56,7 @@ std::optional<NativeShippingSnapshot> DecodeNativeShipping(const Reader& reader,
     const uint64_t object=roster[size_t(slot)*2+1];if(!object)continue;
     std::array<uint8_t,0x68> row{};
     if(!seen.insert(object).second || !read(object,row.data(),row.size()) ||
-       u64(row,0)!=module+0x04427d98 || u64(row,0x10)!=module+0x04427d60 ||
+       u64(row,0)!=module+0x04670978 || u64(row,0x10)!=module+0x04661088 ||
        u32(row,8)==UINT32_MAX || (u32(row,8)&0xffffff)!=slot)
       return fail("invalid shipping lane type or full handle");
     NativeShippingLane lane;lane.id=u32(row,8);lane.country=u32(row,0x18);lane.kind=u32(row,0x1c);
@@ -65,8 +68,10 @@ std::optional<NativeShippingSnapshot> DecodeNativeShipping(const Reader& reader,
     // Native names distinguish port_connection (0) and goods_transfer (1).
     // Goods transfer refers to CTreaty, whose articles carry goods/amounts.
     if(lane.kind==1){
-      if(u16(row,0x20)!=0x65 || u32(row,0x28)==UINT32_MAX)return fail("invalid goods transfer treaty reference");
-      lane.treaty=u32(row,0x28);
+      // 1.15.0 moved the treaty reference to +0x20; two live lanes of the same
+      // treaty share this handle. +0x28 is their article count, not the id.
+      lane.treaty=u32(row,0x20);
+      if(lane.treaty==UINT32_MAX)return fail("invalid goods transfer treaty reference");
     }
     const uint32_t capacity=u32(row,0x38),count=u32(row,0x3c);
     if(count>capacity || capacity>65534)return fail("invalid shipping province set bounds");

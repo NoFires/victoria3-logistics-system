@@ -20,7 +20,7 @@ template<class Reader,class Current>
 std::optional<NativeSplineNetwork> DecodeNativeSplineNetwork(const Reader& reader,uint64_t module,
     const Current& current,std::string* error=nullptr) {
   auto fail=[&](const char* why)->std::optional<NativeSplineNetwork>{if(error)*error=why;return {};};
-  if(!module || module>UINT64_MAX-0x05901fa8 || !current())return fail("missing current native spline source");
+  if(!module || module>UINT64_MAX-0x05bdcaf8 || !current())return fail("missing current native spline source");
   EconomyReadWindow window(reader);
   auto read=[&](uint64_t at,void* p,size_t n){return window.Read(at,p,n);};
   auto field=[&](uint64_t p,uint64_t off,auto& value){return p && off<=UINT64_MAX-p && read(p+off,&value,sizeof(value));};
@@ -28,9 +28,10 @@ std::optional<NativeSplineNetwork> DecodeNativeSplineNetwork(const Reader& reade
   auto u32=[](const auto& bytes,size_t at){uint32_t n=0;std::memcpy(&n,bytes.data()+at,4);return n;};
   uint64_t graphics=0,type=0,database=0,templates=0,pixels=0;
   NativeSplineNetwork result;
-  if(!field(module,0x05901fa0,graphics) || !field(graphics,0,type) || type!=module+0x0464e4e8 ||
+  // 1.15.0: CGraphicalMap global and vtable; table layouts are unchanged.
+  if(!field(module,0x05bdcaf0,graphics) || !field(graphics,0,type) || type!=module+0x048caec0 ||
      !field(graphics,0x2c0,database) || !database || database>UINT64_MAX-0x78 ||
-     !field(module,0x058fccf0,templates) || !field(templates,0,type) || type!=module+0x0441c938 ||
+     !field(module,0x05bd7308,templates) || !field(templates,0,type) || type!=module+0x046d6850 ||
      !field(templates,0x240,pixels) || !field(pixels,0x50,result.width) || !field(pixels,0x54,result.height) ||
      !result.width || result.width>65536 || !result.height || result.height>65536)
     return fail("native spline database or current map dimensions unavailable");

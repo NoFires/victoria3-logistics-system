@@ -48,14 +48,30 @@ struct NativeLandConnection {
   bool forward=true; // definition origin follows the native connection key
   bool operator==(const NativeLandConnection&)const=default;
 };
+struct NativePortTransfer {
+  uint32_t id=0,state=0;
+  std::array<uint32_t,2> anchors{}; // original definition from/to, not guessed port suffixes
+  // 1.15.0 original port-access connections carry a real spline key; the old
+  // keyless cumulative path is gone. Geometry is resolved from the current
+  // spline network by this key.
+  uint64_t spline=0;
+  bool forward=true;
+  bool operator==(const NativePortTransfer&)const=default;
+};
 struct NativeDomesticSources {
   std::vector<StateOrders> orders; // copied local counters, milli-orders; region unused
   NativeShippingSnapshot shipping;
   std::vector<NativeLandConnection> land;
-  std::vector<NativeLandConnection> builtRails; // all current type4, including intra-state/cross-market
+  std::vector<NativeLandConnection> localLand; // current usable intra-state links, not self shipments
+  std::map<uint32_t,uint32_t> landHubs; // full owning state -> current primary land control
+  std::vector<NativePortTransfer> portTransfers; // current original port-access splines
+  std::vector<NativeLandConnection> builtRails; // current built rail rows (1.15 row flag 4)
   // Optional owned original per-country passage results, using full handles.
   // No engine pointers escape the capture window.
   std::optional<std::map<uint32_t,std::vector<uint32_t>>> straitAccess;
+  // BindNativeLaneAccess output, keyed by full lane handle, not country. The
+  // capture producer is not enabled yet; an engaged empty map is known empty.
+  std::optional<std::map<uint32_t,std::vector<uint32_t>>> laneStraitAccess;
 };
 struct NativeWorldTradeSnapshot {
   std::vector<NativeStateEconomy> states;
@@ -83,7 +99,7 @@ struct NativeWorldTradeSnapshot {
 template<class Reader,class Current>
 std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& reader,uint64_t module,
     const std::vector<NativeStateEconomy>& states,uint32_t goodCount,const Current& current,
-    const std::function<uint64_t(uint64_t)>& select={},std::string* error=nullptr) {
+    const std::function<uint64_t(uint64_t,uint32_t,uint32_t)>& select={},std::string* error=nullptr) {
   auto fail=[&](const char* why)->std::optional<NativeWorldTradeSnapshot>{if(error)*error=why;return {};};
   if(!current() || !module || module>UINT64_MAX-0x059667f8-8 || states.empty() ||
      states.size()>65536 || !goodCount || goodCount>128)return fail("missing current world trade identity");
@@ -231,7 +247,7 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
       if(count==1)dest.selected=0;
       else if(count && select){
         if(!current())return fail("retired before native path selection");
-        const uint64_t chosen=select(table+j+0x10),begin=u64(rows,j+0x10);
+        const uint64_t chosen=select(world+0x4e0,result.groups[i].anchor,dest.state),begin=u64(rows,j+0x10);
         if(chosen<begin || (chosen-begin)%0x38 || (chosen-begin)/0x38>=count)
           return fail("native selector returned a path outside its current alternatives");
         dest.selected=uint32_t((chosen-begin)/0x38);
