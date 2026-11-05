@@ -9,8 +9,8 @@ import hashlib
 from pathlib import Path
 import re
 
-BASE_SHA256 = '1f682222b689666731e755bc52b412b3126f4afff40cde05b13a0757b027ec3e'
-STATE_SHA256 = 'ee259534f21785d962672ba25ebb66e6f3c881ffc2f74fdc44caaf989ab76be6'
+BASE_SHA256 = '831ec4036314d4d27313030e824b1db32f3d639407bf26e2fc26bb4b83fd4ed0'
+STATE_SHA256 = 'fa5dfdb31d17f9c00e60b64067b851e1dc2105c846f3dc3e13ce933829c90e2e'
 TAB = 'ironroad_logistics'
 TAB_OVERRIDE = '''
                 blockoverride "fifth_button" { text = "IRONROAD_LOGISTICS" }
@@ -68,7 +68,7 @@ def block(text, pattern, start=0, end=None):
 
 def patch_market(raw):
     if hashlib.sha256(raw).hexdigest() != BASE_SHA256:
-        raise ValueError('market_panel.gui differs from verified 1.13.11; native UI patch disabled')
+        raise ValueError('market_panel.gui differs from verified 1.15.0; native UI patch disabled')
     text = raw.decode('utf-8-sig')
     top, top_end = block(text, r'blockoverride\s+"fixed_top"\s*\{')
     _, tabs_end = block(text, r'\btab_buttons\s*=\s*\{', top, top_end)
@@ -107,21 +107,25 @@ def patch_market(raw):
 
 def patch_logistics_fragment(raw, fragment):
     if hashlib.sha256(raw).hexdigest() != BASE_SHA256:
-        raise ValueError('market_panel.gui differs from verified 1.13.11; native UI patch disabled')
+        raise ValueError('market_panel.gui differs from verified 1.15.0; native UI patch disabled')
     original = raw.decode('utf-8-sig')
     start, end = block(original, r'type\s+goods_entry_button\s*=\s*flowcontainer\s*\{')
     price, price_end = block(original, r'block\s+"last_column"\s*\{', start, end)
     marker = '__IRONROAD_NATIVE_MARKET_PRICE__'
     if fragment.count(marker) != 1:
         raise ValueError('missing/ambiguous original market price placeholder')
-    result = fragment.replace(marker, original[price+1:price_end])
+    price_widget = original[price+1:price_end]
+    if price_widget.count('size = { 215 55 }') != 1:
+        raise ValueError('ambiguous native market price width')
+    price_widget = price_widget.replace('size = { 215 55 }', 'size = { 210 55 }')
+    result = fragment.replace(marker, price_widget)
     braces(result)
     return result
 
 
 def patch_state(raw):
     if hashlib.sha256(raw).hexdigest() != STATE_SHA256:
-        raise ValueError('states_panel.gui differs from verified 1.13.11; native state UI patch disabled')
+        raise ValueError('states_panel.gui differs from verified 1.15.0; native state UI patch disabled')
     text = raw.decode('utf-8-sig')
     marker = 'visible =  "[InformationPanel.IsTabSelected(\'local_goods\')]"'
     if text.count(marker) != 1:

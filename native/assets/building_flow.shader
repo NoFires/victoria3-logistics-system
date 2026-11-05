@@ -29,6 +29,13 @@ ConstantBuffer( 1 )
 {
     int IsSelected;
     int IsFaded;
+    float Weight;
+    float LaneCenter;
+    float PatternOffset;
+    int SuppressStartFade;
+    float WeightBefore;
+    float WeightAfter;
+    float3 LineColor;
 };
 
 VertexShader =

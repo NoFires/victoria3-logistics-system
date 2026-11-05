@@ -63,7 +63,7 @@ for match in re.finditer(r'\bicon\s*=\s*\{', fragment):
 resolved = patch_logistics_fragment(raw, fragment)
 row_start, row_end = block(original, r'type\s+goods_entry_button\s*=\s*flowcontainer\s*\{')
 price_start, price_end = block(original, r'block\s+"last_column"\s*\{', row_start, row_end)
-assert original[price_start+1:price_end] in resolved
+assert original[price_start+1:price_end].replace('size = { 215 55 }', 'size = { 210 55 }') in resolved
 assert '__IRONROAD_NATIVE_MARKET_PRICE__' not in resolved
 assert 'Goods.GetPriceTrend' in resolved and 'Goods.GetMarketPrice' in resolved
 for source, template in [(raw+b'changed', fragment), (raw, fragment.replace('__IRONROAD_NATIVE_MARKET_PRICE__', '')),

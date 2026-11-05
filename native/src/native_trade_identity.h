@@ -49,9 +49,11 @@ inline bool NativeTradeEquivalent(const NativeWorldTradeSnapshot& a,const Native
     return bool(x)==bool(y) && (!x || equal(*x,*y));
   };
   const auto domestic=[&](const NativeDomesticSources& x,const NativeDomesticSources& y){
-    return x.straitAccess==y.straitAccess &&
+    return x.straitAccess==y.straitAccess && x.laneStraitAccess==y.laneStraitAccess &&
         byKey(x.orders,y.orders,[](const auto& o){return std::pair{o.state,o.good};},[](const auto& u,const auto& v){return u==v;}) &&
         byKey(x.land,y.land,[](const auto& c){return c.id;},[](const auto& u,const auto& v){return u==v;}) &&
+        byKey(x.localLand,y.localLand,[](const auto& c){return c.id;},[](const auto& u,const auto& v){return u==v;}) && x.landHubs==y.landHubs &&
+        byKey(x.portTransfers,y.portTransfers,[](const auto& c){return c.id;},[](const auto& u,const auto& v){return u==v;}) &&
         byKey(x.builtRails,y.builtRails,[](const auto& c){return c.id;},[](const auto& u,const auto& v){return u==v;}) &&
         byKey(x.shipping.lanes,y.shipping.lanes,[](const auto& l){return l.id;},[](const auto& u,const auto& v){return u==v;});
   };

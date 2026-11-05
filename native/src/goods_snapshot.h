@@ -21,9 +21,9 @@ inline GoodsCatalog DecodeThreadGoodsCatalog(const GoodsMemoryReader& reader,
   auto read=[&](uint64_t a,void* out,size_t n){return a && n<=UINT64_MAX-a && reader(a,out,n);};
   auto context=[&](Context& c){
     uint32_t initialized=0; uint8_t active=0;
-    if(!read(tlsArray,&c.storage,8) || !c.storage || c.storage>UINT64_MAX-0x8650 ||
-       !read(c.storage+0x8600,&initialized,4) || !(initialized&1) ||
-       !read(c.storage+0x8648,&c.token,8))return false;
+    if(!read(tlsArray,&c.storage,8) || !c.storage || c.storage>UINT64_MAX-0x86c0 ||
+       !read(c.storage+0x8670,&initialized,4) || !(initialized&1) ||
+       !read(c.storage+0x86b8,&c.token,8))return false;
     const uint32_t index=uint32_t(c.token);
     if(index>=16)return false;
     uint64_t slot=moduleBase+kRvaGoodsDatabaseSlots+16*index;

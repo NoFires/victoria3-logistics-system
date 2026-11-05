@@ -3,6 +3,7 @@
 #include <array>
 #include <functional>
 #include <memory>
+#include <map>
 #include <optional>
 #include <unordered_set>
 
@@ -85,9 +86,12 @@ struct FreightResult {
 // reverse arcs allow earlier allocations to be reassigned; this is not a greedy
 // nearest-supplier approximation. Final positive flows are decomposed only after
 // optimization, so reverse augmentations cannot leave phantom shipments.
+// Optional owned physical access is source/sink-only. A state's different hubs
+// never become a transit shortcut; empty access retains unmet demand.
 FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph& graph,
                              const FreightPolicy& policy,
-                             const std::function<bool()>& cancelled = {});
+                             const std::function<bool()>& cancelled = {},
+                             const std::map<uint32_t,std::vector<uint32_t>>& stateAccess = {});
 
 enum class FreightViewKind { Market, State };
 enum class FreightTransport { All, Land, Sea };

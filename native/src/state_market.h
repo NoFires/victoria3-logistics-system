@@ -3,12 +3,12 @@
 #include <optional>
 
 namespace v3 {
-// Exact 1.13.11 State.GetMarket: use its owner or explicit market-area branch,
+// Exact 1.15.0 State.GetMarket: use its owner or explicit market-area branch,
 // resolve the native market ID, then validate that typed market object. The
 // state+0x48 grouping is unrelated to this getter and must not select a market.
 inline std::optional<uint32_t> DecodeNativeStateMarket(const GoodsMemoryReader& reader,
     uint64_t module,uint64_t state,uint32_t expectedId) {
-  if(!reader || !module || module>UINT64_MAX-0x05964ef0 || !state || expectedId==UINT32_MAX)return {};
+  if(!reader || !module || module>UINT64_MAX-0x05bd69c8 || !state || expectedId==UINT32_MAX)return {};
   struct Copy {uint64_t address;std::vector<uint8_t> bytes;};
   std::vector<Copy> copies;
   auto read=[&](uint64_t address,void* out,size_t size){
@@ -28,18 +28,18 @@ inline std::optional<uint32_t> DecodeNativeStateMarket(const GoodsMemoryReader& 
     return object;
   };
   uint32_t id=UINT32_MAX,specialId=UINT32_MAX,market=UINT32_MAX;uint8_t special=0;
-  if(!type(state,0x044de308) || !field(state,8,id) || id!=expectedId ||
-     !field(state,0x11b8,special) || special>1 || !field(state,0xb48,specialId))return {};
+  if(!type(state,0x046bad90) || !field(state,8,id) || id!=expectedId ||
+     !field(state,0x1258,special) || special>1 || !field(state,0xb78,specialId))return {};
   if(special && specialId!=UINT32_MAX){
-    const auto area=lookup(0x05964ea0,specialId,8,0x04430cd8);
+    const auto area=lookup(0x05c44e00,specialId,8,0x04677060);
     if(!area || !field(area,0x10,market))return {};
   }else{
     uint32_t owner=UINT32_MAX;
-    if(!field(state,0xe48,owner))return {};
-    const auto country=lookup(0x05964e20,owner,0x18,0x04494cb8);
-    if(!country || !field(country,0xa24,market))return {};
+    if(!field(state,0xed8,owner))return {};
+    const auto country=lookup(0x05c42c20,owner,0x18,0x0468fce0);
+    if(!country || !field(country,0xaf4,market))return {};
   }
-  if(!lookup(0x05964ed8,market,8,0x0449c648))return {};
+  if(!lookup(0x05c43518,market,8,0x046d4670))return {};
   // Reject ownership/database/handle changes observed during this bounded copy.
   for(const auto& copy:copies){std::vector<uint8_t> after(copy.bytes.size());
     if(!reader(copy.address,after.data(),after.size()) || after!=copy.bytes)return {};}

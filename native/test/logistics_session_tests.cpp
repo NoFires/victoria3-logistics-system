@@ -37,6 +37,42 @@ std::shared_ptr<const LogisticsDocument> Await(LogisticsSession& session,
 }
 int main() {
   {
+    LogisticsSession guarded(Geo());std::string why;
+    auto epoch=std::make_shared<std::atomic<uint64_t>>(7);
+    auto economy=std::make_shared<const EconomySnapshot>(Snapshot());
+    Check(guarded.SetSnapshot(economy,&why,false,epoch,7),"session accepts current owned lane collection witness");
+    LogisticsSelection selection;selection.kind=FreightViewKind::Market;
+    guarded.SetSelection(kOwnerNativePanel,kOwnerNativePanel,selection);
+    Check(bool(Await(guarded,{})),"guarded snapshot builds through production worker");
+    auto frame=guarded.Frame();const auto applied=guarded.Status().applied;
+    Check(guarded.FrameIsCurrent(frame,applied) && guarded.StatisticsAreCurrent(frame),"current collection permits frame and statistics");
+    Check(guarded.HasEquivalentSnapshot(Snapshot(1,2),epoch,7) &&
+        !guarded.HasEquivalentSnapshot(Snapshot(1,2)),"equivalent timer capture must retain the same collection witness");
+    auto replacementEpoch=std::make_shared<std::atomic<uint64_t>>(7);
+    Check(!guarded.HasEquivalentSnapshot(Snapshot(1,2),replacementEpoch,7),"same number from another collection lifetime cannot reuse old view");
+    epoch->store(8);
+    Check(!guarded.FrameIsCurrent(frame,applied) && !guarded.StatisticsAreCurrent(frame) && !guarded.Frame() &&
+        !guarded.SnapshotIsCurrent(economy) && !guarded.Status().snapshotReady && !guarded.Status().haveFrame,
+        "epoch retirement rejects retained render/statistics identities before UI poll or coalescing");
+    Check(!guarded.HasEquivalentSnapshot(Snapshot(1,2),epoch,7),"retired collection cannot suppress snapshot refresh");
+    Check(!guarded.Poll() && !guarded.Frame(),"UI poll cancels retired collection and removes resident frame");
+    Check(!guarded.SetSnapshot(economy,&why,false,epoch,7),"late retired snapshot cannot reenter session");
+    auto fresh=std::make_shared<const EconomySnapshot>(Snapshot(1,2));
+    Check(guarded.SetSnapshot(fresh,&why,false,epoch,8) && bool(Await(guarded,{})),
+        "current replacement resumes existing panel owner without fabricating world change");
+    Check(guarded.Status().owner==kOwnerNativePanel && !guarded.FrameIsCurrent(frame,applied),
+        "replacement preserves owner and cannot revive retired frame");
+    auto next=std::make_shared<const EconomySnapshot>(Snapshot(1,3));
+    Check(guarded.SetSnapshot(next,&why,false,epoch,8),"current input can queue another worker generation");
+    guarded.Poll();epoch->store(9);
+    Check(!guarded.Poll() && !guarded.Frame(),"late worker completion cannot publish after collection retirement");
+    Check(!guarded.SetSnapshot(next,&why,false,{},9) && !guarded.SetSnapshot(next,&why,false,epoch,0),
+        "half-present collection witness rejected");
+    Check(guarded.SetSnapshot(next,&why,false,replacementEpoch,7),"new independently owned collection can replace retired lifetime");
+    guarded.ResetWorld();
+    Check(!guarded.SetSnapshot(next,&why,false,replacementEpoch,7),"collection witness cannot bypass retired world gate");
+  }
+  {
     LogisticsSession nativeSession(Geo());
     auto native=std::make_shared<NativeWorldTradeSnapshot>();
     native->states={{10,1,7},{30,3,7},{40,4,7}};native->centers={{10,10},{30,30},{40,30}};

@@ -245,12 +245,9 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     if(!((a.anchor==start && b.anchor==end) || (b.anchor==start && a.anchor==end)))
       return fail("domestic port transfer anchors differ from spline");
     // The endpoint with the linked land province is the port side; the other is
-    // the sea-side node used by the lane. 1.15.0 prefixes the land-hub control
-    // with 0x800000; normalise it back to the witnessed hub.
+    // the sea-side node used by the lane. Keep the raw spline anchors for the
+    // geometry chain; the model normalises the land side to the witnessed hub.
     uint32_t landAnchor=first?a.anchor:b.anchor,seaAnchor=first?b.anchor:a.anchor;
-    if(const auto hubAnchor=hubs.find(state);hubAnchor!=hubs.end()){
-      if((landAnchor&~0x800000u)==hubAnchor->second)landAnchor=hubAnchor->second;
-    }
     if(landAnchor==seaAnchor || !transferIds.insert(id).second)
       return fail("invalid owned native port transfer");
     result.portTransfers.push_back({id,state,{landAnchor,seaAnchor},key,true});

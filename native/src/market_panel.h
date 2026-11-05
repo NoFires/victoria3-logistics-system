@@ -52,7 +52,7 @@ inline bool ReadGuiMarketSimulationCandidate(const GoodsMemoryReader& reader,uin
   if(!reader(match+0x374,&candidate,sizeof(candidate)))return false;
   return true;
 }
-// Exact 1.13.11 profile, copied on the existing UI timer thread. No engine
+// Exact 1.15.0 profile, copied on the existing UI timer thread. No engine
 // functions, RTTI casts, GUI effects or retained pointers. Closed-state chain
 // was observed live in R73; open/tab transitions still need DLL acceptance.
 inline NativeMarketPanelState DecodeNativeMarketPanel(const GoodsMemoryReader& reader,
@@ -101,8 +101,8 @@ inline NativeMarketPanelState DecodeNativeMarketPanel(const GoodsMemoryReader& r
   }
   if(!field(idler,0x10,gfx) || !type(gfx,kRvaInterfaceGfxVtable) ||
      !field(gfx,0x20,handler) || !type(handler,kRvaInterfaceHandlerVtable) ||
-     !field(handler,0xd8,barSelf) || barSelf!=handler+0xd8 ||
-     !field(handler,0xe0,panels) || !field(handler,0xec,count) || count!=56 ||
+     !field(handler,0xe8,barSelf) || barSelf!=handler+0xe8 ||
+     !field(handler,0xf0,panels) || !field(handler,0xfc,count) || count!=56 ||
      !field(panels,9*8,panel) || !type(panel,kRvaMarketPanelVtable))
     return fail("market panel ownership unavailable");
   std::string name;

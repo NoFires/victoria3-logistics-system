@@ -217,8 +217,14 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     if(anchor!=uint32_t(transfer->spline>>35) || anchor==start)
       return fail("current port transfer endpoints differ");
     // 1.15.0 port access uses its own model fee1, not the sea tariff0.25.
+    // The raw land anchor carries the 0x800000 flag; the graph joins the
+    // witnessed primary land hub instead.
+    uint32_t landAnchor=transfer->anchors[0];
+    if(const auto hubAnchor=trade.domestic->landHubs.find(transfer->state);
+       hubAnchor!=trade.domestic->landHubs.end() && (landAnchor&~0x800000u)==hubAnchor->second)
+      landAnchor=hubAnchor->second;
     if(!add(transfer->state,transfer->state,4,std::move(shape),{},
-        std::array<uint64_t,2>{transfer->anchors[0],transfer->anchors[1]}))
+        std::array<uint64_t,2>{landAnchor,transfer->anchors[1]}))
       return fail("invalid native port transfer scope or distance");
   }
   std::map<Area,uint32_t> hubs;

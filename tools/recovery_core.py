@@ -131,12 +131,21 @@ class Recover:
         base, mil, sup = (self.rtti.slots(v) for v in (base_vt, mil_vt, sup_vt))
         if not len(base) == len(mil) == len(sup):
             raise AnchorBroken('constant-buffer slot: vtable lengths', 'base %d, military %d, supply %d' % (len(base), len(mil), len(sup)))
-        diff = [i for i in range(len(base)) if base[i] != mil[i] and mil[i] == sup[i]]
+        diff = []
+        for i in range(len(base)):
+            if base[i] == mil[i] or base[i] == sup[i]:
+                continue
+            try:
+                same_field = self._slot_read_offset(mil[i]) == self._slot_read_offset(sup[i])
+            except AnchorBroken:
+                continue
+            if same_field:
+                diff.append(i)
         if len(diff) != 1:
-            raise AnchorBroken('constant-buffer slot: unique divergent index', 'expected exactly 1 slot where the base differs from both subclasses and the subclasses agree, observed %d: %s' % (len(diff), diff))
+            raise AnchorBroken('constant-buffer slot: unique divergent index', 'expected exactly 1 slot where both subclasses differ from the base and upload the same buffer field, observed %d: %s' % (len(diff), diff))
         idx = diff[0]
-        steps.append(dict(step='the unique slot index at which CArrowObject differs from both shipped subclasses, which agree with each other', asserts='three vtables of equal length; exactly one divergent index', expected_matches=1, observed_matches=1, result_rva=hexs(base_vt + 8 * idx)))
-        return (dict(vtable_rva=base_vt, military_vtable_rva=mil_vt, supply_vtable_rva=sup_vt, slot_index=idx, slot_count=len(base), base_target=base[idx], subclass_target=mil[idx], slots=base), steps)
+        steps.append(dict(step='the unique slot index where both shipped subclasses differ from the base and read the same upload field', asserts='three vtables of equal length; exactly one independently checked buffer-field index', expected_matches=1, observed_matches=1, result_rva=hexs(base_vt + 8 * idx)))
+        return (dict(vtable_rva=base_vt, military_vtable_rva=mil_vt, supply_vtable_rva=sup_vt, slot_index=idx, slot_count=len(base), base_target=base[idx], subclass_target=sup[idx], slots=base), steps)
 
     def _subclass_path_updater(self, mangled, label, steps):
         _c, _i, vt = self._class_vtable(mangled, label, steps)
@@ -172,15 +181,21 @@ class Recover:
 
     def ensure_constant_buffer(self):
         steps = []
-        _sup, _mil, common, _sg, _mg = self._updater_pair(steps)
+        sup, mil, common, _sg, _mg = self._updater_pair(steps)
         slot, _s = self.constant_buffer_slot()
         field = self._slot_read_offset(slot['subclass_target'])
         steps.append(dict(step='the object field the divergent slot uploads from, read off its own instruction stream rather than assumed', asserts='the slot body loads one qword field of `this` into rdx', expected_matches=1, observed_matches=1, result_rva=hexs(field)))
         writers = [f for f in common if self._writes_qword_field(f, field)]
+        if not writers:
+            supply_writers = [f for f in self._callees(sup) if self._writes_qword_field(f, field)]
+            military_writers = [f for f in self._callees(mil) if self._writes_qword_field(f, field)]
+            if len(supply_writers) == len(military_writers) == 1:
+                writers = supply_writers
+                steps.append(dict(step='distinct supply/military constant writers both store the independently derived buffer field', supply_writer=hexs(supply_writers[0]), military_writer=hexs(military_writers[0]), field=hexs(field)))
         if len(writers) != 1:
             raise AnchorBroken('ensure_constant_buffer: field writers', 'expected exactly 1 shared callee storing into this+%s, observed %d: %s' % (hexs(field), len(writers), [hexs(x) for x in writers]))
         fn = writers[0]
-        steps.append(dict(step='the unique callee shared by both updaters that stores into that field', expected_matches=1, observed_matches=1, result_rva=hexs(fn)))
+        steps.append(dict(step='the unique supply updater callee that stores into the independently derived field', expected_matches=1, observed_matches=1, result_rva=hexs(fn)))
         self._require_function_start(fn, 'CArrowObject::EnsureConstantBuffer')
         return (fn, field, steps)
 
@@ -198,10 +213,30 @@ class Recover:
         ex = self.pe.extent(fn_rva)
         if ex is None:
             return False
-        want = '+ %s], r' % hexs(field)
+        aliases = {'rcx': 0}
+        volatile = {'rax', 'rcx', 'rdx', 'r8', 'r9', 'r10', 'r11'}
         for ins in self.pe.insns(*ex):
-            if ins.mnemonic == 'mov' and 'qword ptr [' in ins.op_str and (want in ins.op_str):
-                return True
+            parts = ins.op_str.split(', ', 1)
+            if ins.mnemonic == 'mov' and len(parts) == 2:
+                store = re.fullmatch(r'qword ptr \[(r[a-z0-9]+)(?: \+ (0x[0-9a-f]+))?\]', parts[0])
+                if store and store[1] in aliases and aliases[store[1]] + int(store[2] or '0', 0) == field:
+                    return True
+                if re.fullmatch(r'r[a-z0-9]+', parts[0]):
+                    value = aliases.get(parts[1])
+                    aliases.pop(parts[0], None)
+                    if value is not None:
+                        aliases[parts[0]] = value
+            elif ins.mnemonic == 'lea' and len(parts) == 2:
+                source = re.fullmatch(r'\[(r[a-z0-9]+)(?: \+ (0x[0-9a-f]+))?\]', parts[1])
+                value = aliases.get(source[1]) if source else None
+                aliases.pop(parts[0], None)
+                if value is not None:
+                    aliases[parts[0]] = value + int(source[2] or '0', 0)
+            elif ins.mnemonic == 'call':
+                for reg in volatile:
+                    aliases.pop(reg, None)
+            elif parts and re.fullmatch(r'r[a-z0-9]+', parts[0]) and ins.mnemonic not in ('cmp', 'test', 'push'):
+                aliases.pop(parts[0], None)
         return False
 
     def bucket_append(self, slot_info, type_field, bucket_field):

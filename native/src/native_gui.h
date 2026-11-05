@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 namespace v3 {
-inline constexpr char kMarketGuiHash[]="1f682222b689666731e755bc52b412b3126f4afff40cde05b13a0757b027ec3e";
-inline constexpr char kStateGuiHash[]="ee259534f21785d962672ba25ebb66e6f3c881ffc2f74fdc44caaf989ab76be6";
+inline constexpr char kMarketGuiHash[]="831ec4036314d4d27313030e824b1db32f3d639407bf26e2fc26bb4b83fd4ed0";
+inline constexpr char kStateGuiHash[]="fa5dfdb31d17f9c00e60b64067b851e1dc2105c846f3dc3e13ce933829c90e2e";
 bool PatchNativeStateGui(const std::vector<uint8_t>& original,std::string* patched,std::string* error);
 bool PatchNativeMarketGui(const std::vector<uint8_t>& original,const std::string& tabOverride,
                          std::string* patched,std::string* error);

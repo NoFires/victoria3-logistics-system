@@ -23,6 +23,56 @@ EconomySnapshot Snapshot() {
   return s;
 }
 int main() {
+  {
+    SplineGraph physical;physical.nodes={{100,0,0},{101,1,0},{102,2,0},{103,3,0}};
+    physical.edges={{0,0,1,0,0,0,1},{256,2,3,0,0,0,1}};
+    auto input=Snapshot();input.orders={{10,UINT32_MAX,7,1,1000,0},{20,UINT32_MAX,7,1,0,0},{30,UINT32_MAX,7,1,0,1000}};
+    const std::map<uint32_t,std::vector<uint32_t>> access{{10,{0}},{20,{1,2}},{30,{3}}};
+    auto blocked=AllocateFreight(input,physical,{}, {},access);
+    Require(blocked.complete && blocked.shipments.empty() && blocked.balances[2].allocatedImport==0 &&
+        blocked.balances[2].freightDemand.unmet==1,"physical state access cannot teleport across disconnected intermediate hubs");
+    input.orders[1].consumption=200;
+    auto partial=AllocateFreight(input,physical,{}, {},access);
+    Require(partial.complete && partial.shipments.size()==1 && partial.shipments[0].destination==20 &&
+        partial.shipments[0].quantity==200 && partial.balances[2].allocatedImport==0,
+        "an importing state's arrival gate cannot send onward through its other hub");
+    input.orders[1].production=400;input.orders[1].consumption=0;
+    auto supplier=AllocateFreight(input,physical,{}, {},access);
+    Require(supplier.complete && supplier.shipments.size()==1 && supplier.shipments[0].source==20 &&
+        supplier.shipments[0].quantity==400 && supplier.balances[0].allocatedExport==0 &&
+        supplier.balances[2].freightDemand.unmet==.6,"a supplying state's access gate cannot become an intermediate shortcut");
+    physical.edges.push_back({512,1,2,0,0,0,2});input.orders[1].production=0;
+    auto connected=AllocateFreight(input,physical,{}, {},access);
+    Require(connected.complete && connected.shipments.size()==1 && connected.shipments[0].route.size()==3,
+        "real inter-hub link restores contiguous physical routing");
+    Near(connected.shipments[0].distance,4,"access gates add no invented distance or route edge");
+    auto bad=access;bad[10]={4};Require(!AllocateFreight(input,physical,{}, {},bad).complete,"access outside graph rejected");
+    bad=access;bad[10]={0,0};Require(!AllocateFreight(input,physical,{}, {},bad).complete,"duplicate access rejected");
+    bad=access;bad.erase(30);Require(!AllocateFreight(input,physical,{}, {},bad).complete,"missing state access is unavailable, not legacy fallback");
+    bad=access;bad[30].clear();auto unavailable=AllocateFreight(input,physical,{}, {},bad);
+    Require(unavailable.complete && unavailable.shipments.empty() && unavailable.balances[2].freightDemand.unmet==1,
+        "known empty state access retains unmet demand");
+    auto conflict=input;conflict.stateTerminals[10]=0;
+    Require(!AllocateFreight(conflict,physical,{}, {},access).complete,"single and physical access identities cannot be mixed");
+    SplineGraph empty;auto emptyFlow=AllocateFreight(input,empty,{}, {},{{10,{}},{20,{}},{30,{}}});
+    Require(emptyFlow.complete && emptyFlow.shipments.empty() && emptyFlow.balances[2].freightDemand.unmet==1,
+        "known empty physical graph still publishes target and unmet demand");
+    input.orders={{10,UINT32_MAX,7,1,1000,0},{20,UINT32_MAX,7,1,0,1000},{30,UINT32_MAX,7,1,0,1000}};
+    auto scarce=AllocateFreight(input,physical,{}, {},{{10,{0,1}},{20,{2}},{30,{3}}});
+    Require(scarce.complete && scarce.balances[0].allocatedExport==1000 &&
+        scarce.balances[1].allocatedImport+scarce.balances[2].allocatedImport==1000,
+        "multiple physical source nodes share one supply limit without duplicating goods");
+    auto optimum=AllocateFreight(Snapshot(),Graph(),{}, {},{{10,{0}},{20,{1}},{30,{2}},{40,{3}}});
+    Require(optimum.complete && optimum.shipments.size()==2,"physical gates retain final residual flow decomposition");
+    double cost=0;for(const auto& shipment:optimum.shipments)cost+=shipment.cost;
+    Near(cost,4,"physical gates preserve global optimum after residual reassignment");
+    SplineGraph sharedHub;sharedHub.nodes={{100,0,0}};
+    auto sharedInput=input;sharedInput.orders.resize(2);sharedInput.orders[1].consumption=1000;
+    auto colocated=AllocateFreight(sharedInput,sharedHub,{}, {},{{10,{0}},{20,{0}}});
+    Require(colocated.complete && colocated.shipments.size()==1 && colocated.shipments[0].quantity==1000 &&
+        colocated.shipments[0].route.empty() && colocated.shipments[0].distance==0,
+        "different runtime states at one witnessed physical hub retain known zero-distance flow without a fake line");
+  }
   auto graph=Graph();auto s=Snapshot();FreightPolicy policy;
   auto result=AllocateFreight(s,graph,policy);
   Require(result.complete,result.error.c_str());Require(result.shipments.size()==2,"two final allocations");

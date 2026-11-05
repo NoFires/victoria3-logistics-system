@@ -239,12 +239,21 @@ std::optional<RibbonBatch> BuildNativeTradeRibbons(const NativeTradeFacts& facts
     if(cancelled && cancelled())return fail("cancelled");
     if(segment.quantity<=0)return fail("invalid native segment quantity");
     const auto strip=network.strips.find(segment.strip);
-    if(strip==network.strips.end())return fail("native strip geometry unavailable");
     const bool forward=segment.netQuantity>=0;std::vector<Vec3> points;
-    for(size_t i=0;i<strip->second.size();++i){
-      const auto point=network.points.find(strip->second[forward?i:strip->second.size()-i-1]);
-      if(point==network.points.end())return fail("native control point unavailable");
-      points.push_back({point->second.x,0,point->second.z});
+    if(segment.strip&(uint64_t(1)<<63)){
+      if(!facts.domestic)return fail("native port transfer geometry unavailable");
+      const auto path=facts.domestic->portPaths.find(segment.strip);
+      if(path==facts.domestic->portPaths.end())return fail("native port transfer geometry unavailable");
+      for(size_t i=0;i<path->second.size();++i){
+        const auto& p=path->second[forward?i:path->second.size()-1-i];points.push_back({p.x,0,p.z});
+      }
+    }else{
+      if(strip==network.strips.end())return fail("native strip geometry unavailable");
+      for(size_t i=0;i<strip->second.size();++i){
+        const auto point=network.points.find(strip->second[forward?i:strip->second.size()-i-1]);
+        if(point==network.points.end())return fail("native control point unavailable");
+        points.push_back({point->second.x,0,point->second.z});
+      }
     }
     std::string palette=segment.direction>0?"ironroadBuildingOutput":segment.direction<0?"ironroadBuildingInput":palettes[std::min<unsigned>(segment.band,4)];
     if(view.colorMode==FreightColorMode::Native)palette="ironroadBuildingOutput";

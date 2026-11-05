@@ -4,6 +4,7 @@
 #include "mutex.h"
 #include <map>
 #include <memory>
+#include <atomic>
 
 namespace v3 {
 // Owner identities double as their priorities; the higher active owner provides
@@ -44,10 +45,12 @@ class LogisticsSession {
   // any work is queued. `synthetic` marks debug-only test input; it can never be
   // presented as a live game reading.
   bool SetSnapshot(std::shared_ptr<const EconomySnapshot> snapshot,
-                   std::string* reason = nullptr, bool synthetic = false);
+                   std::string* reason = nullptr, bool synthetic = false,
+                   std::shared_ptr<const std::atomic<uint64_t>> laneEpoch = {}, uint64_t laneGeneration = 0);
   // A timer capture with identical owned inputs retains the current snapshot,
   // revision and worker request. Failed/retired/synthetic inputs never match.
-  bool HasEquivalentSnapshot(const EconomySnapshot& snapshot) const;
+  bool HasEquivalentSnapshot(const EconomySnapshot& snapshot,
+      std::shared_ptr<const std::atomic<uint64_t>> laneEpoch = {}, uint64_t laneGeneration = 0) const;
   void ResetWorld();
   // Cheap UI-thread update. `priority` selects which active owner owns the map;
   // the worker coalesces rapid hover changes.
@@ -78,6 +81,7 @@ class LogisticsSession {
   };
   static uint32_t FirstMarket(const EconomySnapshot& snapshot);
   uint32_t EffectiveOwnerLocked() const;
+  bool LaneAccessCurrentLocked() const;
   GeographyHandle m_geography;
   FreightPolicy m_policy;
   FreightWorker m_worker;
@@ -86,6 +90,9 @@ class LogisticsSession {
   uint64_t m_serial = 0;
   uint32_t m_effectiveOwner = 0;
   std::shared_ptr<const EconomySnapshot> m_snapshot;
+  // Session-side owned witness; no engine pointer or epoch reaches the worker.
+  std::shared_ptr<const std::atomic<uint64_t>> m_laneEpoch;
+  uint64_t m_laneGeneration = 0;
   // Validation survives m_snapshot.reset(); a retired world cannot re-enter
   // through a late adapter result while the next world is still loading.
   uint64_t m_lastWorld = 0, m_lastRevision = 0;

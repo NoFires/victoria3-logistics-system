@@ -211,9 +211,9 @@ inline std::shared_ptr<const NativeCaptureResult> CopyNativeSnapshot(
   trade->domestic=std::make_shared<const NativeDomesticSources>(std::move(*domestic));
   auto sea=DecodeNativeSeaGeography(read,module,tlsArray,*states,*trade,current,&why);
   if(!sea)return fail(why);
-  auto hubs=DecodeNativePortHubs(read,module,sea->states,current,&why);
-  if(!hubs)return fail(why);
-  sea->stateHubs=std::move(*hubs);
+  // 1.15.0 replaces the removed hub-locator eligibility with the current
+  // port-access transfer: a state is port-capable when it has one.
+  for(const auto& transfer:trade->domestic->portTransfers)sea->stateHubs[transfer.state]=true;
   trade->seaGeography=std::make_shared<const NativeSeaGeography>(std::move(*sea));
   trade->geometry=std::make_shared<const NativeSplineNetwork>(std::move(*geometry));
   snapshot->nativeTrade=std::make_shared<const NativeWorldTradeSnapshot>(std::move(*trade));
