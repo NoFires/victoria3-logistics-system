@@ -1,5 +1,13 @@
 # 当前状态
 
+### 2026-11-06 — R223：商品缓存代数/失效检查移植与实机
+
+- 从对方线移植 `native_goods_filter.h` 的 1.15 缓存失效检查：`module+0x05404748` initialized、`module+0x05c07c68` root／`+0x588` phase／`+0x608` machine、`match+0x58/0x5c` key／generation、`machine+0x114/0x108` epoch 表；dirty=0 但代数已退休时拒绝旧行，保留我方查询／行身份／排除检查。
+- 新增 10 组 `market_panel` 回归（退休代数、空集、越界 key、空表、未初始化、错误 root、非 ingame、零代数、指针溢出、复制中变化）PASS。
+- 构建 `1c0974e0…`／50,126,309B＋引导 `c8020412…`；临时安装 pid32676 最小化实机：快照 `total=328/312/328ms`、`selected=4290`、states=1157 goods=54；市场物流页商品行完整（谷物886.935等），贸易量13982.47687／铁路510.99MU不变，`owner=10 gen=2 ribbons=201`，`DRAW PERF uploads=201 visible=201 dropped=0 peak_frame_us=579 overrun_frames=0`，无错误。
+- WM_CLOSE正常退出0；恢复未安装状态（移除 version.dll／freight/freight.dll），freight.ini `df06e5c0…` 不变；未写存档。证据：`checkpoint2026-11-06-goods-generation-live/{live-evidence.log,market-logistics.png}`。完整等价入口35/35、零失败。
+- 边界：本实验分支未并入正式交付；提升前须重跑同构建性能／生命周期及完整 A01–A27，并确认 201 条 ribbon 的增量绑定。
+
 ### 2026-11-06 — R222：贸易 getter 实验分支实机快照与物流页
 
 - 临时安装 `trade-getter-port` 构建 `e8bf966d…`／50,120,165B＋引导 `c8020412…`，最小化启动 pid27312（EXE `473186e8…`）。三次快照：states=1157 goods=54，`total=359/328/344 ms`；`native trade copied groups=66 destinations=4290 alternatives=5278 selected=4290 pairs=4463 straits=9`。交付基线同存档的 selected 为3792，本次498个多候选目的地全部由原版 `D039C0` getter 选中；无 WARN／ERROR／snapshot pending。

@@ -203,6 +203,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R223：商品缓存代数/失效检查移植与实机
+
+从对方线移植 `native_goods_filter.h` 的 1.15 缓存失效检查：`module+0x05404748` initialized、`module+0x05c07c68` root／`+0x588` phase／`+0x608` machine、`match+0x58/0x5c` key／generation、`machine+0x114/0x108` epoch 表；dirty=0 但代数已退休时拒绝旧行。新增 10 组 `market_panel` 回归（退休代数、空集、越界 key、空表、未初始化、错误 root、非 ingame、零代数、指针溢出、复制中变化）PASS。构建 `1c0974e0…`／50,126,309B；临时安装 pid32676 最小化实机：快照 total=328/312/328ms、selected=4290、states=1157；市场物流页商品行完整（谷物886.935等）、贸易量13982.47687／铁路510.99MU不变、ribbons=201、`DRAW PERF visible=201 dropped=0`、无错误。WM_CLOSE退出0，恢复未安装状态，freight.ini不变。完整等价入口35/35、零失败；证据 `checkpoint2026-11-06-goods-generation-live`。未并入正式交付分支；提升前须用户确认并重跑性能／生命周期门槛。
+
 ### 2026-11-06 — R222：贸易 getter 实验分支实机快照与物流页验证
 
 `trade-getter-port` 构建 `e8bf966d…`／50,120,165B（引导 `c8020412…`）临时安装后最小化启动 pid27312：`native trade copied world=1 ... destinations=4290 alternatives=5278 selected=4290 pairs=4463`（交付基线 `selected=3792`，498 个多候选全部选中）；快照 `total=328–359ms`、states=1157 goods=54、无 WARN／ERROR。恢复窗口打开原版市场物流页：贸易量13982.47687／铁路510.99MU与基线一致，`owner=10 gen=2 ribbons=201`（基线187），`DRAW PERF uploads=201 visible=201 dropped=0 peak_frame_us=800 overrun_frames=0`。正常WM_CLOSE退出；已恢复未安装状态（version.dll／freight.dll 移除，freight.ini `df06e5c0…`与备份`0fc29b6f…`不变）。边界：快照 total=328–359ms，交付基线同存档为312–328ms（+15–31ms，约5–10%），并入交付前仍须跑同构建性能／生命周期门槛；201 vs 187 的增量绑定需在最终矩阵确认；本实验尚未并入交付分支。证据：`E:\Code\v3-analysis\checkpoints\2026-11-06-trade-getter-live`（live-evidence.log、market-logistics.png）。
