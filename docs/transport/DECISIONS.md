@@ -3,9 +3,9 @@
 ## R223 并行 1.15 线的功能取舍（2026-11-06）
 
 - 事实：主工作区另一条线（R195–R202）与本分支（R200–R219）在 31 个文件相同、11 个仅对方改动、4 个仅我方改动、36 个两边不同；忽略行尾后约 70 个冲突块。两份 AGENTS／MASTER_PLAN 的 R 号重叠但内容不同，且主工作区改动长时间未提交。
-- 裁决：按功能取优，不整包合并。取对方：完整贸易 getter `D039C0`＋每州 hub `DA2500`、商品缓存代数／失效检查；保留我方：detailed-only 表绑定（拒绝 `detailed==grouped` 与 `0x8C0`）、国内／港口／旅行模型、交付文档与构建。
-- 理由：Ghidra 独立反汇编确认 `D039C0` 为 `(world,source,destination)` 完整 getter、`DA2500` 为每州 hub；实机基线 `selected=3792/4290`，移植后 `4290/4290`。我方 R197 实机证据显示 detailed `0x898` 与 grouped `0x870` 4350 对键相同、5729 项值不同；对方仍要求等值，会把已修复的 `native detailed and grouped exports differ` 带回来；对方代码从未作为 DLL 实载。
-- 结果：`trade-getter-port` 分支完整 35/35、两个机器码 harness 12＋24 cases、实机物流页 201 ribbons／数值不变；商品代数检查实机商品行完整。未直接改写正式交付分支，提升前须用户确认并重跑性能／生命周期门槛。
+- 裁决：按功能取优，不整包合并。取对方：完整贸易 getter `D039C0`＋每州 hub `DA2500`、商品缓存代数／失效检查；表绑定在复核后也采用对方的 `state+0x8C0` 分组表＋`detailed==grouped` 等值校验；保留我方国内／港口／旅行模型、交付文档与构建。
+- 理由（含更正）：Ghidra 独立反汇编确认 `D039C0` 为 `(world,source,destination)` 完整 getter、`DA2500` 为每州 hub；实机基线 `selected=3792/4290`，移植后 `4290/4290`。对方 R200 实机 `binding=1 count=4463` 在同一含 5 个多 hub 区域的存档上通过等值校验；对方代码的州分组表是 `state+0x8C0`，`world+0x870` 是世界组名册。本分支 R197 曾把 `state+0x870` 误作分组表，得出“grouped 值不同”的错误结论；R224 已改为 `0x8C0` 并恢复等值，随后以本分支实机复核。
+- 结果：`trade-getter-port` 分支完整 35/35、两个机器码 harness 12＋24 cases、实机物流页 201 ribbons／数值不变；商品代数检查实机商品行完整。表绑定纠正后的构建／实机见 R224。未直接改写正式交付分支，提升前须用户确认并重跑性能／生命周期门槛。
 - 防复发：见 [COORDINATION.md](COORDINATION.md) 与 `tools/agent_preflight.py`；同一时间只允许一个活动分支，开工前 claim，发现并行线先快照、三路比对、按证据顺序裁决。
 
 ## R117 国内模型与可编辑资源（2026-10-26）

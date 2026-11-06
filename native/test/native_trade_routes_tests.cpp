@@ -20,7 +20,7 @@ NativeWorldTradeSnapshot Fixture(){
 int main(){
   auto trade=Fixture();std::string error;
   auto bindings=BindNativeTradeRoutes(trade,&error);
-  Check(bindings && bindings->size()==5,"all positive detailed records bind from the 1.15 detailed table");
+  Check(bindings && bindings->size()==5,"all positive detailed records bind after exact original grouped-table agreement");
   Check((*bindings)[0].pair==0 && (*bindings)[0].sourceGroup==0 && (*bindings)[0].destinationCenter==20 &&
       (*bindings)[0].route==0 && trade.groups[0].destinations[0].selected==1,
       "current native centers bind the original second selected alternative without selecting or reallocating");
@@ -45,23 +45,17 @@ int main(){
       (*staleDestination)[0].destinationCenter==22,
       "original grouped center outside cached representatives remains valid quantity with unavailable route (live five areas)");
   auto oldMembership=empty;oldMembership.centers[21]=20;oldMembership.centers[22]=20;
-  Check(BindNativeTradeRoutes(oldMembership).has_value(),
-      "1.15: grouped values are not an equality oracle, so current-center bindings no longer depend on old member totals");
+  Check(!BindNativeTradeRoutes(oldMembership),"negative control: inferring current centers from old members fails exact original quantities");
   empty=trade;empty.statePairs.push_back({0,20,{}});empty.groupPairs.push_back({0,20,{}});
   Check(BindNativeTradeRoutes(empty)->size()==5,"known empty counters outside explicit participating members contribute nothing");
   auto bad=[&](auto change,const char* why){auto copy=trade;change(copy);Check(!BindNativeTradeRoutes(copy,&error),why);};
-  Check(BindNativeTradeRoutes([]{auto t=Fixture();++t.groupPairs[0].goods[0].valueFixed;return t;}(),&error).has_value(),
-      "1.15: a grouped-table value different from the detailed state value is retained data, not a rejection");
-  Check(BindNativeTradeRoutes([]{auto t=Fixture();t.groupPairs.clear();return t;}(),&error).has_value(),
-      "1.15: absent grouped rows do not gate the detailed association");
-  {auto t=Fixture();t.statePairs.clear();auto b=BindNativeTradeRoutes(t,&error);
-   Check(b && b->empty(),"no detailed records produce no state shipments even if grouped rows remain");}
-  Check(BindNativeTradeRoutes([]{auto t=Fixture();t.statePairs[0].source=0;return t;}(),&error).has_value(),
-      "detailed source identity is only structurally validated in 1.15");
+  bad([](auto& t){++t.groupPairs[0].goods[0].valueFixed;},"one original 1e-5 discrepancy rejects the association");
+  bad([](auto& t){t.groupPairs.clear();},"detailed totals cannot replace absent original grouped evidence");
+  bad([](auto& t){t.statePairs.clear();},"unattributed original grouped goods cannot be invented as state shipments");
+  bad([](auto& t){t.statePairs[0].source=0;},"changing the detailed source cannot retain another source's grouped evidence");
   empty=trade;empty.statePairs[0].destination=20;
-  Check(BindNativeTradeRoutes(empty).has_value(),"actual detailed peer may be a representative with current area evidence");
-  Check(BindNativeTradeRoutes([]{auto t=Fixture();t.groupPairs[0].destination=21;return t;}(),&error).has_value(),
-      "1.15: grouped peer values are not cross-checked against the detailed destination");
+  Check(BindNativeTradeRoutes(empty).has_value(),"actual detailed peer may be a representative when its current area evidence agrees");
+  bad([](auto& t){t.groupPairs[0].destination=21;},"grouped peer must agree with current destination center");
   bad([](auto& t){t.centers.erase(21);},"missing current area evidence cannot infer destination center from members");
   bad([](auto& t){t.centers[21]=UINT32_MAX;},"positive exports without current destination center rejected");
   bad([](auto& t){t.statePairs[0].source|=0x1000000;},"full-generation state identity never masked to slot");
@@ -73,6 +67,7 @@ int main(){
   bad([](auto& t){t.statePairs[0].goods.push_back(t.statePairs[0].goods[0]);},"duplicate good cannot double quantities");
   bad([](auto& t){t.statePairs[0].goods[0].valueFixed=-1;},"negative quantity rejected");
   bad([](auto& t){t.statePairs[0].goods[0].valueFixed=0;},"zero entries must be normalized by decoder, not treated as shipments");
+  bad([](auto& t){t.statePairs[0].goods[0].valueFixed=INT64_MAX;},"exact integer aggregation detects overflow");
   bad([](auto& t){t.groups[0].destinations[0].selected=2;},"out-of-range native selection rejected");
   bad([](auto& t){t.groups[0].destinations.push_back(t.groups[0].destinations[0]);},"duplicate destination rejected");
   std::reverse(trade.statePairs.begin(),trade.statePairs.end());std::reverse(trade.groupPairs.begin(),trade.groupPairs.end());

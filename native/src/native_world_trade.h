@@ -300,7 +300,7 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
   }
   for(const auto& state:states)for(unsigned grouped=0;grouped<2;++grouped){
     std::vector<uint8_t> rows;uint64_t table=0;
-    if(!buckets(objects.at(state.id)+(grouped?0x870:0x898),0x60,rows,table))return fail("invalid state trade table");
+    if(!buckets(objects.at(state.id)+(grouped?0x8c0:0x898),0x60,rows,table))return fail("invalid state trade table");
     std::unordered_set<uint32_t> peers;
     for(size_t j=0;j<rows.size();j+=0x60){
       if(!rows[j+4])continue;

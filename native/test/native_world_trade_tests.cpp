@@ -71,7 +71,7 @@ struct Fixture {
     Map(first+0x898,pairs);Zero(pairs,2*0x60);Put(pairs+4,uint8_t(1));Put(pairs+8,lastId);
     Put(pairs+0x10,module+0x0465cb70);Put(pairs+0x18,values);Put(pairs+0x20,uint32_t(2));Put(pairs+0x24,uint32_t(2));
     Put(pairs+0x30,uint64_t(1));Put(values,int64_t(100001));Put(values+8,int64_t(-999));
-    Map(first+0x870,pairs); // Same fixture bytes, independent original tables.
+    Map(first+0x8c0,pairs); // Same fixture bytes, independent original tables.
   }
   bool Read(uint64_t a,void* out,size_t n){
     for(size_t i=0;i<n;++i){auto f=bytes.find(a+i);if(f==bytes.end())return false;((uint8_t*)out)[i]=f->second;}
@@ -226,7 +226,7 @@ int main(){
   test([](auto& m){m.template Put<std::array<uint16_t,2>>(Fixture::ranges,{65534,1});},"province set overflow rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::straitList,0);},"stale generation cannot impersonate current strait");
   test([](auto& m){m.template Put<uint32_t>(Fixture::pairs+8,2049);},"full peer handle checked");
-  test([](auto& m){m.template Put<uint64_t>(Fixture::first+0x878,0);},"unreadable grouped table rejects complete snapshot");
+  test([](auto& m){m.template Put<uint64_t>(Fixture::first+0x8c8,0);},"unreadable grouped table rejects complete snapshot");
   test([](auto& m){m.template Put<uint64_t>(Fixture::pairs+0x10,1);},"unknown goods counter type rejected");
   test([](auto& m){m.template Put<uint64_t>(Fixture::pairs+0x38,1);},"goods mask outside catalog rejected");
   test([](auto& m){m.template Put<int64_t>(Fixture::values,-1);},"negative populated trade value rejected");

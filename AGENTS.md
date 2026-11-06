@@ -119,7 +119,7 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
 
-截至R223：正式分支已快进合入候选 `1c0974e0…`（完整贸易 getter／每州 hub＋商品缓存代数），完整等价入口 35/35、实机物流页通过；同构建性能／生命周期门槛待重跑，不得套用旧 `2028e03b…` 的 A24／A25 结果。实际安装为未安装，旧构建仍为回滚副本。当前活动线遵守 [docs/transport/COORDINATION.md](docs/transport/COORDINATION.md)：正式交付分支为 `worktree-v115-adaptation`；`trade-getter-port` 已合并，不再作为并行线维护。
+截至R224：正式分支候选 `ec8350d3…`（完整贸易 getter／每州 hub＋商品缓存代数＋`state+0x8C0` 等值绑定），完整等价入口 35/35、实机多 hub 物流页通过；同构建性能／生命周期门槛待重跑，不得套用旧 `2028e03b…` 的 A24／A25 结果。实际安装为未安装，旧构建仍为回滚副本。当前活动线遵守 [docs/transport/COORDINATION.md](docs/transport/COORDINATION.md)：正式交付分支为 `worktree-v115-adaptation`；`trade-getter-port` 已合并，不再作为并行线维护。
 
 截至R219：1.15.0交付范围为双DLL实载、官方等价入口35/35、改图/UI/生命周期/性能/部署矩阵（见 `docs/DELIVERY.md` 与 `docs/transport/ACCEPTANCE.md`）；剩余设备丢失重建与官方PowerShell脚本需在可用环境补跑，不把等价入口冒充官方脚本。
 
@@ -202,6 +202,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 **最新操作授权（2026-10-25）**：用户明确“我现在不在电脑旁边，请你自主验证”，允许自主启动及操作测试，覆盖此前手动操控限制；保留不强制结束可能有未保存进度会话的部署约束。
 
 ## 6. 进度日志（简要记录，最新在上）
+
+### 2026-11-06 — R224：纠正州分组表偏移与恢复等值绑定
+
+R200 实机 `binding=1 count=4463`（同一含 5 个多 hub 区域的存档）证明 `state+0x8C0`＋`detailed==grouped` 在 1.15 成立；本分支此前把 `world+0x870`（世界组名册）误当州分组表，R197 的“grouped 值不同”结论撤回。`native_world_trade.h` 州表偏移 `0x870→0x8c0`；`native_trade_routes.h` 恢复 `detailed==grouped` 等值校验；`native_trade_routes_tests.cpp` 改用 R200 的绑定回归（含多中心/陈旧中心/空集/溢出）；`native_world_trade_tests` 分组表 fixture 改 `0x8C0`。定向 world-trade／trade-routes／trade-view PASS。构建 `ec8350d3…`／50,224,638B；实机 pid31852：快照 `total=343/328/329ms`、`selected=4290`、states=1157、无 WARN／ERROR；市场物流页 201 ribbons、贸易量13982.47687／铁路510.99MU不变、无 `native detailed and grouped exports differ`；WM_CLOSE退出0，恢复未安装状态，freight.ini不变。完整等价入口35/35、零失败；证据 `checkpoint2026-11-06-multi-hub-equality-live`。R221／R223 中“未引入 `0x8C0`／等值”的表述由本条取代。
 
 ### 2026-11-06 — R223：商品缓存代数/失效检查移植与实机
 

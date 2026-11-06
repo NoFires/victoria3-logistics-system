@@ -1,5 +1,12 @@
 # 当前状态
 
+### 2026-11-06 — R224：纠正州分组表偏移与恢复等值绑定
+
+- R200 实机 `binding=1 count=4463`（同一存档 5 个多 hub 区域：237×1、3×2、1×3、1×4）证明 `state+0x8C0`＋`detailed==grouped` 在 1.15 成立；本分支此前把 `world+0x870`（世界组名册）误当州分组表，R197 的“grouped 值不同”结论撤回。
+- 修改：`native_world_trade.h` 州表偏移 `0x870→0x8c0`；`native_trade_routes.h` 恢复 `detailed==grouped` 等值校验；`native_trade_routes_tests.cpp` 改用 R200 绑定回归；`native_world_trade_tests` 分组表 fixture 改 `0x8C0`。定向 world-trade／trade-routes／trade-view PASS。
+- 构建 `ec8350d3…`／50,224,638B；实机 pid31852 最小化：快照 `total=343/328/329ms`、`selected=4290`、states=1157 goods=54、无 WARN／ERROR；市场物流页 201 ribbons、贸易量13982.47687／铁路510.99MU不变、无 `native detailed and grouped exports differ`；`DRAW PERF visible=201 dropped=0`。WM_CLOSE退出0，恢复未安装状态，freight.ini `df06e5c0…` 不变。证据：`checkpoint2026-11-06-multi-hub-equality-live`。完整等价入口35/35、零失败。
+- 多 hub 处理见 R200 记录：5 个多 hub 区域（2/3/4 个中心），本分支按 area active 列表＋DA2500 每州 hub 保留，不设中心上限、不取首候选；275 个无 active 中心州保持未知，绑定失败关闭。R223 的“保留 detailed-only”表述由本条取代。
+
 ### 2026-11-06 — R223：商品缓存代数/失效检查移植与实机
 
 - 从对方线移植 `native_goods_filter.h` 的 1.15 缓存失效检查：`module+0x05404748` initialized、`module+0x05c07c68` root／`+0x588` phase／`+0x608` machine、`match+0x58/0x5c` key／generation、`machine+0x114/0x108` epoch 表；dirty=0 但代数已退休时拒绝旧行，保留我方查询／行身份／排除检查。
