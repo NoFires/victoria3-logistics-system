@@ -23,7 +23,7 @@ for stream in (sys.stdout, sys.stderr):
     except AttributeError:
         pass
 
-CANONICAL_BRANCH = os.environ.get("IRONROAD_CANONICAL_BRANCH", "worktree-v115-adaptation")
+CANONICAL_BRANCH = os.environ.get("IRONROAD_CANONICAL_BRANCH", "main")
 CLAIM_NAME = "claude-claim.json"
 DEFAULT_HOURS = 8.0
 UTC = dt.timezone.utc

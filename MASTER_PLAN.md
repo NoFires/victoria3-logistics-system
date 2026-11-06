@@ -289,7 +289,7 @@ laidTrack = Σ 唯一、已建成铁路物理区段的长度
 ### 9.0 单写者与分支协调（2026-11-06）
 
 - 同一迁移任务同一时间只允许一个活动工作区／分支；开工前运行 `python tools\agent_preflight.py`，用 `--claim "任务" --owner <会话ID> --round R2xx` 登记，收工 `--release`。
-- 正式线为 `worktree-v115-adaptation`；实验线必须切自正式线、不得部署，合并前完整构建／测试并由用户确认。
+- 正式线为本地 `main`（2026-11-06 快进到 `b5efd46`）；推送镜像为 `origin/worktree-v115-adaptation`，远程 `origin/main` 暂不推送；旧 worktree 只读备份。实验线必须切自本地 `main`、不得部署，合并前完整构建／测试并由用户确认。
 - 发现并行线时停止推进，快照另一工作区到 `E:\Code\v3-analysis\checkpoints`，按 [docs/transport/COORDINATION.md](docs/transport/COORDINATION.md) 做三路比对；按功能取优，不整包覆盖，不合并两套 R 号或候选哈希。
 - 分歧证据顺序：当前 1.15 实机行为 > 同构建完整入口＋部署/生命周期/性能 > 官方等价 harness > 隔离机器码 harness > 静态反汇编。未实载代码不得覆盖已交付且通过实机验收的实现。
 
