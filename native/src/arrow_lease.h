@@ -17,7 +17,7 @@ inline bool ValidateNativeArrowLeases(const GoodsMemoryReader& reader,uint64_t m
     uint64_t graphics,const std::vector<NativeArrowLease>& leases,
     const std::function<bool()>& current,std::string* error) {
   auto fail=[&](const char* reason){if(error)*error=reason;return false;};
-  if(!reader || !current || !current() || !module || module>UINT64_MAX-0x0592d5c8 ||
+  if(!reader || !current || !current() || !module || module>UINT64_MAX-0x05c080b8 ||
      !graphics || leases.size()>8192)return fail("missing native recovery identity");
   struct Copy {uint64_t address;std::vector<uint8_t> bytes;};
   std::vector<Copy> copies;
@@ -29,7 +29,7 @@ inline bool ValidateNativeArrowLeases(const GoodsMemoryReader& reader,uint64_t m
     return object && offset<=UINT64_MAX-object && read(object+offset,&value,sizeof(value));
   };
   uint64_t liveGraphics=0;
-  if(!field(module,0x0592d5c8,liveGraphics) || liveGraphics!=graphics)
+  if(!field(module,0x05c080b8,liveGraphics) || liveGraphics!=graphics)
     return fail("native graphics identity changed");
   std::map<std::string,uint64_t> styles;
   std::unordered_set<uint64_t> arrows;
@@ -42,8 +42,8 @@ inline bool ValidateNativeArrowLeases(const GoodsMemoryReader& reader,uint64_t m
   }
   if(!styles.empty()){
     uint64_t entries=0;uint32_t mask=0;uint8_t initialized=0,tail=0;
-    const uint64_t map=module+0x0513f268;
-    if(!field(module,0x0513f2b8,initialized) || initialized!=1 ||
+    const uint64_t map=module+0x053ed618;
+    if(!field(module,0x053ed668,initialized) || initialized!=1 ||
        !field(map,0x30,entries) || !field(map,0x3c,mask) || !field(map,0x40,tail) ||
        mask>65535 || (mask&(mask+1)) ||
        entries>UINT64_MAX-uint64_t(mask+tail+2)*0x30)
@@ -75,10 +75,10 @@ inline bool ValidateNativeArrowLeases(const GoodsMemoryReader& reader,uint64_t m
   size_t total=0;
   for(const auto& [style,type]:styles){
     uint64_t vt=0,entries=0,allocator=0;uint32_t capacity=0,count=0;
-    if(!field(type,0,vt) || vt!=module+0x0481daa8 || !field(type,0x38,entries) ||
+    if(!field(type,0,vt) || vt!=module+0x04aa54b8 || !field(type,0x38,entries) ||
        !field(type,0x40,capacity) || !field(type,0x44,count) || !field(type,0x48,allocator) ||
        count>capacity || capacity>16384 || !count || total+count>8192 ||
-       allocator!=module+0x0512cdc0)return fail("native arrow registration unavailable");
+       allocator!=module+0x053d8dc0)return fail("native arrow registration unavailable");
     total+=count;
     std::vector<uint8_t> items(size_t(count)*0x48);
     if(!read(entries,items.data(),items.size()))return fail("unreadable native arrow registration");
@@ -90,13 +90,13 @@ inline bool ValidateNativeArrowLeases(const GoodsMemoryReader& reader,uint64_t m
     uint64_t vt=0,type=0,path=0,vertex=0,constant=0,points=0,allocator=0;
     uint32_t capacity=0,count=0;
     if(!registered[lease.type].count(lease.arrow) || !field(lease.arrow,0,vt) ||
-       vt!=module+0x046588e8 || !field(lease.arrow,0x50,type) || type!=lease.type ||
+       vt!=module+0x048d3f90 || !field(lease.arrow,0x50,type) || type!=lease.type ||
        !field(lease.arrow,0x70,path) || path!=lease.path ||
        !field(lease.arrow,0x68,vertex) || vertex!=lease.vertex ||
        !field(lease.arrow,0x60,constant) || constant!=lease.constant ||
        !field(path,0x10,points) || points!=lease.points || !field(path,0x18,capacity) ||
        !field(path,0x1c,count) || capacity!=4096 || count<4 || count>capacity ||
-       !field(path,0x20,allocator) || allocator!=module+0x0512cdc0)
+       !field(path,0x20,allocator) || allocator!=module+0x053d8dc0)
       return fail("native arrow object or retained resources changed");
   }
   for(const auto& copy:copies){std::vector<uint8_t> after(copy.bytes.size());

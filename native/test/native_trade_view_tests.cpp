@@ -4,6 +4,7 @@
 #include "native_state_owner.h"
 #include "native_market_owner.h"
 #include "native_trade_identity.h"
+#include "native_lane_access.h"
 #include <cstdio>
 #include <cstdlib>
 
@@ -42,6 +43,205 @@ std::shared_ptr<const LogisticsDocument> Await(LogisticsSession& session){
 }
 int main(){
   {
+    auto input=Snapshot();auto trade=std::make_shared<NativeWorldTradeSnapshot>(*input.nativeTrade);
+    trade->states={{100,1,7},{200,1,7},{400,5,7}};trade->statePairs.clear();
+    auto geo=std::make_shared<NativeSeaGeography>(*trade->seaGeography);
+    geo->states[200]=geo->states.at(100);trade->seaGeography=geo;
+    auto network=std::make_shared<NativeSplineNetwork>(*trade->geometry);
+    constexpr uint32_t city=101,exit=102,destination=103;
+    constexpr uint64_t local=(uint64_t(exit)<<35)|(uint64_t(city)<<6),
+        onward=(uint64_t(destination)<<35)|(uint64_t(exit)<<6);
+    network->points[city]={0,0};network->points[exit]={3,0};network->points[destination]={7,0};
+    network->strips[704]={city,exit};network->strips[768]={exit,destination};
+    network->connections[local]={704};network->connections[onward]={768};trade->geometry=network;
+    auto sources=std::make_shared<NativeDomesticSources>();
+    sources->orders={{200,UINT32_MAX,7,1,1000,0},{400,UINT32_MAX,7,1,0,1000}};
+    sources->land={{1,100,200,2,local,true},{2,200,400,2,onward,true}};
+    sources->landHubs={{100,city},{400,destination}};
+    trade->domestic=sources;input.nativeTrade=trade;
+    auto model=BuildNativeDomesticModel(input);
+    Check(model && model->allocation.shipments.size()==1 && model->allocation.shipments[0].route.size()==2 &&
+        std::abs(model->allocation.shipments[0].distance-7)<.00001,
+        "split-state supply must traverse actual local road from the same-market native primary hub");
+    sources->orders={{400,UINT32_MAX,7,1,1000,0},{200,UINT32_MAX,7,1,0,1000}};
+    auto incoming=BuildNativeDomesticModel(input);
+    Check(incoming && incoming->allocation.shipments.size()==1 && incoming->allocation.shipments[0].route.size()==2 &&
+        !incoming->allocation.shipments[0].route.back().forward && std::abs(incoming->allocation.shipments[0].distance-7)<.00001,
+        "split-state imports follow the same real road back to the native primary hub");
+    sources->land.erase(sources->land.begin());auto blocked=BuildNativeDomesticModel(input);
+    Check(blocked && blocked->allocation.shipments.empty() && blocked->allocation.balances[0].allocatedImport==0,
+        "known primary hub without a connecting road leaves demand unmet instead of unloading at another access point");
+    trade->states[0].market=8;auto foreign=BuildNativeDomesticModel(input);
+    Check(foreign && foreign->allocation.shipments.size()==1 && foreign->allocation.shipments[0].route.size()==1,
+        "another market's primary hub cannot relocate this state's known loading points");
+    trade->states[0].market=7;sources->landHubs[200]=exit;
+    Check(!BuildNativeDomesticModel(input),"conflicting primary hubs in the same current region and market are rejected");
+    sources->landHubs.erase(200);sources->landHubs[999]=city;
+    Check(!BuildNativeDomesticModel(input),"primary hub must belong to a current full state");
+    sources->landHubs.erase(999);sources->landHubs[100]=999;
+    Check(!BuildNativeDomesticModel(input),"primary hub must have a current control point");
+    sources->landHubs[100]=city;
+    auto changed=std::make_shared<NativeWorldTradeSnapshot>(*trade);
+    auto changedSources=std::make_shared<NativeDomesticSources>(*sources);changedSources->landHubs[100]=exit;changed->domestic=changedSources;
+    Check(!NativeTradeEquivalent(*trade,*changed),"same-revision primary hub change invalidates domestic allocation identity");
+  }
+  {
+    auto input=Snapshot();auto trade=std::make_shared<NativeWorldTradeSnapshot>(*input.nativeTrade);
+    trade->states={{100,1,7},{200,4,7},{500,6,7},{700,7,7}};trade->statePairs.clear();
+    auto network=std::make_shared<NativeSplineNetwork>(*trade->geometry);
+    constexpr uint32_t port=0x800190,city=900,inland=901,alternative=902;
+    constexpr uint64_t local=(uint64_t(city)<<35)|(uint64_t(port)<<6),
+        onward=(uint64_t(inland)<<35)|(uint64_t(city)<<6),
+        real=(uint64_t(alternative)<<35)|(uint64_t(inland)<<6);
+    network->points[city]={22,1};network->points[inland]={25,1};network->points[alternative]={33,1};
+    network->strips[704]={port,city};network->strips[768]={city,inland};network->strips[832]={inland,alternative};
+    network->connections[local]={704};network->connections[onward]={768};network->connections[real]={832};
+    trade->geometry=network;
+    auto sources=std::make_shared<NativeDomesticSources>();
+    sources->orders={{100,UINT32_MAX,7,1,1000,0},{500,UINT32_MAX,7,1,0,1000}};
+    NativeShippingLane lane;lane.fromState=100;lane.toState=200;lane.provinces={{10,10}};lane.travelDistanceFixed=100000;
+    sources->shipping.lanes={lane};sources->land={{1,200,500,2,onward,true}};trade->domestic=sources;input.nativeTrade=trade;
+    auto blocked=BuildNativeDomesticModel(input);
+    Check(blocked && blocked->allocation.shipments.empty() && blocked->allocation.balances[1].allocatedImport==0 &&
+        blocked->allocation.balances[1].freightDemand.unmet==1,
+        "disconnected port and road hubs cannot satisfy demand through a logical intermediate state");
+    sources->orders.push_back({700,UINT32_MAX,7,1,1000,0});sources->land.push_back({2,500,700,2,real,true});
+    auto rerouted=BuildNativeDomesticModel(input);
+    Check(rerouted && rerouted->allocation.shipments.size()==1 && rerouted->allocation.shipments[0].source==700 &&
+        rerouted->allocation.shipments[0].destination==500 && rerouted->allocation.shipments[0].quantity==1000 &&
+        std::abs(rerouted->allocation.shipments[0].distance-8)<.00001 && rerouted->allocation.balances[0].allocatedExport==0,
+        "real alternate supply wins over a cheaper state-level route with a disconnected physical transfer");
+    sources->localLand={{3,200,200,2,local,true}};
+    auto connected=BuildNativeDomesticModel(input);
+    Check(connected && connected->allocation.shipments.size()==1 && connected->allocation.shipments[0].source==100 &&
+        connected->allocation.shipments[0].route.size()==3 && std::abs(connected->allocation.shipments[0].distance-6)<.00001,
+        "restoring the actual connector makes its full physical path and cost eligible before allocation");
+  }
+  {
+    auto input=Snapshot();auto trade=std::make_shared<NativeWorldTradeSnapshot>(*input.nativeTrade);
+    trade->states={{100,1,7},{200,4,7},{500,6,7}};trade->statePairs.clear();
+    auto network=std::make_shared<NativeSplineNetwork>(*trade->geometry);
+    constexpr uint32_t port=0x800190,city=900,inland=901;
+    constexpr uint64_t localKey=(uint64_t(city)<<35)|(uint64_t(port)<<6),
+        onwardKey=(uint64_t(inland)<<35)|(uint64_t(city)<<6);
+    network->points[city]={22,1};network->points[inland]={25,1};
+    network->strips[704]={port,city};network->strips[768]={city,inland};
+    network->connections[localKey]={704};network->connections[onwardKey]={768};trade->geometry=network;
+    auto sources=std::make_shared<NativeDomesticSources>();
+    sources->orders={{100,UINT32_MAX,7,1,1000,0},{500,UINT32_MAX,7,1,0,1000}};
+    NativeShippingLane lane;lane.fromState=100;lane.toState=200;lane.provinces={{10,10}};lane.travelDistanceFixed=100000;
+    sources->shipping.lanes={lane};sources->land={{1,200,500,2,onwardKey,true}};
+    sources->localLand={{2,200,200,2,localKey,true}};
+    trade->domestic=sources;input.nativeTrade=trade;
+    auto model=BuildNativeDomesticModel(input);
+    Check(model && model->allocation.shipments.size()==1,"port-to-interior fixture allocates one final shipment");
+    const auto& shipment=model->allocation.shipments[0];
+    Check(shipment.quantity==1000 && shipment.route.size()==3,"same-state port-to-city connector belongs to final shipment route");
+    uint32_t previous=0;bool first=true;
+    for(const auto& edge:shipment.route){
+      auto strips=model->edges.at(edge.id).strips;
+      if(!edge.forward){std::reverse(strips.begin(),strips.end());for(auto& strip:strips)strip.forward=!strip.forward;}
+      for(const auto& strip:strips){
+        const auto& points=network->strips.at(strip.id);auto from=strip.forward?points.front():points.back();
+        Check(first || previous==from,"sea, port, intra-state road and onward road share exact current controls");
+        previous=strip.forward?points.back():points.front();first=false;
+      }
+    }
+    sources->localLand.clear();auto missing=BuildNativeDomesticModel(input);
+    Check(missing && missing->allocation.shipments.empty() && missing->allocation.balances[1].allocatedImport==0,
+        "missing current local connectivity leaves domestic demand unmet before allocation");
+    constexpr uint32_t landPort=903;
+    constexpr uint64_t accessKey=(uint64_t(city)<<35)|(uint64_t(landPort)<<6);
+    network->points[landPort]={21.25f,1};network->strips[960]={landPort,city};network->connections[accessKey]={960};
+    sources->localLand={{2,200,200,2,accessKey,true}};
+    sources->portTransfers={{9,200,{port,landPort},{2000000,100000},{{100000,2100000,100000}}}};
+    auto portModel=BuildNativeDomesticModel(input);
+    Check(portModel && portModel->allocation.shipments[0].route.size()==4 &&
+        portModel->edges[portModel->allocation.shipments[0].route[1].id].complete,
+        "original keyless port path joins naval control to current land road");
+    Check(std::abs(portModel->allocation.shipments[0].distance-5.75)<.00001,
+        "port transfer retains original fixed distance while adding the actual local road length");
+    const auto navalPoint=network->points.at(port);network->points.erase(port);
+    auto missingControls=BuildNativeDomesticModel(input);
+    Check(missingControls && missingControls->allocation.shipments.size()==1 &&
+        missingControls->allocation.shipments[0].quantity==1000 && missingControls->allocation.balances[1].allocatedImport==1000 &&
+        std::any_of(missingControls->allocation.shipments[0].route.begin(),missingControls->allocation.shipments[0].route.end(),
+          [&](const auto& leg){return !missingControls->edges.at(leg.id).complete;}),
+        "missing drawn controls do not erase witnessed original lane and port connectivity or pretend the geometry is complete");
+    network->points[port]=navalPoint;
+    auto drawableSource=std::make_shared<NativeWorldTradeSnapshot>(*trade);
+    drawableSource->groups.clear();drawableSource->groupPairs.clear();
+    auto drawable=input;drawable.nativeTrade=drawableSource;FreightFilter portFilter;portFilter.market=7;
+    auto portFacts=BuildNativeTradeFacts(drawable);Check(bool(portFacts),"keyless port path reaches formal facts");
+    auto portView=BuildNativeTradeView(drawable,*portFacts,portFilter);Check(bool(portView),"keyless port path reaches formal view");
+    auto portRibbons=BuildNativeTradeRibbons(*portFacts,*portView);
+    Check(portRibbons && std::any_of(portView->segments.begin(),portView->segments.end(),[](const auto& segment){
+      return bool(segment.strip&(uint64_t(1)<<63));}),"copied original port path produces a formal ribbon without editing native spline database");
+    FreightEngine portCache({});Check(portCache.SetSnapshot(drawable),"port cache baseline accepted");
+    auto cachedPort=portCache.Build(portFilter);Check(bool(cachedPort),"port cache baseline built");
+    auto changedPortSource=std::make_shared<NativeWorldTradeSnapshot>(*drawableSource);
+    auto changedPortInputs=std::make_shared<NativeDomesticSources>(*sources);
+    ++changedPortInputs->portTransfers[0].path[0][0];changedPortSource->domestic=changedPortInputs;
+    auto changedPortSnapshot=drawable;changedPortSnapshot.nativeTrade=changedPortSource;
+    Check(portCache.SetSnapshot(changedPortSnapshot) && portCache.Build(portFilter)->nativeFacts!=cachedPort->nativeFacts,
+        "same-revision original port path update invalidates cached geometry and quantities");
+    sources->orders={{500,UINT32_MAX,7,1,1000,0},{100,UINT32_MAX,7,1,0,1000}};
+    auto reversePort=BuildNativeDomesticModel(input);
+    Check(reversePort && reversePort->allocation.shipments[0].route.size()==4 &&
+        !reversePort->allocation.shipments[0].route[2].forward,
+        "land-to-sea travel reverses original port path consistently");
+    sources->orders={{100,UINT32_MAX,7,1,1000,0},{500,UINT32_MAX,7,1,0,1000}};
+    sources->portTransfers.clear();sources->localLand.clear();
+    trade->states.push_back({600,4,7});
+    auto splitGeo=std::make_shared<NativeSeaGeography>(*trade->seaGeography);
+    splitGeo->states[600]=splitGeo->states.at(200);trade->seaGeography=splitGeo;
+    sources->localLand={{2,600,600,2,localKey,true}};
+    auto split=BuildNativeDomesticModel(input);
+    Check(split && split->allocation.shipments[0].quantity==1000 &&
+        split->edges[split->allocation.shipments[0].route[1].id].complete,
+        "same-market split state can supply the actual same-region transfer road");
+    constexpr uint32_t middle=902;
+    constexpr uint64_t enterKey=(uint64_t(middle)<<35)|(uint64_t(port)<<6),
+        leaveKey=(uint64_t(city)<<35)|(uint64_t(middle)<<6);
+    network->points[middle]={21,1};network->strips[832]={port,middle};network->strips[896]={middle,city};
+    network->connections[enterKey]={832};network->connections[leaveKey]={896};
+    sources->localLand.clear();sources->land.push_back({3,200,600,2,enterKey,true});
+    sources->land.push_back({4,600,200,2,leaveKey,true});
+    auto crossing=BuildNativeDomesticModel(input);
+    Check(crossing && crossing->allocation.shipments[0].quantity==1000 && crossing->allocation.shipments[0].route.size()==4 &&
+        crossing->edges[crossing->allocation.shipments[0].route[1].id].strips[0].id==832 &&
+        crossing->edges[crossing->allocation.shipments[0].route[2].id].strips[0].id==896,
+        "physical transfer can cross split ownership boundary and return within the same region and market");
+    splitGeo->states[600]={9,9};
+    auto detour=BuildNativeDomesticModel(input);
+    Check(detour && detour->allocation.shipments[0].quantity==1000 && detour->allocation.shipments[0].route.size()==4 &&
+        detour->edges[detour->allocation.shipments[0].route[1].id].strips[0].id==832 &&
+        detour->edges[detour->allocation.shipments[0].route[2].id].strips[0].id==896 &&
+        std::abs(detour->allocation.shipments[0].distance-6)<.00001,
+        "current same-market physical roads can leave a region and return without a state-terminal jump");
+    sources->land[1]={3,600,200,2,enterKey,false};sources->land[2]={4,200,600,2,leaveKey,false};
+    auto reverseDefinitions=BuildNativeDomesticModel(input);
+    Check(reverseDefinitions && reverseDefinitions->allocation.shipments[0].route.size()==4 &&
+        reverseDefinitions->edges[reverseDefinitions->allocation.shipments[0].route[1].id].strips[0].forward==
+          reverseDefinitions->allocation.shipments[0].route[1].forward &&
+        reverseDefinitions->edges[reverseDefinitions->allocation.shipments[0].route[2].id].strips[0].forward==
+          reverseDefinitions->allocation.shipments[0].route[2].forward,
+        "cross-region transfer binds canonical anchors to the correct runtime state when native definition reverses");
+    splitGeo->states[600]=splitGeo->states.at(200);
+    sources->land.resize(1);sources->localLand={{2,600,600,2,localKey,true}};
+    trade->states.back().market=8;
+    auto foreign=BuildNativeDomesticModel(input);
+    Check(foreign && foreign->allocation.shipments.empty(),
+        "same-region road in another market cannot complete transfer");
+    trade->states.back().market=7;splitGeo->states[600]={9,9};
+    auto unrelated=BuildNativeDomesticModel(input);
+    Check(unrelated && unrelated->allocation.shipments.empty(),
+        "coincident controls in unrelated region cannot complete transfer");
+    splitGeo->states[600]={UINT32_MAX,4};auto unknown=BuildNativeDomesticModel(input);
+    Check(unknown && unknown->allocation.shipments.empty(),
+        "unknown region definition cannot grant shared split-state access");
+  }
+  {
     EconomySnapshot input;input.world=1;input.revision=1;input.goods={{1,"grain","staple",1,false}};
     auto trade=std::make_shared<NativeWorldTradeSnapshot>();trade->states={{100,UINT32_MAX,7},{400,UINT32_MAX,7}};
     NativeSplineNetwork network;network.width=8192;network.height=3616;
@@ -78,6 +278,34 @@ int main(){
     Check(!BuildNativeDomesticModel(input),"missing current country access is not an implicit permit");
     other->straitAccess=std::map<uint32_t,std::vector<uint32_t>>{{5,{0x2000001}},{9,{}}};
     Check(!BuildNativeDomesticModel(input),"stale strait handle cannot authorize a current edge");
+    auto boundSources=std::make_shared<NativeDomesticSources>(*sources);
+    boundSources->shipping.lanes[1].country=5;
+    NativeLaneAccessScope scope{input.world,input.revision,7};NativeLaneAccessBatch batch;batch.scope=scope;
+    for(const auto& current:boundSources->shipping.lanes){
+      NativeStraitClassification access;
+      (current.id==1?access.allowed:access.denied).push_back(0x1000001);
+      batch.records.push_back({current.id,{current.country,current.fromState,current.toState,
+          current.travelDistanceFixed,current.provinces},std::move(access)});
+    }
+    boundSources->laneStraitAccess=BindNativeLaneAccess(batch,scope,boundSources->shipping,{0x1000001});
+    Check(boundSources->laneStraitAccess.has_value(),"current original lane batch binds to copied domestic roster");
+    auto boundTrade=std::make_shared<NativeWorldTradeSnapshot>(*trade);boundTrade->domestic=boundSources;
+    input.nativeTrade=boundTrade;auto boundFacts=BuildNativeDomesticModel(input);
+    Check(boundFacts && boundFacts->edges[0].complete && !boundFacts->edges[1].complete &&
+          boundFacts->allocation.shipments.size()==1 && boundFacts->allocation.shipments[0].quantity==1000,
+          "same-country per-lane access overrides legacy country permission without changing model quantity");
+    auto swapped=std::make_shared<NativeDomesticSources>(*boundSources);
+    swapped->laneStraitAccess=std::map<uint32_t,std::vector<uint32_t>>{{1,{}},{2,{0x1000001}}};
+    auto swappedTrade=std::make_shared<NativeWorldTradeSnapshot>(*boundTrade);swappedTrade->domestic=swapped;
+    Check(!NativeTradeEquivalent(*boundTrade,*swappedTrade),"lane-specific permission changes invalidate cached facts");
+    input.nativeTrade=swappedTrade;auto swappedFacts=BuildNativeDomesticModel(input);
+    Check(swappedFacts && !swappedFacts->edges[0].complete && swappedFacts->edges[1].complete &&
+          swappedFacts->allocation.shipments.size()==1 && swappedFacts->allocation.shipments[0].quantity==1000,
+          "lane-specific geometry refresh preserves model quantity");
+    swapped->laneStraitAccess->erase(2);
+    Check(!BuildNativeDomesticModel(input),"missing bound lane must not fall back to country or registered straits");
+    swapped->laneStraitAccess->clear();
+    Check(!BuildNativeDomesticModel(input),"engaged empty lane access cannot implicitly permit nonempty lanes");
   }
   {
     EconomySnapshot input;input.world=1;input.revision=1;input.goods={{1,"grain","staple",1,false}};
@@ -147,9 +375,9 @@ int main(){
     auto trade=std::make_shared<NativeWorldTradeSnapshot>();trade->states={{0,UINT32_MAX,7},{9,UINT32_MAX,7},{10,UINT32_MAX,7}};
     NativeSplineNetwork network;network.width=100;network.height=100;
     network.points={{100,{1,1}},{200,{2,1}},{300,{1,2}},{400,{1.5f,1}}};
-    network.strips={{256,{100,200}},{512,{100,300}},{768,{100,400,200}}};
+    network.strips={{256,{100,200}},{512,{100,300}},{769,{100,400,200}}};
     constexpr uint64_t first=(uint64_t(200)<<35)|(uint64_t(100)<<6),second=(uint64_t(300)<<35)|(uint64_t(100)<<6);
-    network.connections={{first,{256}},{second,{512}},{first|1,{768}}};
+    network.connections={{first,{256}},{second,{512}},{first|1,{769}}};
     NativeDomesticSources domestic;
     domestic.orders={{0,UINT32_MAX,7,1,1000,0},{9,UINT32_MAX,7,1,0,1000},{10,UINT32_MAX,7,1,0,1000}};
     domestic.land={{1,0,9,2,first,true},{2,0,10,2,second,true},{3,0,9,2,first|1,true}};
@@ -486,11 +714,14 @@ int main(){
       network.points.emplace(0x800258,NativeSplinePoint{25,1});
       network.strips.emplace(newPort,std::vector<uint32_t>{0x800258,72,0x8493e0});
       network.connections.emplace(NativePortSplineKeys(3000,6)[0],std::vector<uint64_t>{newPort});
+      constexpr uint64_t newAccess=(uint64_t(0x800258)<<35)|(uint64_t(900)<<6),accessStrip=0x600000000;
+      network.strips.emplace(accessStrip,std::vector<uint32_t>{900,0x800258});
+      network.connections.emplace(newAccess,std::vector<uint64_t>{accessStrip});
       old->geometry=std::make_shared<const NativeSplineNetwork>(network);
       auto geography=sea;geography.states.emplace(600,NativeSeaRegion{6,6});geography.stateHubs.emplace(600,true);
       old->seaGeography=std::make_shared<const NativeSeaGeography>(geography);
       auto initial=std::make_shared<NativeDomesticSources>(*ports);
-      initial->land={{88,600,400,2,landKey,true}};old->domestic=initial;
+      initial->land={{88,600,400,2,landKey,true}};initial->localLand={{89,600,600,2,newAccess,true}};old->domestic=initial;
       auto before=domesticSnapshot;before.nativeTrade=old;
       FreightEngine cache({});Check(cache.SetSnapshot(before),"initial port snapshot accepted");
       auto oldFrame=cache.Build(filter);Check(oldFrame && oldFrame->error.empty(),"initial port frame built");
@@ -532,14 +763,26 @@ int main(){
       inputs->orders={{100,UINT32_MAX,7,1,1000000,0},{600,UINT32_MAX,7,1,0,500000}};
       inputs->land={{88,400,600,2,landKey,true}};mixed->domestic=inputs;
       auto mixedSnapshot=domesticSnapshot;mixedSnapshot.nativeTrade=mixed;
+      auto blockedMixed=BuildNativeTradeFacts(mixedSnapshot,{},&error);
+      Check(blockedMixed && blockedMixed->domestic->allocation.shipments.empty() &&
+          blockedMixed->domestic->allocation.balances[1].allocatedImport==0,
+          "mixed transport cannot use an absent physical handoff as allocated movement");
+      auto connectedNetwork=seaNetwork;
+      constexpr uint64_t localAccess=(uint64_t(0x8001f4)<<35)|(uint64_t(900)<<6),accessStrip=0x600000000;
+      connectedNetwork.strips.emplace(accessStrip,std::vector<uint32_t>{900,0x8001f4});
+      connectedNetwork.connections.emplace(localAccess,std::vector<uint64_t>{accessStrip});
+      mixed->geometry=std::make_shared<const NativeSplineNetwork>(connectedNetwork);
+      inputs->localLand={{89,400,400,2,localAccess,true}};
       auto mixedFacts=BuildNativeTradeFacts(mixedSnapshot,{},&error);
       Check(mixedFacts && mixedFacts->domestic->allocation.shipments.size()==1 &&
-          mixedFacts->domestic->allocation.shipments[0].route.size()==2,"mixed transport fixture allocates one original sea/land route");
+          mixedFacts->domestic->allocation.shipments[0].route.size()==3 &&
+          mixedFacts->domestic->edges[mixedFacts->domestic->allocation.shipments[0].route[1].id].complete,
+          "mixed transport includes its actual local handoff before allocation");
       auto scope=filter;scope.kind=FreightViewKind::State;scope.state=600;
       auto whole=BuildNativeTradeView(mixedSnapshot,*mixedFacts,scope);
       scope.mapTransport=FreightTransport::Land;auto land=BuildNativeTradeView(mixedSnapshot,*mixedFacts,scope);
       scope.mapTransport=FreightTransport::Sea;auto sea=BuildNativeTradeView(mixedSnapshot,*mixedFacts,scope);
-      Check(whole && land && sea && whole->segments.size()==3 && land->segments.size()==1 && sea->segments.size()==2 &&
+      Check(whole && land && sea && whole->segments.size()==4 && land->segments.size()==2 && sea->segments.size()==2 &&
           land->segments[0].strip==landStrip && land->filteredQuantity==50000000 && sea->filteredQuantity==50000000 &&
           land->scopeQuantity==whole->scopeQuantity && sea->domesticAllocated==whole->domesticAllocated &&
           land->heatReference==whole->heatReference,"mixed route mode filters paint only selected connection segments, count quantity once, preserve allocation and heat");

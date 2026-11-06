@@ -3,14 +3,14 @@
 
 namespace v3 {
 struct NativeDirectedStrip {
-  uint64_t id=0; // full original56-bit identity, never a truncated graph edge
+  uint64_t id=0; // original56-bit identity; bit63 tags an owned original keyless port path
   bool forward=false;
   bool operator==(const NativeDirectedStrip&)const=default;
 };
 struct NativeTradeGeometry {
   NativeRouteConnections connections;
   std::vector<NativeDirectedStrip> strips;
-  bool complete=true; // false only for witnessed partial original port-lane geometry
+  bool complete=true; // false for partial original port geometry or a missing physical transfer
 };
 // Compose the original port-connection mapping with the CURRENT endpoints used
 // by013C4E70 and its selected native ProvinceSet. Order only an unambiguous chain

@@ -29,8 +29,8 @@ bool Context(HANDLE thread,QueryThread query,uint32_t& context){
   return GetExitCodeThread(thread,&exit) && exit==STILL_ACTIVE &&
     query(thread,0,&info,sizeof(info),nullptr)>=0 && info.teb &&
     Read((uint64_t)info.teb+0x58,&tlsArray,8) && Read(tlsArray,&tls,8) &&
-    Read(tls+0x8600,&initialized,4) && (initialized&1) &&
-    Read(tls+0x8648,&context,4) && context<16;
+    Read(tls+0x8670,&initialized,4) && (initialized&1) &&
+    Read(tls+0x86b8,&context,4) && context<16;
 }
 }
 int main(int argc,char** argv){

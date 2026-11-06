@@ -13,9 +13,9 @@ struct NativeTradeBinding {
   // may itself be known empty or unselected: neither permits a model fallback.
   std::optional<size_t> route;
 };
-// Original01221F180 uses each state's current CMarketArea+48 and013C4E70
-// looks those centers up in the native cache. Aggregate detailed890 exports by
-// current destination center and require exact agreement with independent8B8.
+// Each state's current original world hub is separate from its market area
+// and the route-cache members. Aggregate detailed898 exports by current
+// destination hub and require exact agreement with independent8C0.
 // Old group membership never substitutes for a missing current route. This
 // establishes quantity/path association, not port endpoints or travel order.
 inline std::optional<std::vector<NativeTradeBinding>> BindNativeTradeRoutes(

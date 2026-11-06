@@ -7,6 +7,8 @@ $gpuPython = (Get-Command python -ErrorAction Stop).Source
 $env:Path = "$tools;$env:Path"
 $testBuild = Join-Path $here 'build\tests'
 New-Item -ItemType Directory -Force $testBuild | Out-Null
+& $gpuPython (Join-Path $root 'tools/test_recovery_core.py')
+if ($LASTEXITCODE -ne 0) { throw 'native discovery regression tests failed' }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -municode -static `
   -o (Join-Path $testBuild 'harness.exe') (Join-Path $here 'test\harness.cpp') `
   '-ld3d11' '-ldxgi' '-luser32' '-lgdi32'
@@ -29,6 +31,16 @@ if ($LASTEXITCODE -ne 0) { throw 'GUI variable key tests failed' }
 if ($LASTEXITCODE -ne 0) { throw 'native access tests build failed' }
 & (Join-Path $testBuild 'native_access_tests.exe')
 if ($LASTEXITCODE -ne 0) { throw 'native access tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_travel_tests.exe') (Join-Path $here 'test\native_travel_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native travel tests build failed' }
+& (Join-Path $testBuild 'native_travel_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native travel tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'native_port_approach_tests.exe') (Join-Path $here 'test\native_port_approach_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'native port approach tests build failed' }
+& (Join-Path $testBuild 'native_port_approach_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native port approach tests failed' }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
   -o (Join-Path $testBuild 'native_snapshot_tests.exe') (Join-Path $here 'test\native_snapshot_tests.cpp')
 if ($LASTEXITCODE -ne 0) { throw 'native snapshot tests build failed' }
@@ -86,6 +98,8 @@ if ($LASTEXITCODE -ne 0) { throw 'native port tests build failed' }
 if ($LASTEXITCODE -ne 0) { throw 'native port tests failed' }
 & $gpuPython (Join-Path $root 'tools\test_native_trade_selector.py')
 if ($LASTEXITCODE -ne 0) { throw 'exact-build native trade selector harness failed' }
+& $gpuPython (Join-Path $root 'tools\test_native_world_hub.py')
+if ($LASTEXITCODE -ne 0) { throw 'exact-build native world hub getter harness failed' }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
   -o (Join-Path $testBuild 'native_economy_tests.exe') (Join-Path $here 'test\native_economy_tests.cpp')
 if ($LASTEXITCODE -ne 0) { throw 'native economy tests build failed' }

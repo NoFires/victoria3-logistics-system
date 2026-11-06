@@ -211,15 +211,15 @@ int wmain(int argc, wchar_t** argv) {
   std::printf("  handler (gfx+0x20)     = 0x%016llx\n", static_cast<unsigned long long>(handler));
   VtableMatches(handler, module, v3::kRvaInterfaceHandlerVtable, "handler vtable");
   uint64_t barSelf = 0;
-  ReadMemory(handler + 0xd8, &barSelf, sizeof(barSelf));
+  ReadMemory(handler + 0xe8, &barSelf, sizeof(barSelf));
   std::printf("  bar self (handler+d8)  = 0x%016llx  expected 0x%016llx  %s\n",
               static_cast<unsigned long long>(barSelf),
-              static_cast<unsigned long long>(handler + 0xd8),
-              barSelf == handler + 0xd8 ? "MATCH" : "MISMATCH");
-  ReadMemory(handler + 0xe0, &panels, sizeof(panels));
-  ReadMemory(handler + 0xec, &panelCount, sizeof(panelCount));
+              static_cast<unsigned long long>(handler + 0xe8),
+              barSelf == handler + 0xe8 ? "MATCH" : "MISMATCH");
+  ReadMemory(handler + 0xf0, &panels, sizeof(panels));
+  ReadMemory(handler + 0xfc, &panelCount, sizeof(panelCount));
   std::printf("  panels (handler+e0)    = 0x%016llx\n", static_cast<unsigned long long>(panels));
-  std::printf("  panel count (ec)       = %d   (production expects 56)\n", panelCount);
+  std::printf("  panel count (fc)       = %d   (production expects 56)\n", panelCount);
 
   std::printf("\n[5] panel table: vtable identity + panel name per slot\n");
   for (int index = 0; index < panelCount && index < 64; ++index) {
@@ -231,13 +231,13 @@ int wmain(int argc, wchar_t** argv) {
     bool known = false;
     if (vtable >= module && vtable - module <= 0x800000) {
       rva = static_cast<uint32_t>(vtable - module);
-      known = rva == v3::kRvaMarketPanelVtable || rva == 0x045CC848;
+      known = rva == v3::kRvaMarketPanelVtable || rva == 0x0485DB38;
     }
     if (!known && index != 9 && index != 14) continue;
     std::printf("  slot %2d panel=0x%016llx vtable_rva=0x%08X%s%s\n", index,
                 static_cast<unsigned long long>(panel), rva,
                 rva == v3::kRvaMarketPanelVtable ? "  [market_panel]" : "",
-                rva == 0x045CC848 ? "  [states_panel]" : "");
+                rva == 0x0485DB38 ? "  [states_panel]" : "");
     std::string name;
     if (ReadMsvcString(panel, 8, name)) std::printf("        name=\"%s\"\n", name.c_str());
     std::string tab;

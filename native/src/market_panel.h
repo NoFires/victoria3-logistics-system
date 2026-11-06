@@ -10,12 +10,10 @@ struct NativeMarketPanelState {
   uint32_t market=UINT32_MAX;
   std::string tab, error;
   std::optional<std::vector<uint32_t>> visibleGoods;
-  // Diagnostic only: panel+0x70 is the GUI market id the vanilla getter resolves,
-  // while the snapshot groups states by `state+0x48`. R84 live evidence showed
-  // panel market 0 ("British market") absent from the snapshot's 52 ids, so the
-  // two spaces are NOT interchangeable. This carries the candidate simulation id
-  // the GUI market object holds at +0x374; nothing may authorise a view from it
-  // until the mapping is verified.
+  // Legacy diagnostic from the old state+48 grouping investigation. Formal
+  // snapshots now use State.GetMarket; original20394E0 resolves the GUI object's
+  // +10 ID through the same typed market database (97A380). The current meaning
+  // of +374 is unverified, so this hint must not authorise a view.
   uint32_t simulationMarket=UINT32_MAX;
 };
 
@@ -52,9 +50,9 @@ inline bool ReadGuiMarketSimulationCandidate(const GoodsMemoryReader& reader,uin
   if(!reader(match+0x374,&candidate,sizeof(candidate)))return false;
   return true;
 }
-// Exact 1.13.11 profile, copied on the existing UI timer thread. No engine
-// functions, RTTI casts, GUI effects or retained pointers. Closed-state chain
-// was observed live in R73; open/tab transitions still need DLL acceptance.
+// Exact 1.15.0 profile, copied on the existing UI timer thread. No engine
+// functions, RTTI casts, GUI effects or retained pointers. Current open/search
+// copies were checked externally; DLL interaction/lifecycle acceptance remains.
 inline NativeMarketPanelState DecodeNativeMarketPanel(const GoodsMemoryReader& reader,
                                                        uint64_t module) {
   NativeMarketPanelState result;
@@ -101,8 +99,8 @@ inline NativeMarketPanelState DecodeNativeMarketPanel(const GoodsMemoryReader& r
   }
   if(!field(idler,0x10,gfx) || !type(gfx,kRvaInterfaceGfxVtable) ||
      !field(gfx,0x20,handler) || !type(handler,kRvaInterfaceHandlerVtable) ||
-     !field(handler,0xd8,barSelf) || barSelf!=handler+0xd8 ||
-     !field(handler,0xe0,panels) || !field(handler,0xec,count) || count!=56 ||
+     !field(handler,0xe8,barSelf) || barSelf!=handler+0xe8 ||
+     !field(handler,0xf0,panels) || !field(handler,0xfc,count) || count!=56 ||
      !field(panels,9*8,panel) || !type(panel,kRvaMarketPanelVtable))
     return fail("market panel ownership unavailable");
   std::string name;

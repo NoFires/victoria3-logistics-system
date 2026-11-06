@@ -6,6 +6,9 @@
 #include "native_economy.h"
 #include "native_access.h"
 #include "native_strait_probe.h"
+#include "native_path_probe.h"
+#include "native_port_approach.h"
+#include "native_sea_cache.h"
 #include "frame_timing.h"
 
 #include <imgui.h>
@@ -79,7 +82,7 @@ void __fastcall PartialDailyTickThunk(void* command) {
   // No GUI effect, selection, database scan, worker request, engine-owned
   // pointer retention or economic write is performed from this observation.
 }
-// Diagnostic only: observe calls the game already makes; never request one.
+// Permission observer only: no query request originates from this hook.
 using FnStraitPermission = uint8_t(__fastcall*)(void*, void*, uint8_t);
 FnStraitPermission g_origStraitPermission = nullptr;
 std::atomic<unsigned> g_straitPermissionSamples{0};
@@ -101,6 +104,24 @@ struct DomesticLaneBuildTrace {
   std::vector<std::pair<uint32_t,NativeLaneSelection>> lanes;
 };
 thread_local DomesticLaneBuildTrace* g_domesticLaneBuildTrace=nullptr;
+struct TradeSearchTrace {
+  uint32_t country=UINT32_MAX;
+  unsigned classifications=0;
+  bool invalid=false;
+  std::optional<NativeStraitClassification> rawAccess;
+};
+thread_local TradeSearchTrace* g_tradeSearchTrace=nullptr;
+struct PortSearchTrace {
+  uint32_t country=UINT32_MAX;
+  unsigned searches=0,query=0;
+  bool invalid=false;
+  std::optional<NativeTradeSearchResult> path;
+  bool defaultOptions=false;
+  std::optional<NativeAccessObservation> queryScope;
+  std::optional<NativeTradeBufferObservation> queryBuffer;
+  std::optional<NativeThreadAllocatorObservation> queryAllocator;
+};
+thread_local PortSearchTrace* g_portSearchTrace=nullptr;
 uint8_t __fastcall StraitPermissionProbe(void* strait, void* country, uint8_t mode) {
   const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base());
   const auto caller=reinterpret_cast<uint64_t>(__builtin_return_address(0))-base;
@@ -163,6 +184,7 @@ void __fastcall StraitClassificationProbe(void* country,uint8_t mode,void* allow
   const unsigned sample=g_straitClassificationSamples.fetch_add(1);
   if(sample>=20000){
     if(g_domesticLaneBuildTrace)g_domesticLaneBuildTrace->invalid=true;
+    if(g_tradeSearchTrace)g_tradeSearchTrace->invalid=true;
     g_origStraitClassification(country,mode,allowed,denied);return;
   }
   const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base());
@@ -199,9 +221,14 @@ void __fastcall StraitClassificationProbe(void* country,uint8_t mode,void* allow
         cp && cp<=UINT64_MAX-0x1c && read(cp+0x18,&actualCountry,4) && actualCountry==trace.country;
     if(!same || !output || trace.invalid || *output!=trace.observed) {
       if(g_domesticLaneBuildTrace)g_domesticLaneBuildTrace->invalid=true;
+      if(g_tradeSearchTrace)g_tradeSearchTrace->invalid=true;
       if(g_straitClassificationFailures.fetch_add(1)<32)
         V3_WARN("native strait classification refused sample=%u country=%u prepared=%u scope=%u copied=%u trace=%u",sample,trace.country,unsigned(prepared),unsigned(same),unsigned(bool(output)),unsigned(!trace.invalid));
       return;
+    }
+    if(auto* search=g_tradeSearchTrace){
+      if(mode!=1 || trace.country!=search->country || search->classifications)search->invalid=true;
+      else {search->rawAccess=*output;++search->classifications;}
     }
     if(auto* build=g_domesticLaneBuildTrace) {
       if(mode!=1 || trace.country!=build->country || (build->access && *build->access!=*output))build->invalid=true;
@@ -224,12 +251,377 @@ void __fastcall StraitClassificationProbe(void* country,uint8_t mode,void* allow
           sample,GetCurrentThreadId(),(unsigned long long)caller,trace.country,unsigned(mode),
           (unsigned long long)after->world,after->date,after->access,unsigned(after->owns),after->context,a->count,d->count,yes.c_str(),no.c_str());
     }
-  } catch(...) {if(g_domesticLaneBuildTrace)g_domesticLaneBuildTrace->invalid=true;}
+  } catch(...) {
+    if(g_domesticLaneBuildTrace)g_domesticLaneBuildTrace->invalid=true;
+    if(g_tradeSearchTrace)g_tradeSearchTrace->invalid=true;
+  }
   // Diagnostic only: no result or borrowed pointer is handed to the worker.
 }
 bool ReadProbeMemory(uint64_t a,void* p,size_t n) {
   SIZE_T copied=0;return a && n<=UINT64_MAX-a &&
       ReadProcessMemory(GetCurrentProcess(),reinterpret_cast<const void*>(a),p,n,&copied) && copied==n;
+}
+using FnNativeTradeSearch=void*(__fastcall*)(void*,void*,void*,void*,uint32_t,uint64_t,void*);
+FnNativeTradeSearch g_origNativeTradeSearch=nullptr;
+std::atomic<unsigned> g_nativeTradeSearchSamples{0},g_nativeTradeSearchOtherSamples{0},g_nativeTradeSearchDomesticSamples{0};
+std::atomic<unsigned> g_nativeTradeSearchCopies{0},g_nativeDomesticTradeSearchCopies{0};
+std::atomic<unsigned> g_nativeTradeReplayAttempts{0},g_nativeTradeReplayMatches{0};
+std::atomic<bool> g_nativeTradeReplayFailed{false};
+struct IndependentTradeQuery {
+  std::optional<NativeTradeSearchResult> path;
+  bool allocated=false,freed=false,independent=false;
+};
+// Adapter-only: the caller retains the verified original request/access window.
+// Own only the output buffer; borrowed inputs never escape this invocation.
+IndependentTradeQuery QueryIndependentTrade(uint64_t base,void* manager,void* sources,void* targets,
+    uint32_t country,uint64_t scratch,void* options,const NativeTradeSearchInputs& input,uint64_t originalData) {
+  IndependentTradeQuery out;
+  constexpr std::array<uint8_t,14> signature={0x48,0x85,0xd2,0x74,0x08,0x48,0x8b,0xca,0xe9,0xb3,0x19,0xb6,0x03,0xc3};
+  std::array<uint8_t,14> actual{};
+  if(!g_origNativeTradeSearch || !ReadProbeMemory(base+0x0061be90,actual.data(),actual.size()) || actual!=signature)return out;
+  std::array<uint64_t,5> raw{};
+  {
+    struct ReleaseResult {
+      std::array<uint64_t,5>& raw;uint64_t base,originalData;bool& freed;
+      ~ReleaseResult(){
+        if(raw[0] && raw[0]!=originalData && raw[2]==base+0x0512cdc0){
+          using Free=void(__fastcall*)(void*,void*);
+          reinterpret_cast<Free>(base+0x0061be90)(reinterpret_cast<void*>(raw[2]),reinterpret_cast<void*>(raw[0]));
+          raw[0]=0;freed=true;
+        }
+      }
+    } release{raw,base,originalData,out.freed};
+    void* returned=nullptr;
+    {
+      struct RestoreTrace {
+        DomesticLaneBuildTrace* build;PortSearchTrace* port;TradeSearchTrace* search;
+        ~RestoreTrace(){g_domesticLaneBuildTrace=build;g_portSearchTrace=port;g_tradeSearchTrace=search;}
+      } restore{g_domesticLaneBuildTrace,g_portSearchTrace,g_tradeSearchTrace};
+      g_domesticLaneBuildTrace=nullptr;g_portSearchTrace=nullptr;g_tradeSearchTrace=nullptr;
+      returned=g_origNativeTradeSearch(manager,raw.data(),sources,targets,country,scratch,options);
+    }
+    out.allocated=raw[0]!=0;out.independent=!out.allocated || raw[0]!=originalData;
+    if(returned==raw.data() && raw[2]==base+0x0512cdc0 && out.independent)
+      out.path=CopyNativeTradeSearchResult(ReadProbeMemory,reinterpret_cast<uint64_t>(raw.data()),input.sources,input.targets);
+  }
+  return out;
+}
+void* __fastcall NativeTradeSearchProbe(void* manager,void* result,void* sources,void* targets,
+    uint32_t country,uint64_t scratch,void* options) {
+  const unsigned sample=g_nativeTradeSearchSamples.fetch_add(1);
+  auto* port=g_portSearchTrace;
+  if(port && (++port->searches!=1 || port->country!=country))port->invalid=true;
+  const bool domestic=g_domesticLaneBuildTrace!=nullptr;
+  const unsigned ordinal=(domestic?g_nativeTradeSearchDomesticSamples:g_nativeTradeSearchOtherSamples).fetch_add(1);
+  if(ordinal>=(domestic?512u:8192u)){
+    if(port)port->invalid=true;
+    return g_origNativeTradeSearch(manager,result,sources,targets,country,scratch,options);
+  }
+  const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base());
+  const auto caller=reinterpret_cast<uint64_t>(__builtin_return_address(0))-base;
+  const auto mp=reinterpret_cast<uint64_t>(manager),rp=reinterpret_cast<uint64_t>(result),
+      sp=reinterpret_cast<uint64_t>(sources),tp=reinterpret_cast<uint64_t>(targets),op=reinterpret_cast<uint64_t>(options);
+  const GoodsMemoryReader read=ReadProbeMemory;
+  std::optional<NativeAccessObservation> before;
+  std::optional<NativeTradeSearchInputs> input;
+  std::optional<NativeThreadAllocatorObservation> allocatorBefore;
+  TradeSearchTrace trace;trace.country=country;bool prepared=false;
+  const unsigned build=g_domesticLaneBuildTrace?g_domesticLaneBuildTrace->generation:0;
+  try {
+    before=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    input=CopyNativeTradeSearchInputs(read,sp,tp,op);
+    if(port)allocatorBefore=ObserveNativeThreadAllocator(read,base,__readgsqword(0x58));
+    uint64_t currentManager=0;
+    prepared=country!=UINT32_MAX && before && input && before->world<=UINT64_MAX-0x4508 &&
+        read(before->world+0x4500,&currentManager,8) && currentManager==mp;
+  } catch(...) {}
+  void* returned=nullptr;
+  {
+    struct RestoreSearchTrace {
+      TradeSearchTrace* previous;
+      ~RestoreSearchTrace(){g_tradeSearchTrace=previous;}
+    } restore{g_tradeSearchTrace};
+    g_tradeSearchTrace=prepared?&trace:nullptr;
+    // Preserve all seven machine argument slots, including the original unused
+    // scratch slot. The gated replay below uses the same live borrowed inputs.
+    returned=g_origNativeTradeSearch(manager,result,sources,targets,country,scratch,options);
+  }
+  try {
+    const auto after=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    const auto actual=input?CopyNativeTradeSearchInputs(read,sp,tp,op):std::optional<NativeTradeSearchInputs>{};
+    uint64_t currentManager=0,allocator=0;
+    const bool same=prepared && after && before->world==after->world && before->machine==after->machine &&
+        before->stateDb==after->stateDb && before->date==after->date && before->phase==after->phase &&
+        before->access==after->access && before->hidden==after->hidden && before->owns==after->owns &&
+        before->context==after->context && after->world<=UINT64_MAX-0x4508 &&
+        read(after->world+0x4500,&currentManager,8) && currentManager==mp && actual==input;
+    auto output=same && returned==result && !trace.invalid && trace.rawAccess && trace.classifications==1?
+        CopyNativeTradeSearchResult(read,rp,input->sources,input->targets):std::optional<NativeTradeSearchResult>{};
+    if(!output || output->provinces.size()>256 || !read(rp+0x10,&allocator,8)){
+      if(port)port->invalid=true;
+      if(ordinal<16)V3_INFO("native trade search skipped sample=%u caller=%llx build=%u prepared=%u scope=%u classifications=%u result=%u trace=%u",
+          sample,(unsigned long long)caller,build,unsigned(prepared),unsigned(same),trace.classifications,unsigned(bool(output)),unsigned(!trace.invalid));
+      return returned;
+    }
+    if(port && !port->invalid){
+      port->path=*output;port->query=sample;port->queryScope=*after;
+      port->defaultOptions=input->forcedStraits.empty() && input->blockedPairs.empty() && input->selector==UINT16_MAX;
+      const auto buffer=ObserveNativeTradeBuffer(read,rp);
+      const auto heap=ObserveNativeThreadAllocator(read,base,__readgsqword(0x58));
+      if(buffer && buffer->allocator==base+0x0512cdc0 && buffer->array.count==output->provinces.size() &&
+         CopyNativeTradeSearchResult(read,rp,input->sources,input->targets)==output)port->queryBuffer=buffer;
+      if(allocatorBefore && heap==allocatorBefore)port->queryAllocator=heap;
+    }
+    // The original wrapper still owns these exact borrowed parameters. This
+    // bounded opt-in replay is not a different request or a snapshot producer.
+    if(port && !port->invalid && port->queryBuffer && port->queryAllocator &&
+       caller==0x014502b1 && after->phase==4 && after->access==2 && !after->hidden &&
+       after->owns==1 && after->context==1 && !g_nativeTradeReplayFailed.load() &&
+       g_nativeTradeReplayAttempts.fetch_add(1)<128) {
+      bool matched=false,freed=false,allocated=false,independent=false;
+      std::optional<NativeTradeSearchResult> replay;
+      try {
+        auto repeated=QueryIndependentTrade(base,manager,sources,targets,country,scratch,options,*input,port->queryBuffer->array.data);
+        replay=std::move(repeated.path);allocated=repeated.allocated;freed=repeated.freed;independent=repeated.independent;
+        const auto scope=ObserveNativeAccess(read,base,__readgsqword(0x58));
+        matched=replay==output && (!allocated || freed) && scope && scope->world==after->world &&
+            scope->machine==after->machine && scope->stateDb==after->stateDb && scope->date==after->date &&
+            scope->phase==after->phase && scope->access==after->access && scope->hidden==after->hidden &&
+            scope->owns==after->owns && scope->context==after->context && scope->paused==after->paused &&
+            ObserveNativeThreadAllocator(read,base,__readgsqword(0x58))==port->queryAllocator &&
+            CopyNativeTradeSearchInputs(read,sp,tp,op)==input &&
+            CopyNativeTradeSearchResult(read,rp,input->sources,input->targets)==output;
+      } catch(...) {}
+      if(matched)g_nativeTradeReplayMatches.fetch_add(1);else g_nativeTradeReplayFailed.store(true);
+      V3_INFO("native trade replay query=%u thread=%lu build=%u country=%u matched=%u independent=%u allocated=%u freed=%u from=%u to=%u distance=%lld count=%zu",
+          sample,GetCurrentThreadId(),build,country,unsigned(matched),unsigned(independent),unsigned(allocated),unsigned(freed),
+          replay?unsigned(replay->fromProvince):UINT16_MAX,replay?unsigned(replay->toProvince):UINT16_MAX,
+          replay?(long long)replay->distance:0,replay?replay->provinces.size():0);
+    }
+    if((domestic?g_nativeDomesticTradeSearchCopies:g_nativeTradeSearchCopies).fetch_add(1)>=(domestic?256u:4096u))return returned;
+    auto list=[](const auto& values){std::string s;for(auto id:values){if(!s.empty())s+=',';s+=std::to_string(id);}return s;};
+    const auto from=list(input->sources),to=list(input->targets),forced=list(input->forcedStraits),
+        allowed=list(trace.rawAccess->allowed),denied=list(trace.rawAccess->denied);
+    std::string pairs,ranges;
+    for(const auto& pair:input->blockedPairs){if(!pairs.empty())pairs+=',';pairs+=std::to_string(pair[0])+':'+std::to_string(pair[1]);}
+    for(const auto& range:output->provinces){if(!ranges.empty())ranges+=',';ranges+=std::to_string(range.first)+':'+std::to_string(range.last);}
+    V3_INFO("native trade search sample=%u thread=%lu caller=%llx build=%u country=%u from=%u to=%u distance=%lld count=%zu selector=%u allocator=%llx world=%llx date=%u phase=%u access=%u owns=%u context=%u sources=[%s] targets=[%s] forced=[%s] pairs=[%s] raw_allowed=[%s] raw_denied=[%s] provinces=[%s]",
+        sample,GetCurrentThreadId(),(unsigned long long)caller,build,country,unsigned(output->fromProvince),unsigned(output->toProvince),
+        (long long)output->distance,output->provinces.size(),unsigned(input->selector),(unsigned long long)(allocator-base),
+        (unsigned long long)after->world,after->date,after->phase,after->access,unsigned(after->owns),after->context,
+        from.c_str(),to.c_str(),forced.c_str(),pairs.c_str(),allowed.c_str(),denied.c_str(),ranges.c_str());
+  } catch(...) {if(port)port->invalid=true;}
+  // Raw classification is not effective permission when options add limits.
+  // This observation never publishes a formal route, permission or worker job.
+  return returned;
+}
+using FnNativePortSearch=void(__fastcall*)(void*,uint16_t*,uint16_t*,uint32_t*,uint32_t*,int64_t*,const void*,const void*,uint32_t);
+FnNativePortSearch g_origNativePortSearch=nullptr;
+std::atomic<unsigned> g_nativePortSearchSamples{0},g_nativePortSearchCopies{0};
+std::atomic<unsigned> g_nativePortApproachAttempts{0},g_nativePortApproachCopies{0};
+std::atomic<bool> g_nativePortApproachFailed{false};
+void __fastcall NativePortSearchProbe(void* provinces,uint16_t* fromProvince,uint16_t* toProvince,
+    uint32_t* fromState,uint32_t* toState,int64_t* distance,const void* sources,const void* targets,uint32_t country) {
+  auto* build=g_domesticLaneBuildTrace;
+  if(!build){g_origNativePortSearch(provinces,fromProvince,toProvince,fromState,toState,distance,sources,targets,country);return;}
+  const unsigned sample=g_nativePortSearchSamples.fetch_add(1);
+  if(sample>=512){g_origNativePortSearch(provinces,fromProvince,toProvince,fromState,toState,distance,sources,targets,country);return;}
+  const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base());
+  const auto caller=reinterpret_cast<uint64_t>(__builtin_return_address(0))-base;
+  const auto sp=reinterpret_cast<uint64_t>(sources),tp=reinterpret_cast<uint64_t>(targets);
+  const GoodsMemoryReader read=ReadProbeMemory;
+  std::optional<NativeAccessObservation> before;std::optional<NativePortSearchInputs> input;
+  std::optional<NativeTradeBufferObservation> bufferBefore;
+  std::optional<NativeThreadAllocatorObservation> allocatorBefore;
+  PortSearchTrace trace;trace.country=country;bool prepared=false;
+  try {
+    before=ObserveNativeAccess(read,base,__readgsqword(0x58));input=CopyNativePortSearchInputs(read,sp,tp);
+    prepared=before && input && country!=UINT32_MAX && country==build->country;
+    if(prepared){
+      bufferBefore=ObserveNativeTradeBuffer(read,reinterpret_cast<uint64_t>(provinces));
+      allocatorBefore=ObserveNativeThreadAllocator(read,base,__readgsqword(0x58));
+    }
+  } catch(...) {}
+  {
+    struct RestorePortTrace {
+      PortSearchTrace* previous;
+      ~RestorePortTrace(){g_portSearchTrace=previous;}
+    } restore{g_portSearchTrace};
+    g_portSearchTrace=prepared?&trace:nullptr;
+    // Original nine-slot void ABI. Outputs/candidate arrays remain borrowed
+    // until this wrapper returns to the original caller; never free or retain.
+    g_origNativePortSearch(provinces,fromProvince,toProvince,fromState,toState,distance,sources,targets,country);
+  }
+  try {
+    const auto after=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    const auto actual=input?CopyNativePortSearchInputs(read,sp,tp):std::optional<NativePortSearchInputs>{};
+    const auto same=[](const NativeAccessObservation& a,const NativeAccessObservation& b){
+      return a.world==b.world && a.machine==b.machine && a.stateDb==b.stateDb && a.date==b.date &&
+          a.phase==b.phase && a.access==b.access && a.hidden==b.hidden && a.owns==b.owns &&
+          a.context==b.context && a.paused==b.paused;
+    };
+    const bool valid=prepared && after && trace.queryScope && same(*before,*after) && same(*before,*trace.queryScope) &&
+        actual==input && !trace.invalid && trace.searches==1 && trace.path;
+    auto output=valid?CopyNativePortSearchSelection(read,reinterpret_cast<uint64_t>(provinces),
+        reinterpret_cast<uint64_t>(fromProvince),reinterpret_cast<uint64_t>(toProvince),
+        reinterpret_cast<uint64_t>(fromState),reinterpret_cast<uint64_t>(toState),reinterpret_cast<uint64_t>(distance),
+        *input,*trace.path):std::optional<NativePortSearchSelection>{};
+    if(output && !output->path.provinces.empty() &&
+       (!ReadNativeStateObject(read,base,output->fromState) || !ReadNativeStateObject(read,base,output->toState)))output.reset();
+    if(!output){
+      if(sample<32)V3_INFO("native port selection skipped sample=%u build=%u country=%u prepared=%u searches=%u valid=%u",
+          sample,build->generation,country,unsigned(prepared),trace.searches,unsigned(valid));
+      return;
+    }
+    if(g_nativePortSearchCopies.fetch_add(1)>=256)return;
+    const auto bufferAfter=ObserveNativeTradeBuffer(read,reinterpret_cast<uint64_t>(provinces));
+    const auto allocatorAfter=ObserveNativeThreadAllocator(read,base,__readgsqword(0x58));
+    const bool ready=allocatorBefore && trace.queryAllocator==allocatorBefore && allocatorAfter==allocatorBefore &&
+        bufferBefore && trace.queryBuffer && bufferAfter && bufferAfter->array.count==output->path.provinces.size();
+    const bool sameAllocator=ready && bufferBefore->allocator==trace.queryBuffer->allocator &&
+        bufferAfter->allocator==trace.queryBuffer->allocator;
+    const bool moved=sameAllocator && trace.queryBuffer->array.data &&
+        trace.queryBuffer->array.count && *bufferAfter==*trace.queryBuffer;
+    V3_INFO("native port ownership sample=%u query=%u thread=%lu build=%u country=%u ready=%u same_allocator=%u moved=%u previous_data=%llx query_data=%llx final_data=%llx query_capacity=%u final_capacity=%u count=%u tls_index=%u tls=%llx heap=%llx teb=%llx",
+        sample,trace.query,GetCurrentThreadId(),build->generation,country,unsigned(ready),unsigned(sameAllocator),unsigned(moved),
+        bufferBefore?(unsigned long long)bufferBefore->array.data:0,trace.queryBuffer?(unsigned long long)trace.queryBuffer->array.data:0,
+        bufferAfter?(unsigned long long)bufferAfter->array.data:0,trace.queryBuffer?trace.queryBuffer->array.capacity:0,
+        bufferAfter?bufferAfter->array.capacity:0,bufferAfter?bufferAfter->array.count:0,
+        allocatorAfter?allocatorAfter->index:UINT32_MAX,allocatorAfter?(unsigned long long)allocatorAfter->tls:0,
+        allocatorAfter?(unsigned long long)allocatorAfter->heap:0,(unsigned long long)__readgsqword(0x30));
+    auto list=[](const auto& values){std::string s;for(auto id:values){if(!s.empty())s+=',';s+=std::to_string(id);}return s;};
+    const auto from=list(input->sources),to=list(input->targets);std::string ranges;
+    for(const auto& range:output->path.provinces){if(!ranges.empty())ranges+=',';ranges+=std::to_string(range.first)+':'+std::to_string(range.last);}
+    V3_INFO("native port selection sample=%u query=%u thread=%lu caller=%llx build=%u country=%u from=%u to=%u from_province=%u to_province=%u distance=%lld world=%llx date=%u phase=%u access=%u owns=%u context=%u sources=[%s] targets=[%s] provinces=[%s]",
+        sample,trace.query,GetCurrentThreadId(),(unsigned long long)caller,build->generation,country,output->fromState,output->toState,
+        unsigned(output->path.fromProvince),unsigned(output->path.toProvince),(long long)output->path.distance,
+        (unsigned long long)after->world,after->date,after->phase,after->access,unsigned(after->owns),after->context,
+        from.c_str(),to.c_str(),ranges.c_str());
+    if(!ready || !sameAllocator || !trace.defaultOptions || output->path.provinces.empty() ||
+       after->phase!=4 || after->access!=2 || after->hidden || after->owns!=1 || after->context!=1 ||
+       g_nativeTradeReplayFailed.load() || g_nativePortApproachFailed.load())return;
+    const auto current=[&]{
+      const auto scope=ObserveNativeAccess(read,base,__readgsqword(0x58));
+      return scope && same(*after,*scope) && ObserveNativeThreadAllocator(read,base,__readgsqword(0x58))==allocatorAfter;
+    };
+    for(unsigned side=0;side<2;++side){
+      const auto state=side?output->toState:output->fromState;
+      const auto logical=side?output->path.toProvince:output->path.fromProvince;
+      std::string why;
+      const auto ports=DecodeNativePortApproaches(read,base,state,logical,current,&why);
+      V3_INFO("native port approaches query=%u country=%u side=%u state=%u valid=%u eligible=%u foreign=%u requests=%zu reason=%s",
+          trace.query,country,side,state,unsigned(bool(ports)),ports?ports->eligibleShores:0,
+          ports?ports->foreignMarketShores:0,ports?ports->queries.size():0,why.c_str());
+      if(!ports)continue;
+      for(const auto& candidate:ports->queries){
+        if(g_nativePortApproachFailed.load() || g_nativePortApproachAttempts.fetch_add(1)>=128)return;
+        uint16_t source=side?candidate.logicalProvince:candidate.physicalProvince,
+            target=side?candidate.physicalProvince:candidate.logicalProvince;
+        // Require both endpoints in the current original pathfinder index. The
+        // cached route content is never used as a result or permission fallback.
+        const auto registered=DecodeNativeSeaCacheRoute(read,base,source,target,current,&why);
+        uint64_t manager=0;
+        if(!registered || !read(after->world+0x4500,&manager,8) || !manager || !current()){
+          g_nativePortApproachFailed.store(true);
+          V3_INFO("native port approach skipped query=%u country=%u state=%u reason=%s",trace.query,country,state,why.c_str());
+          return;
+        }
+        struct Array {uint16_t* data;uint32_t capacity,count;uint64_t allocator;};
+        static_assert(sizeof(Array)==24);
+        const uint64_t allocator=base+0x0512cdc0;
+        Array fromArray{&source,1,1,allocator},toArray{&target,1,1,allocator};
+        alignas(8) std::array<uint8_t,56> options{};
+        const uint16_t selector=UINT16_MAX;
+        std::memcpy(options.data()+16,&allocator,8);std::memcpy(options.data()+40,&allocator,8);
+        std::memcpy(options.data()+48,&selector,2);
+        const auto fromAddress=reinterpret_cast<uint64_t>(&fromArray),toAddress=reinterpret_cast<uint64_t>(&toArray),
+            optionsAddress=reinterpret_cast<uint64_t>(options.data());
+        const auto request=CopyNativeTradeSearchInputs(read,fromAddress,toAddress,optionsAddress);
+        if(!request || request->sources!=std::vector<uint16_t>{source} || request->targets!=std::vector<uint16_t>{target}){
+          g_nativePortApproachFailed.store(true);return;
+        }
+        const auto result=QueryIndependentTrade(base,reinterpret_cast<void*>(manager),&fromArray,&toArray,country,0,
+            options.data(),*request,bufferAfter->array.data);
+        const auto selection=CopyNativePortSearchSelection(read,reinterpret_cast<uint64_t>(provinces),
+            reinterpret_cast<uint64_t>(fromProvince),reinterpret_cast<uint64_t>(toProvince),
+            reinterpret_cast<uint64_t>(fromState),reinterpret_cast<uint64_t>(toState),reinterpret_cast<uint64_t>(distance),
+            *input,*trace.path);
+        uint64_t managerAfter=0;
+        const bool unchanged=result.path && result.independent && (!result.allocated || result.freed) && current() &&
+            read(after->world+0x4500,&managerAfter,8) && managerAfter==manager &&
+            CopyNativeTradeSearchInputs(read,fromAddress,toAddress,optionsAddress)==request &&
+            DecodeNativePortApproaches(read,base,state,logical,current)==ports &&
+            CopyNativePortSearchInputs(read,sp,tp)==input && selection && selection->fromState==output->fromState &&
+            selection->toState==output->toState && selection->path==output->path;
+        std::string route;
+        if(result.path)for(const auto& range:result.path->provinces){if(!route.empty())route+=',';route+=std::to_string(range.first)+':'+std::to_string(range.last);}
+        if(unchanged)g_nativePortApproachCopies.fetch_add(1);else g_nativePortApproachFailed.store(true);
+        V3_INFO("native port approach query=%u thread=%lu build=%u country=%u side=%u state=%u owner=%u market=%u connection=%u key=%llu state_anchor=%u sea_anchor=%u from=%u to=%u valid=%u independent=%u allocated=%u freed=%u distance=%lld count=%zu world=%llx provinces=[%s]",
+            trace.query,GetCurrentThreadId(),build->generation,country,side,state,candidate.ownerState,candidate.market,
+            candidate.connection,(unsigned long long)candidate.spline,candidate.stateAnchor,candidate.seaAnchor,
+            unsigned(source),unsigned(target),unsigned(unchanged),unsigned(result.independent),unsigned(result.allocated),unsigned(result.freed),
+            result.path?(long long)result.path->distance:0,result.path?result.path->provinces.size():0,
+            (unsigned long long)after->world,route.c_str());
+      }
+    }
+  } catch(...) {g_nativePortApproachFailed.store(true);}
+  // Diagnostic selections and independent queries, no formal publication.
+}
+using FnNativePathSearch=uint64_t(__fastcall*)(void*,void*);
+FnNativePathSearch g_origNativePathSearch=nullptr;
+std::atomic<unsigned> g_nativePathSearchSamples{0},g_nativePathSearchCopies{0};
+uint64_t __fastcall NativePathSearchProbe(void* finder,void* request) {
+  const unsigned sample=g_nativePathSearchSamples.fetch_add(1);
+  if(sample>=1024)return g_origNativePathSearch(finder,request);
+  const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base());
+  const auto caller=reinterpret_cast<uint64_t>(__builtin_return_address(0))-base;
+  const auto fp=reinterpret_cast<uint64_t>(finder),rp=reinterpret_cast<uint64_t>(request);
+  const GoodsMemoryReader read=ReadProbeMemory;
+  std::optional<NativeAccessObservation> before;
+  std::optional<NativeFleetPathRequest> input;
+  bool empty=false;
+  try {
+    before=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    input=ObserveNativeFleetPathRequest(read,base,fp,rp);
+    uint32_t count=UINT32_MAX;std::array<int64_t,2> totals{};
+    empty=rp && rp<=UINT64_MAX-0x68 && read(rp+0x4c,&count,4) && !count &&
+        read(rp+0x58,totals.data(),16) && !totals[0] && !totals[1];
+  } catch(...) {}
+  // Forward the game's natural search exactly once. Borrowed result/finder
+  // storage stays on this caller's stack; no extra search or getter is issued.
+  const uint64_t result=g_origNativePathSearch(finder,request);
+  try {
+    const auto after=ObserveNativeAccess(read,base,__readgsqword(0x58));
+    const auto actual=input?ObserveNativeFleetPathRequest(read,base,fp,rp):std::optional<NativeFleetPathRequest>{};
+    const bool same=before && after && before->world==after->world && before->machine==after->machine &&
+        before->stateDb==after->stateDb && before->date==after->date && before->phase==after->phase &&
+        before->access==after->access && before->hidden==after->hidden &&
+        before->owns==after->owns && before->context==after->context;
+    std::string why;
+    auto output=result==1 && empty && same && input && actual==input?
+        CopyNativePathResult(read,rp,input->from,input->to,&why):std::optional<NativePathResult>{};
+    if(!output || output->steps.size()>512){
+      if(sample<32)V3_INFO("native path probe skipped sample=%u caller=%llx result=%llu request=%u empty=%u scope=%u reason=%s",
+          sample,(unsigned long long)caller,(unsigned long long)result,unsigned(bool(input)),unsigned(empty),unsigned(same),why.c_str());
+      return result;
+    }
+    if(g_nativePathSearchCopies.fetch_add(1)>=64)return result;
+    std::string steps;
+    for(const auto& step:output->steps){
+      if(!steps.empty())steps+=',';
+      steps+=std::to_string(step.connection)+':'+std::to_string(step.from.node)+':'+std::to_string(step.to.node)+':'+
+          std::to_string(step.distance)+':'+std::to_string(step.cost)+':'+
+          std::to_string(step.from.position[0])+':'+std::to_string(step.from.position[1])+':'+
+          std::to_string(step.to.position[0])+':'+std::to_string(step.to.position[1]);
+    }
+    V3_INFO("native path result sample=%u thread=%lu caller=%llx result=%llu country=%u traversal=%u from=%u to=%u distance=%lld cost=%lld count=%zu world=%llx date=%u access=%u owns=%u context=%u steps=[%s]",
+        sample,GetCurrentThreadId(),(unsigned long long)caller,(unsigned long long)result,input->country,input->traversal,
+        input->from.node,input->to.node,(long long)output->distance,(long long)output->cost,output->steps.size(),
+        (unsigned long long)after->world,after->date,after->access,unsigned(after->owns),after->context,steps.c_str());
+  } catch(...) {}
+  // Diagnostic only. No pointer/result is published to formal routing or a
+  // worker. Matching observations do not prove a native scope or trade rights.
+  return result;
 }
 using FnShippingConstructor=void*(__fastcall*)(void*,void*,void*,void*,void*,void*,void*,void*,void*);
 FnShippingConstructor g_origShippingConstructor=nullptr;
@@ -267,13 +659,18 @@ void __fastcall DomesticLaneBuildProbe(void* manager,void* country) {
   const unsigned sample=g_domesticLaneBuildSamples.fetch_add(1);
   if(sample>=512){g_origDomesticLaneBuild(manager,country);return;}
   const auto base=reinterpret_cast<uint64_t>(Game::Instance().Base()),cp=reinterpret_cast<uint64_t>(country);
+  const auto caller=reinterpret_cast<uint64_t>(__builtin_return_address(0))-base;
   const GoodsMemoryReader read=ReadProbeMemory;
   DomesticLaneBuildTrace trace;trace.generation=sample+1;
   std::optional<NativeAccessObservation> before;
+  std::array<void*,24> frames{};USHORT depth=0;
   bool prepared=false;
   try {
     before=ObserveNativeAccess(read,base,__readgsqword(0x58));
     prepared=before && cp && cp<=UINT64_MAX-0x1c && read(cp+0x18,&trace.country,4) && trace.country!=UINT32_MAX;
+    // Capture before entering the trampoline, whose relocated prologue has no
+    // original unwind record. Return PCs are diagnostics, never an access lease.
+    if(prepared)depth=CaptureStackBackTrace(0,USHORT(frames.size()),frames.data(),nullptr);
   } catch(...) {}
   {
     struct RestoreBuildTrace {
@@ -304,6 +701,14 @@ void __fastcall DomesticLaneBuildProbe(void* manager,void* country) {
       if(!current || *current!=selected){valid=false;break;}
     }
     if(!valid){V3_WARN("native domestic lane binding refused generation=%u country=%u lanes=%zu classifications=%u",trace.generation,trace.country,trace.lanes.size(),trace.classifications);return;}
+    std::string pcs;
+    for(USHORT i=0;i<depth;++i){
+      char value[24];std::snprintf(value,sizeof(value),"%llx",(unsigned long long)reinterpret_cast<uint64_t>(frames[i]));
+      if(!pcs.empty())pcs+=',';pcs+=value;
+    }
+    V3_INFO("native domestic caller generation=%u thread=%lu country=%u caller=%llx base=%llx world=%llx date=%u access=%u owns=%u context=%u depth=%u pcs=[%s]",
+        trace.generation,GetCurrentThreadId(),trace.country,(unsigned long long)caller,(unsigned long long)base,
+        (unsigned long long)after->world,after->date,after->access,unsigned(after->owns),after->context,unsigned(depth),pcs.c_str());
     auto ids=[](const auto& values){std::string s;for(auto id:values){if(!s.empty())s+=',';s+=std::to_string(id);}return s;};
     const auto allowed=ids(trace.access->allowed),denied=ids(trace.access->denied);
     for(const auto& [id,selected]:trace.lanes)if(g_domesticLaneBuildEvents.fetch_add(1)<256) {
@@ -846,7 +1251,9 @@ bool Overlay::Install(std::string* error) {
         V3_INFO("native world retirement and completed command snapshot hooks installed");
       } else V3_WARN("native world retirement/capture hook failed; economy unavailable");
     }
-    if (m_settings.probeAccess) {
+    if (m_settings.probeAccess && !kNativeDiagnosticsVerified)
+      V3_WARN("native diagnostics disabled: this build's optional hooks are not verified");
+    if (m_settings.probeAccess && kNativeDiagnosticsVerified) {
       void* tick=base+kRvaPartialDailyTick;
       if (MH_CreateHook(tick,(LPVOID)&PartialDailyTickThunk,
                         (LPVOID*)&g_origPartialDailyTick)==MH_OK && MH_EnableHook(tick)==MH_OK)
@@ -881,8 +1288,31 @@ bool Overlay::Install(std::string* error) {
               MH_EnableHook(constructor)==MH_OK && MH_EnableHook(build)==MH_OK)
         V3_INFO("native domestic lane probe installed (natural builds, diagnostic only)");
       else V3_WARN("native domestic lane probe hook failed");
+      constexpr uint8_t tradeSignature[]={0x48,0x8b,0xc4,0x48,0x89,0x58,0x10,0x4c,0x89,0x48,0x20,0x4c,0x89,0x40,0x18};
+      void* tradeSearch=base+0x0141F1D0;
+      if(std::memcmp(tradeSearch,tradeSignature,sizeof(tradeSignature))!=0)
+        V3_WARN("native trade search probe refused: signature mismatch");
+      else if(g_origStraitClassification &&
+              MH_CreateHook(tradeSearch,(LPVOID)&NativeTradeSearchProbe,(LPVOID*)&g_origNativeTradeSearch)==MH_OK && MH_EnableHook(tradeSearch)==MH_OK)
+        V3_INFO("native trade search probe installed (seven slots, 4352 owned results, scoped budgets, diagnostic only)");
+      else V3_WARN("native trade search probe hook failed");
+      constexpr uint8_t portSignature[]={0x48,0x89,0x5c,0x24,0x08,0x48,0x89,0x74,0x24,0x10,0x48,0x89,0x7c,0x24,0x18};
+      void* portSearch=base+0x014500F0;
+      if(std::memcmp(portSearch,portSignature,sizeof(portSignature))!=0)
+        V3_WARN("native port selection probe refused: signature mismatch");
+      else if(g_origNativeTradeSearch && g_origDomesticLaneBuild &&
+              MH_CreateHook(portSearch,(LPVOID)&NativePortSearchProbe,(LPVOID*)&g_origNativePortSearch)==MH_OK && MH_EnableHook(portSearch)==MH_OK)
+        V3_INFO("native port selection probe installed (nine slots, full states, natural calls, diagnostic only)");
+      else V3_WARN("native port selection probe hook failed");
+      constexpr uint8_t pathSignature[]={0x48,0x8b,0xc4,0x48,0x89,0x50,0x10,0x55,0x53,0x56,0x57,0x41,0x54};
+      void* path=base+0x014043D0;
+      if(std::memcmp(path,pathSignature,sizeof(pathSignature))!=0)
+        V3_WARN("native path probe refused: signature mismatch");
+      else if(MH_CreateHook(path,(LPVOID)&NativePathSearchProbe,(LPVOID*)&g_origNativePathSearch)==MH_OK && MH_EnableHook(path)==MH_OK)
+        V3_INFO("native path probe installed (natural searches, 64 owned results, diagnostic only)");
+      else V3_WARN("native path probe hook failed");
     }
-    if (m_settings.probePanelMarket) {
+    if (m_settings.probePanelMarket && kNativeDiagnosticsVerified) {
       constexpr uint8_t expected[] = {0x40,0x53,0x48,0x83,0xEC,0x30,0x48,0x83,0xC1,0x70};
       void* getter = base + 0x0225AC90;
       if (std::memcmp(getter, expected, sizeof(expected)) != 0) {
@@ -895,7 +1325,7 @@ bool Overlay::Install(std::string* error) {
         V3_WARN("panel market getter probe hook failed");
       }
     }
-    if (m_settings.probeRegister) {
+    if (m_settings.probeRegister && kNativeDiagnosticsVerified) {
       void* reg = base + kRvaScriptRegister;
       if (MH_CreateHook(reg, (LPVOID)&ScriptRegisterThunk,
                         (LPVOID*)&g_origScriptRegister) == MH_OK &&
@@ -2109,15 +2539,16 @@ void Overlay::PublishLogisticsDocument(std::shared_ptr<const LogisticsDocument> 
   PublishLogisticsVariables(document);
 }
 
-void Overlay::PublishRealEconomy(std::shared_ptr<const EconomySnapshot> snapshot) {
+void Overlay::PublishRealEconomy(std::shared_ptr<const EconomySnapshot> snapshot,
+    std::shared_ptr<const std::atomic<uint64_t>> laneEpoch, uint64_t laneGeneration) {
   if (!snapshot || !m_logisticsSession) return;
   if (m_logisticsSession->SnapshotIsCurrent(m_nativeStateRoster.snapshot) &&
-      m_logisticsSession->HasEquivalentSnapshot(*snapshot)) {
+      m_logisticsSession->HasEquivalentSnapshot(*snapshot,laneEpoch,laneGeneration)) {
     V3_INFO("real economy snapshot unchanged: retaining current revision and view");
     return;
   }
   std::string reason;
-  if (!m_logisticsSession->SetSnapshot(snapshot, &reason, false)) {
+  if (!m_logisticsSession->SetSnapshot(snapshot, &reason, false,std::move(laneEpoch),laneGeneration)) {
     V3_WARN("real economy snapshot rejected: %s", reason.c_str());
   } else {
     m_nativeStateRoster=CopyNativeStateRoster(snapshot);
@@ -2285,7 +2716,8 @@ void Overlay::CopyAtNativeScopeEnd(uint64_t caller) {
   const uint64_t revision=++m_economyRevision;
   auto copy=CopyNativeSnapshot(memory,base,tls,caller,*request,revision,[&]{
     return m_snapshotMailbox.Current(request) && request->world==m_economyWorld.load();
-  },&why,[](uint64_t candidates){return Game::Instance().SelectTradePath(candidates);});
+  },&why,[](uint64_t worldMarket,uint32_t source,uint32_t destination){return Game::Instance().SelectTradePath(worldMarket,source,destination);},
+     {},nullptr,[](uint64_t state){return Game::Instance().WorldMarketHub(state);});
   if(!copy){
     m_snapshotMailbox.Fail(request,revision,why);
     static std::string lastError;
@@ -2505,7 +2937,7 @@ void Overlay::CollectRealEconomy() {
       }
     }
   }
-  PublishRealEconomy(snapshot);
+  PublishRealEconomy(snapshot,capture->laneAccessEpoch,capture->laneAccessGeneration);
 }
 
 void Overlay::CheckWorldLifecycle(bool force) {

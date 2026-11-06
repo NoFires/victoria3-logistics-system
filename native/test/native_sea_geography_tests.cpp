@@ -17,30 +17,30 @@ struct Fixture {
   void Zero(uint64_t at,size_t size){for(size_t i=0;i<size;++i)bytes[at+i]=0;}
   static uint64_t Key(unsigned a,unsigned b){return v3::NativeSeaSplineKeys(10+a,10+b)[0];}
   Fixture(){
-    Put(tlsArray,tls);Put(tls+0x8600,uint32_t(1));Put(tls+0x8648,uint64_t(0xabc000000003));
-    Put(module+0x0514d418+3*16,database);Put(module+0x0514d420+3*16,uint8_t(1));
-    Put(database,module+0x04424140);Put(database+0x80,definitions);Put(database+0x88,uint32_t(2));Put(database+0x8c,uint32_t(2));
+    Put(tlsArray,tls);Put(tls+0x8670,uint32_t(1));Put(tls+0x86b8,uint64_t(0xabc000000003));
+    Put(module+0x053fad38+3*16,database);Put(module+0x053fad40+3*16,uint8_t(1));
+    Put(database,module+0x04663078);Put(database+0x80,definitions);Put(database+0x88,uint32_t(2));Put(database+0x8c,uint32_t(2));
     Put(definitions,def0);Put(definitions+8,def1);
     for(unsigned i=0;i<2;++i){
-      auto at=def0+i*0x100;Zero(at,0x48);Put(at,module+0x044f85a0);Put(at+0x10,i);
+      auto at=def0+i*0x100;Zero(at,0x48);Put(at,module+0x04786528);Put(at+0x10,i);
       Put(at+0x44,uint16_t(i?3:1));Put(at+0x46,uint16_t(i?4:2));
     }
-    Put(module+0x058fccf0,map);Put(map,module+0x0441c938);Put(map+0x2a0,roster);
+    Put(module+0x05bd7308,map);Put(map,module+0x046d6850);Put(map+0x2a0,roster);
     Put(map+0x2a8,uint32_t(16));Put(map+0x2ac,uint32_t(16));Zero(roster,16*8);
     for(unsigned i=1;i<=4;++i){
       const auto object=province+i*0x200,definition=region+i*0x100;
-      Put(roster+i*8,object);Put(object,module+0x044dc488);Put(object+0xc8,definition);
-      Zero(definition,0x48);Put(definition,module+0x044e7850);Put(definition+0x10,uint32_t(500+i));
+      Put(roster+i*8,object);Put(object,module+0x046ab568);Put(object+0xc8,definition);
+      Zero(definition,0x48);Put(definition,module+0x046ba948);Put(definition+0x10,uint32_t(500+i));
       Put(definition+0x40,uint32_t(10+i));Put(definition+0x44,uint8_t(1));
       const std::array<unsigned,2> peers=i==1?std::array<unsigned,2>{2,3}:i==2?std::array<unsigned,2>{1,4}:
           i==3?std::array<unsigned,2>{1,4}:std::array<unsigned,2>{3,2};
       Zero(object+0x50,0x18);Put(object+0x50,adjacency+i*0x100);Put(object+0x58,uint32_t(2));Put(object+0x5c,uint32_t(2));
       Zero(adjacency+i*0x100,2*0x28);Put(adjacency+i*0x100,uint32_t(peers[0]));Put(adjacency+i*0x100+0x28,uint32_t(peers[1]));
     }
-    Put(module+0x05964ef0,stateDb);Put(stateDb+0x20,statesTable);Put(stateDb+0x2c,uint32_t(2050));
+    Put(module+0x05bd69c8,stateDb);Put(stateDb+0x20,statesTable);Put(stateDb+0x2c,uint32_t(2050));
     Put(statesTable+8,state0);Put(statesTable+2049*16+8,state1);
     for(auto [at,id,definition]:{std::tuple{state0,uint32_t(0),region+0x100},std::tuple{state1,secondState,region+0x200}}){
-      Put(at,module+0x044de308);Put(at+8,id);Put(at+0xe78,definition);
+      Put(at,module+0x046bad90);Put(at+8,id);Put(at+0xf10,definition);
     }
     trade.straits.push_back({naturalStrait,{3,4},{0,0},1}); // runtime handle != definition ID
     v3::NativeTradePath detour;detour.provinces={{1,4}};detour.straits={naturalStrait};detour.distanceFixed=30000000;
@@ -123,10 +123,10 @@ int main(){
   auto test=[&](auto change,const char* why){f.bytes=original;f.trade=originalTrade;f.states={{0,7,0},{Fixture::secondState,8,1}};
     f.current=true;f.mutate=0;f.reads=0;change(f);Check(!f.Decode(),why);};
   test([](auto& m){m.current=false;},"retired request rejected before copying");
-  test([](auto& m){m.template Put<uint32_t>(Fixture::tls+0x8600,0);},"uninitialized TLS cannot be initialized by decoder");
-  test([](auto& m){m.template Put<uint64_t>(Fixture::tls+0x8648,16);},"unknown current context rejected");
-  test([](auto& m){m.template Put<uint8_t>(Fixture::module+0x0514d420+3*16,0);
-    m.template Put<uint64_t>(Fixture::module+0x0514d418,Fixture::database);m.template Put<uint8_t>(Fixture::module+0x0514d420,1);},
+  test([](auto& m){m.template Put<uint32_t>(Fixture::tls+0x8670,0);},"uninitialized TLS cannot be initialized by decoder");
+  test([](auto& m){m.template Put<uint64_t>(Fixture::tls+0x86b8,16);},"unknown current context rejected");
+  test([](auto& m){m.template Put<uint8_t>(Fixture::module+0x053fad40+3*16,0);
+    m.template Put<uint64_t>(Fixture::module+0x053fad38,Fixture::database);m.template Put<uint8_t>(Fixture::module+0x053fad40,1);},
       "populated other context is not a fallback for inactive current context");
   test([](auto& m){m.template Put<uint64_t>(Fixture::database,1);},"wrong definition database rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::database+0x8c,3);},"definition count above capacity rejected");
@@ -144,9 +144,9 @@ int main(){
   test([](auto& m){m.template Put<uint32_t>(Fixture::state1+8,2049);},"recycled state handle rejected");
   test([](auto& m){m.states.push_back(m.states[0]);},"duplicate current state rejected");
   test([](auto& m){m.bytes.erase(Fixture::definitions);},"unreadable definition roster rejected");
-  for(auto address:{Fixture::tlsArray,Fixture::tls+0x8648,Fixture::module+0x0514d418+3*16,Fixture::database+0x80,
+  for(auto address:{Fixture::tlsArray,Fixture::tls+0x86b8,Fixture::module+0x053fad38+3*16,Fixture::database+0x80,
       Fixture::definitions,Fixture::def0,Fixture::roster,Fixture::region+0x100,Fixture::province+0x200+0x50,
-      Fixture::adjacency+0x100,Fixture::state0+0xe78})
+      Fixture::adjacency+0x100,Fixture::state0+0xf10})
     test([&](auto& m){m.mutate=address;},"mutation in any copied identity or geography rejects the combined copy");
   f.bytes=original;f.trade=originalTrade;f.current=true;f.mutate=0;f.reads=0;int checks=0;
   Check(!v3::DecodeNativeSeaGeography([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,Fixture::tlsArray,

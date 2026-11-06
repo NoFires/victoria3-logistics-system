@@ -51,7 +51,8 @@ using FnSetPath = void(__fastcall*)(void*, ArrowPath*);
 using FnOne = void(__fastcall*)(void*);
 using FnSubmit = void(__fastcall*)(void*, void*);
 using FnAlloc = void*(__fastcall*)(void*, size_t, size_t);
-using FnSelectTradePath = uint64_t(__fastcall*)(uint64_t);
+using FnSelectTradePath = uint64_t(__fastcall*)(uint64_t,uint32_t,uint32_t);
+using FnWorldMarketHub = uint32_t*(__fastcall*)(uint64_t,uint32_t*);
 
 }  // namespace
 
@@ -78,6 +79,11 @@ bool Game::Initialize(const std::wstring& exePath, std::string* error) {
   }
   if (m_hash != kExpectedExeSha256) {
     m_error = "unsupported Victoria 3 build (exe sha256 " + m_hash.substr(0, 16) + "...)";
+    if (error) *error = m_error;
+    return false;
+  }
+  if (!kNativeProfileComplete) {
+    m_error = "Victoria 3 native profile migration incomplete";
     if (error) *error = m_error;
     return false;
   }
@@ -108,9 +114,16 @@ bool Game::Initialize(const std::wstring& exePath, std::string* error) {
   return true;
 }
 
-uint64_t Game::SelectTradePath(uint64_t candidates) const {
-  if (!m_ready || !candidates) return 0;
-  return Fn<FnSelectTradePath>(kRvaSelectTradePath)(candidates);
+uint64_t Game::SelectTradePath(uint64_t worldMarket,uint32_t source,uint32_t destination) const {
+  if (!m_ready || !worldMarket || source==UINT32_MAX || destination==UINT32_MAX) return 0;
+  return Fn<FnSelectTradePath>(kRvaSelectTradePath)(worldMarket,source,destination);
+}
+
+std::optional<uint32_t> Game::WorldMarketHub(uint64_t state) const {
+  if (!m_ready || !state) return {};
+  uint32_t hub=UINT32_MAX;
+  if (Fn<FnWorldMarketHub>(kRvaWorldMarketHub)(state,&hub)!=&hub) return {};
+  return hub;
 }
 
 void* Game::ResolveArrowType(const char* name, std::string* error) {
@@ -123,7 +136,7 @@ void* Game::ResolveArrowType(const char* name, std::string* error) {
 
   MsvcString s;
   BuildName(&s, name, std::strlen(name));
-  // 0x37E7D60 obtains the asset factory singleton internally and only reads rdx
+  // 0x3A8CEC0 obtains the asset factory singleton internally and only reads rdx
   // as an MSVC std::string; rcx is not consumed (verified against its prologue).
   void* type = ((FnGetType)Fn<FnGetType>(kRvaGetArrowType))(nullptr, &s);
   FreeName(&s);

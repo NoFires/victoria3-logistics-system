@@ -6,6 +6,7 @@
 #include "native_sea_geography.h"
 #include "native_ports.h"
 #include "native_domestic.h"
+#include "native_lane_access.h"
 #include "goods_snapshot.h"
 #include <mutex>
 #include <atomic>
@@ -14,7 +15,7 @@ namespace v3 {
 // Only the exact command-runner call site, before its native scope destructor,
 // may borrow this range. Observing the same flags elsewhere grants no lease.
 inline bool IsNativeCapturePoint(uint64_t caller,const NativeAccessObservation& s) {
-  return caller==0x00cd2bc1 && s.phase==4 && s.access==2 && !s.hidden && s.owns==1 && s.context==1;
+  return caller==kRvaCommandScopeReturn && s.phase==4 && s.access==2 && !s.hidden && s.owns==1 && s.context==1;
 }
 inline bool NativeCaptureDue(bool paused,uint64_t request,uint64_t copiedRequest,uint64_t now,uint64_t copiedAt) {
   return paused || request!=copiedRequest || now-copiedAt>=30000;
@@ -25,6 +26,21 @@ struct NativeCaptureRequest {
   uint64_t world=0,revision=0;
   uint32_t marketOverride=0;
 };
+// Adapter-only owned batch and independent collection witness. The witness
+// reads only our collection epoch, never engine objects or native permissions.
+// A producer must freeze the batch and retire its epoch on every invalidation;
+// deriving generation/epoch from the batch itself would defeat this guard.
+// The producer advances this epoch monotonically; it must never restore an old
+// value or reuse the token for a different collection lifetime.
+struct NativeLaneAccessInput {
+  std::shared_ptr<const NativeLaneAccessBatch> batch;
+  uint64_t generation=0;
+  std::shared_ptr<const std::atomic<uint64_t>> epoch;
+  bool IsCurrent(uint64_t world,uint64_t revision) const {
+    return batch && world && revision && generation &&
+        batch->scope==NativeLaneAccessScope{world,revision,generation} && epoch && epoch->load()==generation;
+  }
+};
 struct NativeCaptureResult {
   std::shared_ptr<const EconomySnapshot> snapshot;
   std::vector<NativeStateEconomy> states;
@@ -33,10 +49,17 @@ struct NativeCaptureResult {
   NativeAccessObservation identity;
   uint64_t anchor=0;
   uint32_t anchorId=0;
+  // Owned collection witness stays in the adapter/mailbox, outside the worker
+  // EconomySnapshot. Retaining the result does not extend the collection epoch.
+  std::shared_ptr<const std::atomic<uint64_t>> laneAccessEpoch;
+  uint64_t laneAccessGeneration=0;
+  bool LaneAccessCurrent() const {
+    return laneAccessGeneration?laneAccessEpoch && laneAccessEpoch->load()==laneAccessGeneration:!laneAccessEpoch;
+  }
 };
 inline bool NativeCaptureMatches(const NativeCaptureResult& copy,const NativeAccessObservation& now,
                                 uint64_t world,uint64_t revision,uint64_t anchor) {
-  return copy.snapshot && now.phase==4 && copy.snapshot->world==world && copy.snapshot->revision==revision &&
+  return copy.LaneAccessCurrent() && copy.snapshot && now.phase==4 && copy.snapshot->world==world && copy.snapshot->revision==revision &&
       now.machine==copy.identity.machine && now.world==copy.identity.world && now.stateDb==copy.identity.stateDb &&
       anchor && anchor==copy.anchor;
 }
@@ -101,6 +124,9 @@ class NativeSnapshotMailbox {
     if(!request || request!=m_request || !result || !result->snapshot ||
        result->snapshot->world!=request->world || result->snapshot->revision<request->revision ||
        result->snapshot->revision<=m_revision)return false;
+    if(!result->LaneAccessCurrent()){
+      m_revision=result->snapshot->revision;m_result.reset();m_error="native lane access retired before publication";return false;
+    }
     m_revision=result->snapshot->revision;m_result=std::move(result);m_error.clear();return true;
   }
   void Fail(const std::shared_ptr<const NativeCaptureRequest>& request,uint64_t revision,std::string why) {
@@ -110,10 +136,17 @@ class NativeSnapshotMailbox {
     }
   }
   std::string TakeError() {
-    std::lock_guard<std::mutex> lock(m_mutex);auto error=std::move(m_error);m_error.clear();return error;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if(m_result && !m_result->LaneAccessCurrent()){
+      m_result.reset();m_error="native lane access retired before drain";
+    }
+    auto error=std::move(m_error);m_error.clear();return error;
   }
   std::shared_ptr<const NativeCaptureResult> Take() {
     std::lock_guard<std::mutex> lock(m_mutex);
+    if(m_result && !m_result->LaneAccessCurrent()){
+      m_result.reset();m_error="native lane access retired before drain";return {};
+    }
     return std::move(m_result);
   }
   void Retire(){Request(nullptr);}
@@ -133,14 +166,19 @@ class NativeSnapshotMailbox {
 inline std::shared_ptr<const NativeCaptureResult> CopyNativeSnapshot(
     const GoodsMemoryReader& memory,uint64_t module,uint64_t tlsArray,uint64_t caller,
     const NativeCaptureRequest& request,uint64_t revision,const std::function<bool()>& current,std::string* error=nullptr,
-    const std::function<uint64_t(uint64_t)>& select={},
-    const std::function<std::optional<bool>(uint64_t,uint64_t)>& selectAccess={}) {
+    const std::function<uint64_t(uint64_t,uint32_t,uint32_t)>& select={},
+    const std::function<std::optional<bool>(uint64_t,uint64_t)>& selectAccess={},
+    const NativeLaneAccessInput* laneAccess=nullptr,
+    const std::function<std::optional<uint32_t>(uint64_t)>& selectHub={}) {
   auto fail=[&](const std::string& why)->std::shared_ptr<const NativeCaptureResult>{if(error)*error=why;return {};};
   if(!current || !current() || !request.world || !request.revision || revision<request.revision)
     return fail("missing current snapshot request");
+  if(laneAccess && (selectAccess || !laneAccess->IsCurrent(request.world,revision)))
+    return fail("unavailable or conflicting native lane access input");
   const auto before=ObserveNativeAccess(memory,module,tlsArray);
   if(!before || !IsNativeCapturePoint(caller,*before))return fail("outside completed command scope");
   if(!select)return fail("native trade selector unavailable");
+  if(!selectHub)return fail("native current world hub getter unavailable");
   EconomyReadWindow window(memory);
   const GoodsMemoryReader read=[&](uint64_t a,void* p,size_t n){return window.Read(a,p,n);};
   auto catalog=DecodeThreadGoodsCatalog(read,module,tlsArray);
@@ -150,13 +188,22 @@ inline std::shared_ptr<const NativeCaptureResult> CopyNativeSnapshot(
   if(!states)return fail(why);
   auto snapshot=std::make_shared<EconomySnapshot>();snapshot->world=request.world;snapshot->revision=revision;
   if(!PopulateSnapshotGoods(*snapshot,catalog,&why))return fail(why);
-  auto trade=DecodeNativeWorldTrade(read,module,*states,uint32_t(catalog.goods.size()),current,select,&why);
+  auto trade=DecodeNativeWorldTrade(read,module,*states,uint32_t(catalog.goods.size()),current,select,&why,selectHub);
   if(!trade)return fail(why);
   auto geometry=DecodeNativeSplineNetwork(read,module,current,&why);
   if(!geometry)return fail(why);
   auto domestic=DecodeNativeDomesticSources(read,module,*states,uint32_t(catalog.goods.size()),*geometry,current,&why);
   if(!domestic)return fail(why);
-  if(selectAccess){
+  if(laneAccess){
+    if(!current() || !laneAccess->IsCurrent(request.world,revision))
+      return fail("native lane access retired before binding");
+    std::vector<uint32_t> straits;straits.reserve(trade->straits.size());
+    for(const auto& strait:trade->straits)straits.push_back(strait.id);
+    auto access=BindNativeLaneAccess(*laneAccess->batch,{request.world,revision,laneAccess->generation},
+        domestic->shipping,straits,&why);
+    if(!access)return fail(why);
+    domestic->laneStraitAccess=std::move(*access);
+  }else if(selectAccess){
     auto access=DecodeDomesticStraitAccess(read,module,*domestic,*trade,current,selectAccess,&why);
     if(!access)return fail(why);
     domestic->straitAccess=std::move(*access);
@@ -183,6 +230,11 @@ inline std::shared_ptr<const NativeCaptureResult> CopyNativeSnapshot(
   size_t largest=0;
   for(const auto& [market,count]:markets)if(count>largest){largest=count;snapshot->primaryMarket=market;}
   if(request.marketOverride && markets.count(request.marketOverride))snapshot->primaryMarket=request.marketOverride;
+  // Recheck after all copying/validation and before the owned result escapes.
+  // Mailbox request identity still has to be checked separately at publication.
+  if(laneAccess && (!current() || !laneAccess->IsCurrent(request.world,revision)))
+    return fail("native lane access retired during snapshot copy");
+  if(laneAccess){result->laneAccessEpoch=laneAccess->epoch;result->laneAccessGeneration=laneAccess->generation;}
   result->snapshot=std::move(snapshot);result->states=std::move(*states);
   result->catalog=std::move(catalog);result->identity=*after;
   if(error)error->clear();return result;

@@ -1,5 +1,461 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-06 — R202：商品筛选缓存失效修复与最小化原版UI读取
+
+原版AccessMarketGoods链2F51E0→20815B0→2037530→2037570确认缓存不仅要求dirty320=0，还必须通过1442F60的独立失效代数。现有读取遗漏后者，新增“dirty为零但代数已退休”用例先FAIL，修复后PASS：只读复制wrapper58的key／5C的generation与当前root5C07C68→608的invalidation table108／count114；key在表外按原版使用generation1，保留合法generation0，不取锁、不初始化服务／调用引擎。检查原版ready5404748非零及当前root类型／phase4，复制结束复读全部观察。覆盖已退休空集、表外、空表／未使用指针、未初始化、错误root／phase、溢出和复制期间key／marker／表指针／count／entry变化，避免旧行冒充当前筛选或合法零。
+
+当前24E8990由panel70经96BC50取得CDataMarket；20394E0以wrapper10经97A380解析同一个原生market DB5C43518，完整代数与主ID核对。正式快照已使用State.GetMarket，原state48分组调查留下的374只是未证实诊断提示，不进入正式选择；更新相关旧注释，不猜其当前语义。原版缓存row60／lock54／dirty320／query328与商品row10／18／1C保持，中文搜索继续使用原版结果，不自行匹配英文key。
+
+自有vanilla新档PID26576/start2026-11-06T21:02:54.339209+08:00/base7ff70d730000/world305aaa88000/date59883660/phase4/paused1，全程SDL窗口iconic，通过仅投递本PID窗口的F4／文本消息操作原版界面，没有内存写入／原生函数调用或前台激活API。初始面板关闭、缓存dirty1；打开后market0与当前typed market0一致，另有market1同样匹配其typed对象。生产解码器取到41行／key10／generation1055=current1055；中文“谷物”得到当前定义ID7／key grain；经读回UTF8确认的无匹配查询得到已知空集；清空恢复41行。各样本有完整query、world/date与外层联合复读守卫。中文语言下英文grain由原版返回零，保留该结果，不据此宣称英文语言环境已验收。
+
+后台Ctrl+A替换首试没有得到预期空查询，且首版结果文件路径拼接发生TypeError；这些样本不作通过证据。改为定向Backspace后，逐次断言原版归一化query的UTF8字节与请求相等，再核对商品行。两次定向Escape未使panelOpen转false，关闭交互仍未通过，未将其归因于产品；最终在同world/date／暂停／iconic及输入hash守卫下WM_CLOSE正常退出0，save／settings／ini／content／continue五输入逐项相同、原freight45文件逐项保持，无游戏进程。
+
+本轮完整build.ps1退出0，主体573b3716fd6dcb5c5440915e3d7752335466ac26298db48567659c26b5f597df／50159278B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B。随后同一候选完整build_tests.ps1退出0、61条PASS／零FAIL；含新过期缓存回归、原版hub／路线机器码、GPU、core配置／迁移、部署与GUI资源派生，另embedded／默认debug零顶点PASS。安装仍卸载、profile_complete=false。上述实机是原版UI＋外部生产只读解码，不是本候选DLL实际加载／正式物流页验收；正式分类／关闭／hover与世界／资源寿命、无key陆路／陆地海峡、原生scope／调用、改图与最终A01–A27／性能继续，完整目标ACTIVE。
+
+证据：checkpoint2026-11-06-r202-v115-gui-cache/{before,before.log,after.log,native-cache-evidence.c,build.log,tests.log,artifact-checks.log,live/cache-before-open.log,live/cache-after-open.log,live/cache-chinese-search.log,live/cache-empty-search.log,live/cache-english-search.log,live/cache-cleared-search.log,live/cache-closed.log,live/*request.json,live/launch.json,live/after.json,audit.json,NEXT.md}。完整原始指令位于R195同hash分析目录。未保存游戏／push；顺序复读和后台消息不替代原子lease、可视化或完整交互证明。
+
+### 2026-11-06 — R201：新版面板／冻结VFS迁移与完整统一回归
+
+新原始指令确认handler构造235CF30将bar从D8移到E8，2352270仍注册56槽，市场9／州14；数组F0、countFC，州面板当前vt0485DB38，基类234B1D0名称8／tab30与state70保持。迁移市场／州解码及只读诊断，保留完整复制／复读拒绝；新增旧D8 owner和旧州面板类型反例。state_panel原有运行州433→定义17失败由旧fixture E78／vt044E7850造成，按已验证F10／vt046BA948迁移后通过，没有写死地图ID关系。
+
+冻结VFS按原版3DF5A70读取TLS8670／86B8选中的053F2930+18+context*128，仍只复制配置，不调用会初始化TLS／取锁的getter。目录后端3DDC5C0／3DDC820／3DDCA60，ZIP后端3DE9290／3DE9500／3DE9920；目录枚举3DF37C0的replace／exclude规则和布局保持。完整非相对指令字节对照：目录三项和ZIP stat相同，ZIP枚举／open与总枚举仅errno TLS立即数6100→5908；未放松后端唯一性或配置冻结检查。fixture及live_vfs_probe一起迁移；实际有效文件解析／改图矩阵仍待。
+
+自有vanilla最小化新档PID21828/start2026-11-06T20:43:09.696418+08:00/base7ff70d730000/world4914b608000/date59883660/phase4/paused1，旧生产解码器同进程实际拒绝市场／州ownership和冻结配置（exit7），新生产解码器成功（exit0）：两面板available／ingame且关闭、无残留ID，VFS23挂载／0 replace／1 exclude，外层联合复读保持。只读PROCESS_VM_READ，无引擎调用；未测面板打开／搜索／切换。会话在同world/date、iconic和输入hash守卫下WM_CLOSE退出0，临时设置原子恢复，五输入逐项相同，原freight45文件逐项保持，安装双DLL仍卸载。
+
+统一入口先后记录旧state-panel fixture、旧地图资源数量、旧arrow-lease fixture失败，未跳过。新版splnet源SHA3fb78a74…／33765点／4281strip／4279link与R198实际生产读取一致，test_splines绑定当前完整源hash并保持原已知坐标／连接及损坏输入校验。arrow-lease测试迁移到R195已验证的当前graphics／资产注册／分配器与类型地址。最终build_tests.ps1退出0、61条PASS输出／零FAIL，包含12项原版hub、24项原版路线选择器、GPU／源模型／缓存／会话／部署及GUI派生。统一入口运行时产物仍为R200 6ac58103…／71dae36d…；其后完整重建本轮候选并重跑实际产物相关检查，不把两者混成游戏内验收。
+
+本轮build.ps1退出0；主体89879a354e03a48b1f8388768cd77d8833f527467036db12a03a763520f00dff／50154892B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B。新产物embedded、真实core配置优先／迁移、C++资源派生／Python一致性和默认debug零顶点均PASS。profile_complete=false，不部署；尚需新版GUI打开／筛选及映射、无key陆路／陆地海峡、完整快照原生访问scope与调用、双DLL实载／生命周期／性能和同构建A01–A27，完整目标ACTIVE。
+
+证据：checkpoint2026-11-06-r201-v115-panel-vfs/{before,panel-before.log,native-panel-evidence.c,vfs-instruction-alignment.json,tests.log,tests-after.log,tests-final.log,build.log,artifact-checks.log,live/live_panels_before.log,live/live_panels.log,live/launch.json,live/minimized.json,live/after.json,audit.json,NEXT.md}。只读顺序复读不是原子lease，harness不是游戏实载；当前EXE仍SHA473186e8…。未保存游戏／push，无游戏进程。
+
+### 2026-11-06 — R200：新版多国际贸易中心关联与原版getter接线
+
+已移除CMarketArea+48单州旧语义。按当前完整area句柄、代数和+60 active数组绑定每州中心；正式快照必须提供原版DA2500 getter，由原版执行F48／B7C有效性判断和D9F9C0→10219A0距离／海盆／冰冷回退，生产代码不重写评分、不设中心上限4、不取首候选。无原版回调的只读诊断仅允许复制已命中的原版缓存分支，失效则拒绝；所有结果要求属于同次当前active列表。新增8B入口签名，profile仍关闭。
+
+world-trade／snapshot／trade-route定向回归通过，含同area不同中心、完整代数、缓存优先／失效、原版回调不可用／越界／不同缓存结果、合法空列表和复制期间变化。新tools/test_native_world_hub.py执行当前精确hash的DA2500／D9F9C0及两个完整typed getter原始机器码，12项用例PASS；仅10219A0距离服务由隔离fixture提供，覆盖顺序／同成本／极值／完整句柄，输入字节保持、返回指针所有权一致，接统一入口。不把隔离结果当游戏内调用或真实访问scope证明。
+
+自有vanilla新档PID32252/start2026-11-06T20:33:42.881353+08:00/base7ff70d730000/world2a51806a000/date59883660/phase4/paused1，全程最小化，生产只读得到54商品／1157州；882州当前中心已知、275无active中心，66路线组／5278候选／9海峡。逐州4463对／5836商品量与原版2627分组表按当前中心完全一致；当前实际被州使用的多中心area分布为1中心237、2中心3、3中心1、4中心1。外层联合复读及world/date保持；未调用游戏函数、未选择多候选／提交路线或验证GUI。正常WM_CLOSE退出0，save／settings／ini／content／continue五输入逐项相同。安装仍卸载，尚未完整统一回归，state_panel／VFS／无key陆地及scope／实载／完整矩阵继续，完整目标ACTIVE。
+
+证据：checkpoint2026-11-06-r200-v115-international-hubs/{before,hub-before.log,native-hub.log,build.log,live/production-hubs.log,live/launch.json,live/context.json,live/minimized.json,live/close-request.json,live/after.json}。本轮完整build.ps1退出0；主体6ac58103547e9bb53cdd0d94dd4f7a82d76e59d01485bc17b08357399530a94b／50154892B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B。embedded与GUI结构／布局定向PASS，未部署；完整统一回归尚未通过。
+
+### 2026-11-06 — R199：新版港口／海区读取通过，发现多国际中心关联不兼容
+
+港口输入已按新版kind5海岸→虚拟港口→kind6港内→land role2物理省份重写，保留真实owner／市场与所有候选；港口／海区／图形位置定向回归通过。自有最小化新档29756生产解码与联合复读通过，动态找到6处海区错配并核对3份非空接入元数据；未调用寻路／提交路线。正常退出0、五输入保持。统一测试已越过旧港口失败，现停在待迁移state_panel。用户提醒后确认新版多国际中心：area+48已是数组，旧单州读取不成立；DA2500原版当前中心getter及active-list／fallback链已定位，下一步优先修正，不启用旧语义。未完整构建／部署本轮源码，dist仍R198、profile关闭，完整目标ACTIVE。
+
+重现R198完整入口失败：native_port_approach报invalid selected port state／旧fixture与新typed州读取不兼容。迁移当前国家市场／省份／州／定义类型与四数组端点，明确kind5两端roles200/80，沿同一虚拟节点的kind6/keyMAX找到role2陆地港口，以CProvince+18完整owner及省份definition+C8／state+F10核对所属region；仅同真实市场可用，其他市场单独计数。额外role400/800保留。验证key两端控制点与实际节点完全一致，源销毁只保留自有数值。逐依赖不可读、身份／边界／代数、同地区分属州、两个实际港口、合法零、错市场、源变化／退休等回归通过；不是“第一个港口”或ID→key表。
+
+当前原版DCB6B0→18F6AA0确认canonical sea仍取有效非排除region的首个省份；definition+124索引当前TLS StateRegionTemplateDatabase（slots054083A8/054083B0，primaryvt04785CE8），boundF60／dataF98，region+1C8排除标记、+60/68/6C成员数组保持。只读探针复制这些数值，不调用可初始化TLS／取锁的798990 getter。新版sea_geography已移植当前TLS8670/86B8、strait-definition slots053FAD38/40／vt04663078、当前map／province／region类型与stateF10；保留完整省份邻接、未建运河定义和已选通行约束。
+
+当前图形位置eligibility的028FBC00→02EA7560／02EB5400原始读取链：registry053E61B0，graphics05BDCAF0/vt048CAEC0，manager+290；transform头由1F8变为210，当前locator vt049AEC58／index98，实例50、cap58、count5C、stride30／geo4、transform stride28及X0/Z8保持。CStateRegion当前vt046B8BF8、definition90，world roster3B08；nulltype049C9A28，IsValid50分别为67B920真／6745C0假。图形可定位性与国际贸易中心是不同概念，不将此bool当经济中心／港口建筑。02884080当前原版确认原始两组海区key打包及type3接岸规则。迁移后native_ports保持原条件与顺序，定向PASS。
+
+实际新档只读：PID29756/start2026-11-06T20:14:43.435879+08:00/base7ff70d730000/world44bb1704000/date59883660/phase4/paused1，全程SDL窗口最小化。生产商品54／州1157／domestic订单26755、国内lane94与R198一致；sea定义12／省份67（本次输入只含国内lane与strait定义，未验证国际路线绑定）／state geography1157，图形可定位性1157项已知。三个初样为同海区合法零查询；继而从实际四数组和原生naval-exit动态找出6处物理／逻辑海区不同，选3份不同当前owner的真实样例，分别得到1份非空接入元数据，key／完整owner／market／物理及逻辑province均归档，外层联合复读和world/date保持。不是三条寻路结果或可视化修复证明。
+
+统一build_tests已实际运行：原港口失败消除，travel／port-approach／snapshot／VFS旧隔离fixture／rail旧隔离fixture／sea／ports／原版24项选择器／economy等前置通过；现明确FAIL于state_panel的运行州433→定义17解析fixture，属于下一个尚未迁移的接口，不跳过、不称全PASS。本轮未完整重建或部署，安装双DLL仍卸载，dist仍R198 cc404f49…／71dae36d…。
+
+用户最新提醒国际贸易中心规则变化，立即核对当前安装00_defines、GetWorldMarketHub GUI注册与原始指令。当前默认定义允许一个market area多个hub（默认上限4，产品不得写死该上限）。CMarketArea+48现在是24B数组，不再是原版旧版本单一州handle；当前active列表为+60。GUI 326B70→208BDE0→2070210调用DA2500：首先验证state+F48是否在当前area active列表，再验证+B7C，否则D9F9C0遍历原版有效hub并通过10219A0原版距离／冰冷／海盆度量选择，保持原版顺序及行为。不能按area+48、旧成员关系、最近图形港口或首次候选推测。当前新档406份引用area的active计数为{0:163,1:236,2:4,3:1,4:1}；1157州中882命中F48原版缓存分支、275为无active hub，旧field48的u32在882份上均不是当前hub。这里读取的是原版已算好的缓存分支，没有执行原版getter或fallback。国际centers关联尚未修正，native_world_trade.h仍须优先改，profile保持关闭。
+
+会话在暂停／同world/date／iconic及五输入hash守卫下WM_CLOSE，正常退出0；本轮supervisor限定接受原样、临时save_on_exit=false、或同差异另缺三项已知启动图形字段三种配置，原子恢复R199前备份，最终五输入逐项相同。源修改前before冻结，current EXE仍SHA473186e8…。未操作用户会话／保存游戏／push，无游戏进程。全部证据在checkpoint2026-11-06-r199-v115-port-inputs/{before,port-before.log,port-after.log,tests.log,native-port-and-hub-evidence.c,live/production-inputs.log,live/production-approaches.log,live/hub-census.json,live/launch.json,live/minimized.json,live/close-request.json,live/after.json}；原始完整指令dump在R195同hash分析目录。
+
+### 2026-11-06 — R198：新版国内陆路／港内采集与最小化新档只读验证
+
+用户新授权“全自动，游戏尽量最小化避免影响我使用电脑”，覆盖GUI手动边界。新版国内供需／国家航运引用／四数组陆路与港内接入已迁移；economy／domestic／spline定向回归PASS。自有原版新档32244最小化／暂停，只读生产解码得到26755订单／94国内lane／931跨州陆路／1425州内连接／32已建铁路／533主陆枢纽／371港内路径，联合复读与world/date保持。正常退出0，五项本轮输入恢复／保持。完整统一测试已实际启动，但在尚未迁移的native_port_approach旧fixture／新typed州校验处失败，不跳过。profile仍关闭，完整构建／embedded／GUI派生通过，未部署本候选，完整目标ACTIVE。
+
+当前EXE仍1.15.0／SHA473186e8…，只接受用户新档autosave_exit.v3（SHA458e7780…／continue rawGameVersion1.15.0）。启动守卫先发现实际安装与此前记录不一致，拒绝启动且尚未修改设置：当时引导c8020412…／779879B、主体2028e03b…／50025206B，均不同于仓库R196候选；来源未归因，未把其行为当当前源码证据。逐字节冻结installed-before和freight其余文件manifest后，经deploy.ps1 -Uninstall移除两份Ironroad，未动配置／日志／缓存。随后自有vanilla PID32244／start2026-11-06T19:35:02.739553+08:00／base7ff70d730000／world39c11d7c000／date59883660／phase4／暂停1，SDL窗口已确认iconic，始终无前台输入或推进。
+
+新静态证据：完整匹配当前点表8581F0、全key查询DF87B0、56位strip查询2EFE380、原版control排序2F7FF90／拼接2F7D610（仅相对寻址／分支掩码，所有布局指令保持）。graphics05BDCAF0／vt048CAEC0／spline+2C0，map05BD7308／vt046D6850；实际生产解码8192×3616、33765点／4281strip／4279连接。CA8550从当前runtime connection／plain definition取得两端fixed位置、definition+18距离与runtime+20成本分别写入原版leg；CA7D40在keyMAX时复制该leg目的点／距离，有key则取当前spline并按原版端点方向拼接。产品港内路径按这一明确原版分支生成，不假造spline、不用成本代替距离、不猜港口ID。
+
+native_domestic读取新版counter80/D0，完整country+3A0航运引用，使用native_travel自有四数组；物理land端点按当前CProvince vt046AC1C0／+18完整owner及+8省份定义vt046AB568／+C8所属region绑定state+F10。主陆角色按低7位1识别，保留海岸／地形标志；built rail仅development4且原版definition kind2／spline type1。跨市场物理铁路保留但不进入国内货流；州内道路／铁路保留用于转接。港内仅kind6／development5／keyMAX，明确land port role2与naval role200的真实两端，371份实机记录的额外角色标记不破坏绑定。无key普通陆路／陆地海峡当前仍未接几何，不称新版陆路全部完成。
+
+新版网络约17MiB原始读取，多层复读会重复记账而耗尽原32MiB窗口；新增用例先FAIL复现。EconomyReadWindow按(address,size)保留首次观察，重复读取仍真实访问并逐字节比较，结束仍联合复读；仅唯一字节占预算，上限未提高。覆盖40次重复1MiB、重复时变化与32MiB唯一上限，改后PASS；现有economy负量／边界／复制期间变化回归保持。domestic测试按当前plain布局重建并保留原access adapter异常／退休用例，新增物理省份region、额外role标志、原版距离与成本独立、方向／同市场／本州／built rail及源销毁检查。首编译因同一auto声明混合64位object与32位id失败，拆开声明后PASS，未改测试门槛。
+
+私有live_geometry.exe仅PROCESS_VM_READ／QUERY，商品通过当前窗口线程TLS上下文取得54项。生产travel／shipping／states／spline／domestic解码全部成功，独立外层EconomyReadWindow联合复读成功；原state数量1157、全部lane98、domestic94，陆／海节点33565／11381及连接96385／15307。此为外部暂停只读证据，不是原生访问lease、DLL加载、worker/UI或提交验证。原版371港内连接普查来自同一world；没有查找“最近港口”或硬编码ID映射。
+
+自有会话经明确暂停／同日期／同world／最小化和输入hash守卫后WM_CLOSE，正常退出0。supervisor首自动恢复守卫发现退出后的设置缺少display_index/display_mode/vsync三项，拒绝覆盖；记录精确四项差异（含自有save_on_exit=false），确认无游戏且当前hash匹配后原子恢复本轮备份。最终save／settings／ini／content／continue逐项与本轮before相同，settings为用户本轮6618147b…，没有恢复旧R195设置。当前安装双DLL仍卸载，dist为本轮cc404f49ef4e9224273a673138d3470ae928ea5d12367f4669fb10883e63dfd0／50094506B＋71dae36d…／779879B，完整build退出0；embedded／Python GUI结构布局／实际C++资源派生与Python一致性均PASS，不push。下一步迁移当前港口接入输入／海区／VFS及完整快照，再重跑统一回归、实际双DLL加载／自动最小化GUI及生命周期／性能／最终矩阵。
+
+证据：checkpoint2026-11-06-r198-v115-live-network/{before,installed-before,installed-before.json,current-native-geometry.c,window-before.log,window-after.log,domestic-tests.log,tests.log,live/launch.json,live/minimized.json,live/production-network.log,live/production-geometry.log,live/production-domestic.log,live/port-census.json,live/context.json,live/close-request.json,live/settings-difference.json,live/settings-after-exit.json,live/after.json}；相对寻址匹配报告在R197/spline-function-matches.json。
+
+### 2026-11-06 — R197：1.15旅行网络自有复制与航运类型迁移
+
+新增native_travel.h，按当前原版四数组复制陆／海节点及连接，精确校验跨数组端点、plain定义、位置与距离；只返回自有数值，尚未接正式国内快照。定向测试PASS并接统一入口。native_shipping.h已迁移当前数据库／双类型地址，修复条约标记0x65→0x61，并按原版typed getter拒绝数据库代数不一致；航运定向回归PASS。完整统一回归／新网络实际读取未完成，未构建部署本轮源码，双DLL仍卸载、profile_complete=false；候选仍R196，完整目标ACTIVE。
+
+当前精确1.15 EXE／SHA473186e8…；Ghidra本轮重载冻结副本，x86:LE:64／image140000000／198937函数。world+5028新manager046B1D48，数组+10/+28/+40/+58分别为陆节点／陆连接／海节点／海连接，stride30/40。节点definition为plain struct，控制ID8、省份C、fixed1e5位置10/18；连接definition为plain struct，kind4、端点8/10、distance18、spline20。CA1090原版以roles&380选择端点所在数组；复制器同时核对definition指针身份与运行节点地址，只保留数组索引及数值，不输出原生指针，不建ID→key表。development与definition kind分开；无样条港内连接仍保留为原始证据，未猜补几何。
+
+native_travel_tests覆盖同ID跨数组、无key混合端点、非法类型／边界／溢出／定义身份／角色／省份／运行地址／负距离、逐字节读取失败、复制期间变化／退休和源销毁，定向编译运行退出0；新增测试已接native/build_tests.ps1，但完整入口未运行。
+
+原版D61360创建0x68字节CShippingLane，原始指令确认country18/kind1C/province-set30/states48/4C/extra50/demand58/distance60；D67460按当前05C42D88数据库及entry+4代数取typed对象。当前DB vt0470CC00，lane主／副vt04670978／04661088。D5B4C0和D59D60均以61读取条约；21C7B10的GetMerchantMarineDemandRaw明确读58。原版country航运引用为+3A0（D5B3B0），后续国内适配还须移植，未声称已接通。
+
+shipping定向回归退出0，增加旧65标记及错误entry代数反例；现有domestic测试仅同步其航运fixture地址，其余旧旅行fixture待整体迁移，不能引用旧PASS。保存shipping-static.c／shipping-getters.c和原始指令证据；源修改前文件冻结before。私有live_travel.exe仅PROCESS_VM_READ／QUERY并要求phase4且暂停，复用本轮生产解码器，不调用引擎、不attach、不写／输入；仅编译完成，尚未执行，等待用户按GUI手动边界进入新档。当前无游戏，未改存档／设置／INI，未push。
+
+### 2026-11-06 — R196：1.15完整原版贸易入口接线与隔离机器码回归
+
+继续1.15适配；上一轮的渲染／GUI、元数据定向回归及新档只读核对属于实际进展。再次核对安装EXE仍为1.15.0／SHA473186e8…，当前无游戏、安装双DLL仍卸载。用户要求改用新档后，唯一验收存档为其新建的autosave_exit.v3（rawGameVersion1.15.0）；旧档观察不作为新版本验收。R195的生产解码器只读记录为54商品／1157州／305市场，尚非DLL加载或原子访问证明。
+
+修复迁移中的实际ABI矛盾：Game::SelectTradePath已变三参而RVA仍指CFBA00内部候选选择器。现改为D039C0完整原版getter(this=当前world+4E0, 完整source, destination)，由原版完成查表、端点种子与选择，不复制其散列／随机规则到生产代码。回指针仍需落在同次复制的候选数组内，只发布自有index。新world缓存group870／lookup7D8、州出口表898／8C0、州areaB78、运行海峡definition120／controls128..12B／tariff12C..12D、定义canal58与新typed身份已移植；正式完成点1078EA6来自同一原版2／1访问作用域，TLS context34C／ownership5B60，未将其扩成完整writer任务join证明。
+
+新增版24项原始机器码隔离用例：执行当前完整getter、候选选择／距离／海峡收费／确定性偏置和有效完整句柄查询；省份／owner底层服务显式fixture替代。覆盖双向端点、高位句柄、相同成本、收费变更、不同端点种子，逐字节核对输入与成本不变。首次脚本误只复制到CFBB10，截断实际终点CFBC0B，独立测试进程访问异常；按完整pdata范围修正为8FB字节后全部通过，未放松游戏门控、未在游戏执行失败脚本。world-trade／snapshot定向回归先暴露遗漏迁移的反向表／访问fixture，修正后均PASS。
+
+本轮完整build.ps1退出0；主体838c4c2b71f2eb7f88fa763d6dad2bf5b529443841bbe2baa2801334d7b2216f／49951098B，引导71dae36d…／779879B。embedded、GUI结构／布局与实际C++资源派生／Python一致性、24项选择器均PASS。尚未运行完整统一build_tests，未部署或启动本候选；kNativeProfileComplete=false及未移植诊断门控继续关闭，不能称1.15已可用或完整交付。R194原始补丁继续保留，未混入本轮交付结论。
+
+中断后检查发现R195临时save_on_exit=false仍留在设置中；严格核对无游戏、当前JSON仅有该项测试差异后，经沙箱批准逐字节恢复新档测试前设置（SHA dcbff7dd…）。本轮最终save／settings／ini／content／continue逐项见audit.json。未操作用户游戏、未保存游戏／推送。下一步移植NTravelNetwork正式陆路、港内连接与几何／航运来源，再完成统一回归、实际加载与手动GUI、生命周期／性能和同构建A01–A27；完整goal ACTIVE。
+
+证据：checkpoint2026-11-06-r196-native-trade-v115/{before,migrate_trade.py,fix_snapshot_fixture.py,port_selector_harness.py,build.log,settings-restoration.json,source-change.diff,audit.json}；R195新档生产读取为上一checkpoint/newsave-live/production-metadata.log。不把隔离harness或静态RVA当实机通过。
+
+补充输入审计：与R195新档before相比，INI仅route_mode=1→2，mtime为2026-11-05T23:58:53.559705+08:00，早于R196开始；来源未归因，保留当前值、未回滚。save／settings／content／continue与新档before逐字节一致，不能称五输入全部一致。
+
+
+### 2026-11-05 — R195进行中：1.15渲染／GUI静态移植及定向回归
+
+12组箭头接口在旧、新精确EXE均重新定位；新增7个发现器反例／正例测试，涵盖不同子类上传实现、缓冲字段不一致／歧义、this别名、调用破坏与新分配对象误判，定向通过并接统一入口。原始指令确认新版供给工厂分配E0、基类字段和float3／20B顶点ABI保持、常量buffer2C、this／path及this／passContext两参保持；原版2945240的domain／stage句柄来源独立确认。已移植这些renderer RVA／签名及资源租约身份，shader常量1与当前原版字段对齐。尚未改全局EXE准入hash，混合迁移阶段不能进入原生调用；未重建或安装中间DLL。
+
+当前两份原版GUI哈希／原生回调和插入锚点已核对，更新C++与Python准入。首轮GUI布局回归发现新版市场价格控件215px使旧540px布局溢出5px；仅在自有物流页派生控件收窄至210，保留原版价格／趋势／导航表达式。修正后4组GUI结构／回调／布局／图例检查PASS；实际flow shader GPU定向检查PASS，包括近景海路高度、正反方向／八档宽度与反例。不是新版进程实际加载或全GUI手动验收。
+
+新旅行网络定位world+5028的原生manager：陆地与海军节点／连接已拆为两对独立容器，旧RTTI读取不可复用。继续核对新版州市场、经济／贸易、访问完成点和native VFS及新网络结构，尚无1.15完整构建／统一回归／部署／实载结论；安装仍卸载，不push。证据checkpoint2026-11-05-r195-v115-compat，暂停R194完整保留。
+
+
+### 2026-11-05 — R195进行中：Victoria3 1.15.0版本适配
+
+用户在临时卸载后明确要求适配新版本。当前本机EXE为1.15.0／99988600B／SHA256473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa，当前无游戏、两份安装DLL仍卸载。按新任务继续兼容迁移；不将旧1.13.11验收扩成新版本结论。原始00–03按主题重读，继续local-reverse-engineering：先确认目标／hash，独立恢复、检查ABI／字段／寿命，再分层构建／测试／部署。
+
+源码／测试／文档184份、旧交付双DLL和新EXE均已冻结于checkpoint2026-11-05-r195-v115-compat。暂停前R194的7份源码修改及新helper完整保留为R194-pending.patch和逐文件副本，当前迁移回到R193已验收功能基线，未盲目恢复旧dist。首次留档脚本遇路径键正反斜杠不一致而在改动前拒绝；归一化键后成功。
+
+Ghidra当前新导入本次冻结EXE，x86:LE:64／image140000000；代码候选均绑定本次hash。通用箭头发现已独立找到构造／交叉构造、SetPath、类型解析与分配器；旧“两个子类上传函数地址相同”规则失败，当前两子类不同上传实现都读取对象+60，供给箭头分配尺寸C0→E0／常量2C，需按原始机器码验证而不放松唯一性。Append反编译遗漏参数，原始指令表明传入RDX仍由context函数消费，不能据伪代码改成单参。
+
+旧CTravelConnection／CTravelNode／定义的RTTI在新版不再对应，出现NTravelNetwork::CNode／CConnection与STravelNodeDefinition／STravelConnectionDefinition，陆路采集需要按新结构实现。州、国家市场、TLS所有权等已有多处字段变化候选，未启用未经验证读取或调用。私有RTTI／函数指令对齐取得81份唯一候选，仍仅定位线索；全量临时指令缓存首实现占用过高已停止自身分析进程并改为逐函数释放，重跑完成，未动游戏或用户会话。
+
+当前没有1.15构建／回归／部署／实机通过结论。下一步逐项验证正式渲染／UI／VFS／快照、州市场商品与新旅行网络，再移植并执行新版本测试。全部原始证据留本机checkpoint，不进入玩家资源或硬编码地图表。
+
+
+### 2026-11-05 — 游戏更新后按用户要求临时卸载 DLL Mod
+
+用户已暂停实施目标，并要求游戏更新后暂时卸载。初查自有目标游戏进程34872仍在运行，按deploy.ps1守卫等待；用户确认保存退出后重新核对无victoria3进程，执行deploy.ps1 -Uninstall退出0。已移除binaries\version.dll引导及binaries\freight\freight.dll主体；原先无version.dll.ironroad-backup，无需恢复其他代理。卸载前已将两份实际安装DLL备份到checkpoint2026-11-05-temporary-uninstall/installed-before；全部42份其余freight文件的路径／长度／SHA256卸载前后完全一致，配置、日志、缓存及可编辑资源保留。未启动游戏、未修改EXE或存档；当前EXE SHA256=473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa。仓库dist产物保留，未重新安装。
+
+R194暂停前的同步采集／局部接入源码修改仍在工作区，尚未完成完整构建、回归或实机验收，未部署；R193历史59 PASS不覆盖这些未完成修改。实施目标保持暂停，新版本ABI／兼容性未验证，不因本次卸载恢复开发或安装。证据：E:/Code/v3-analysis/checkpoints/2026-11-05-temporary-uninstall/{before.json,installed-before,uninstall.log,uninstall-audit.json}。
+
+
+### 2026-11-03 — R193：动态物理港口接入原版查询实机核对
+
+- R192同参重查是进展，本轮实际执行新的局部港口请求。新增native_port_approach.h只复制当前typed运行州、原版市场、当前旅行连接／节点／省份owner、海区与真实spline数值；不创建ID→key表，不选第一个港口候选。原版14144FEF0确实使用有效且非排除海区的首个省份作为规范表示，此为海区表示规则。不同完整owner但同真实市场可保留，其他市场排除；同海区不追加请求，所有候选自有值且变更／退休拒绝。
+- 首版误将state+48分组当市场，代码复查发现与现有state_market.h明确约束冲突；此前“6份同市场／7份排除”结论撤回。正式改用已有DecodeNativeStateMarket的typed国家／特殊市场区及市场对象校验，新增不同分组仍同市场的反例，修正后定向PASS并完整重建回归。首版构建／统一入口与私有probe日志保留为历史，不继承为最终候选证据。私有首probe还因将13份读取嵌入已有32MiB总窗口触发预算拒绝，改为各自独立窗口，不放宽边界。两次旧产品元数据会话9928／23872均正常退出0、五输入保持、probe_access始终0。
+- 默认关闭probe_access中复用经验证的原版wrapper／GameState2／hidden0／owns1／context1与同次heap窗口，读取同次已选完整州、原country与默认options；按query源侧物理→逻辑海区／目的侧逻辑→物理海区构造明确24B单候选数组和56B选项。当前typed pathfinder索引仅验证登记，不把基础矩阵内容作权限或结果回退。复用独立40B结果调用／原生Free，暂移父trace，不计入自然查询；原输入／原选择／自有输入／scope／heap／manager／港口重核，异常停止后续请求，最多128次。不接正式worker、权限批次或几何。
+- 15组私有原始机器码harness用自有输入数组执行真实查询／selector／move／allocator wrapper，覆盖新端点、反向、无路、原版海峡拒绝及原有选项／重查边界，输入和原输出字节保持、临时分配回收PASS。底层heap／country／base-path／restricted服务仍替代，不冒充游戏heap／通行实测。新typed输入读取测试进入统一入口，包含逐依赖读失败、错误类型／身份／计数／角色、多个候选、市场隔离、复制中变化／退休与源销毁。
+- 最终完整build.ps1退出0、build_tests.ps1退出0／59 PASS／零FAIL，embedded PASS、默认debug零UI顶点PASS；主体f328f68461fd998c2d2eb7abcee55ed125eabe5f23fa516a3cbca69a3fc67c09／51363876B，引导71dae36d…／779879B，经deploy.ps1安装并实际载入，两份dist＝安装＝本次模块。产品路径模型仍R185行为；本轮新增诊断与输入复制，不声称三末端已可视修复。
+- 最终自有41396普通续玩，victoria3.exe SHA7f53e326…／静态image140000000／实载base0x7ff748fa0000，phase4／暂停／date59883804。自然4010查询／103完整port选择／17重建栈及103同参独立重查保持；206端点元数据观察均有效。当前13份错配州普查按真实市场得到eligible=7／foreign=6，逐项与原版keyless港内连接的实际owner及生产州roster市场一致。额外新局部请求1份、1个country，涉及当前state=[936]；每份均与同次原版选择、动态物理端点、原country／world／线程及build诊断值对应，原输入／结果值保持，独立分配并原生释放1份，已知无路0份。完整范围和距离记录于approach-audit.json；诊断build数值不是正式epoch，释放返回不是OS物理内存回收测量。
+- 与R192同一保护存档／日期的4010自然查询按完整country／源组／目的组／forced／pairs／selector多重集合对照，原权限、最终端点／省份范围／距离全部相同，不依赖调用顺序；这是当前暂停场景的原版寻路结果保持，非完整经济或性能对比。自有会话无GUI／相机／推进／保存输入，加载模块于存活时归档，正常WM_CLOSE退出0；五原始输入逐字节保持，临时probe_access1原子恢复0。相关资源错误0、六条Unexpected token同基线，当前无游戏、不提交／push、GUI手动。用户说明R188中断源于停电非正常关机，按外部中断记录，不能当正常退出或DLL崩溃证据。
+- 动态物理港口参数与新本国局部原版查询子项完成。下一步把有效局部结果绑定当前lane完整身份／真实几何／world-map-request及退休更新，再接模型／worker／正式绘制；其他市场的物理港口不能仅凭共享地区放行。三末端仍未修，完整权限生产方、原子交接、改图、GUI／生命周期／性能与同构建A01–A27继续，goal ACTIVE。证据checkpoint2026-11-03-r193-dynamic-port-queries/{before,metadata-live,metadata-live-2,port-approach-corrected.log,approach-contract.log,trade-contract-cases.json,source-change.diff,build.log,tests.log,embedded.log,debug-default.log,deploy.log,live/loaded-modules.json,live/observation-counters.json,live/metadata-probe.log,live/approach-audit.json,live/replay-audit.json,live/ownership-audit.json,live/stack-audit.json,live/session-freight.log,live/close.json,live/after.json,config-restored.json,audit.json,NEXT.md}。
+
+
+### 2026-11-03 — R193进行中：动态物理港口与本国接入查询
+
+R192同参独立查询／释放是实际进展。本轮新增仅测试／默认关闭诊断使用的typed当前州→物理港口海区输入复制器，保持运行州／定义／geo／实际spline身份分离，不创建ID→key表。异常／读失败／变更／退休／源销毁与分属州市场隔离用例已接统一入口，定向PASS；尚无本轮完整构建回归结论。原版14144FEF0确实取有效非排除海区的首个省份作为规范表示，不把它解释为首个港口候选。物理港口候选全部保留。
+
+原产品06e7272e…的自有9928、23872两次暂停VM_READ核对均正常退出0、五输入保持，probe_access始终0；用户说明的停电属于R188外部中断，不能充当DLL崩溃或正常退出证据。第一次私有probe将13份新decoder复用到已有总32MiB观察窗口，后续读取被预算拒绝；改为每份独立观察窗口后13份全部有效，并逐项与真实原版keyless港内连接的实际owner相同。首版误把state+48分组当市场，导致“6份同市场／7份排除”的结论已撤回；207→206、608→607与936→936的实际owner对照仍成立，市场必须以已有DecodeNativeStateMarket的typed国家／特殊市场区分支重新核对。已修正源码并增加不同分组但同真实市场仍可接入的反例，定向重新PASS；首版构建／回归日志保留，不能作修正后候选验收。该事实不自动证明原版航线本身无路，也不允许借其他市场港口补画。
+
+正在同原版wrapper持有的已验证scope／heap窗口内，使用动态候选、原country、自有CPdxArray24与默认options56执行有界新请求；原生基础缓存仅核对索引登记、不作结果／权限回退。原输出／输入／scope／heap／当前港口重核，独立buffer经原Free释放；异常停后续请求。未接正式worker／权限或绘制，三处末端仍未修，不push／GUI手动。源码前备份及只读证据checkpoint2026-11-03-r193-dynamic-port-queries；产品安装仍R192，完整目标ACTIVE。
+
+
+### 2026-11-03 — R192：103次原版同参独立重查及原生释放实机通过
+
+- R191实际调用链与持有的scope是进展，本轮复核既有R100／R101／R106及代码：CD2BC1已用于正式采集及原版selector，不另建锁接口；完整经济输入writer完成／原子性仍待。本轮采用范围更明确的自然1414500F0→14141F1D0返回窗口：原caller仍持有相同候选数组／options，当前原版函数已完成且scope2／hidden0／owns1／context1与同次heap验证成立。该依据是完整ABI／实际原caller栈／借用寿命及原版调用协议的组合，不是只凭瞬时flags给新线程授予权限；不扩展为不同港口请求或整份快照安全证明。
+- 源码前备份checkpoint2026-11-03-r192-native-query-replay/before。默认关闭probe_access下最多128次同参重查，调用既有原始trampoline并使用独立40B输出，完整七槽含scratch／options原样保留。重查时暂时移走自有父trace，避免污染自然query／classifier／port记录；独立数据必须不与原buffer别名、allocator为当前已验证CPdxNewDeleteAllocator，释放入口14B签名匹配，RAII在复制之后经原生Free(this,data)释放。原请求／选项值、原输出值、scope／heap不一致即停止后续重查；不发布路线、权限或worker任务，不调用经济写入接口。释放是原版回收调用返回，不是向操作系统归还物理内存的测量。
+- 私有原始机器码harness将R189的11组每组重查一次，同时保留原输出：结果相同、输入及原输出字节保持、两份非空buffer独立、均经真实原版allocator wrapper释放，所有临时分配回收PASS。底层heap／country／base-path等服务仍替代，独立结果不冒充原生游戏heap证据。源码只改overlay诊断；未为低影响日志／分支复制镜像测试，真实ABI的额外用例留外部checkpoint，既有统一入口完整运行。
+- 完整native/build.ps1退出0、统一build_tests.ps1退出0／58 PASS／零FAIL，embedded PASS，默认debug独立backend3664零UI顶点PASS。主体06e7272e0b0c1e901117e0ecdcd248815e55006bce23234e45f028f1c1ba88cf／51072951B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B；deploy.ps1安装，dist＝安装＝自有32164实际模块。两条旧“绝不新增查询”注释随后同等行数对齐新诊断范围，没有改编译token或行为、未因此重复完整测试。
+- 自有32164普通续玩，无GUI／相机／推进输入；EXE SHA7f53e326…／base7ff748fa0000，phase4／暂停／date59883804／world41e732e9000。实际DLL COFF符号独立解析9个自有计数器，双读稳定：自然4010＝3907普通＋103国内，copy数一致；额外attempt103／matched103，独立日志103份全部matched1／independent1／allocated1／freed1，逐条query／country／thread／build／两端／距离／range数对应自然记录，17个country、7份同省合法零距离；实际已知无路0。103个原版port ownership及17条相同ExecuteGameCommand调用栈保持，临时屏蔽父trace未改变原有计数和绑定。
+- 相关模块清单在存活时归档；自有32164正常WM_CLOSE退出0，五原始保护输入逐字节保持，临时probe_access1原子恢复0。日志超过8MiB后启动轮转，原old文件与启动前prefix逐字节相同，finish按原守卫归档；相关资源错误0，六条Unexpected token同基线。当前无游戏，未保存／提交／push，GUI手动。实时和退出后的最终session日志均严格核对通过，无本轮未解释的构建／回归／实机失败。
+- 同一原生借用请求的额外调用／独立输出／实际释放子项完成。三港口缺段尚未修，不能把这103次相同参数结果当三个新接入段的结果。下一步在已验证原wrapper窗口读取当前已选完整州的typed物理港口／海区，构造自己的有界单候选数组和默认options，调用同一原版逻辑验证真实本国接入请求；禁止固定state／sea／key表、借异国许可或基础缓存补路。正式权限批次生产方、world／map／request与退休／原子交接、改图、完整GUI／生命周期／性能和最终同构建A01–A27继续，goal ACTIVE。证据checkpoint2026-11-03-r192-native-query-replay/{source-change.diff,replay_contract.py,replay-contract.log,trade-contract-cases.json,build.log,tests.log,embedded.log,debug-default.log,deploy.log,live/loaded-modules.json,live/observation-counters.json,live/replay-audit.json,live/ownership-audit.json,live/stack-audit.json,live/session-freight.log,live/close.json,live/after.json,config-restored.json,audit.json,NEXT.md}。
+
+
+### 2026-11-03 — R192进行中：原版相同参数重查及独立输出释放
+
+R191实际17条调用栈是进展。本轮复核已有R100／R101／R106完成点与任务证据：CD2BC1已用于正式采集，不新增锁钩子；完整writer完成证明仍待。先只在自然1414500F0→14141F1D0返回窗口、完整原请求仍由原caller持有且scope2／owns1／context1／hidden0及同次heap已验证时，默认关闭probe_access诊断最多128次相同参数独立重查。原借用参数／原输出不变，临时屏蔽自有父trace归类，重查不冒充自然调用；独立40B输出经原版分配器释放，异常即停后续重查。不接不同港口请求或正式路径。源码前备份checkpoint2026-11-03-r192-native-query-replay/before；11项原始机器码重复调用／独立所有权／真实wrapper释放用例PASS（底层heap等仍替代），完整构建中。安装仍f42f9e6b…／71dae36d…，候选无统一回归／部署／实机结论。不push／GUI手动、三末端仍待。
+
+
+### 2026-11-03 — R191：实机确定贸易重建由ExecuteGameCommand作用域包围，间隔调用并非任务join
+
+- R190的103次buffer／heap实机核对是实际进展。本轮转访问窗口主题，完整重读01／02／03，适用原始指针仅在已验证窗口借用、未知ABI保持关闭、分层证据和worker自有值等约束。精确EXE SHA7f53e326…／image140000000再次校验；Capstone按完整指令边界验证PE相对引用，不将位移匹配或首个caller当执行证据。
+- 静态找到14140D830的3条直接caller：140FF0A67、14133E9D6、14140D763；FF0A30另经FF5DF0注册，RTTI是接收CGamestateGenerationContext的函数包装。这只是候选，不是本次启动路径。源码前备份checkpoint2026-11-03-r191-trade-access-window/before/overlay.cpp；默认关闭probe_access的原重建观察器增加24帧有界Windows调用栈与直接return PC，在进入MinHook trampoline前捕获，避免用其搬移prologue作原版unwind依据。原函数仍只转发一次，不增加查询／锁调用／经济写入或正式发布。
+- 完整native/build.ps1退出0、统一build_tests.ps1退出0／58 PASS／零FAIL、embedded PASS，默认debug独立backend10168零UI顶点PASS。当前主体f42f9e6bc1b6ec1499258bdaa7db3735dd6cacb2fd47b8b4aec4520b77d69750／51038667B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B；经deploy.ps1安装，dist＝安装＝41000实际两模块。原R190产品已由实际安装文件冻结到delivery-before，不恢复旧dist。
+- 自有41000普通续玩、无GUI／相机／推进输入；EXE base7ff748fa0000，phase4／暂停／date59883804／world4e273f45000。4010自然查询＝3907普通＋103国内，计数及copy完全对应；103条ownership继续全部ready／same_allocator／moved1。17次非空国内重建均thread7712／scope2,1,1，深度14未达24上限，各有相同11个EXE内frame；直接caller为14140D768，真实链为140CD2810(return CD2AB6)→140FC1FE0(return FC2198)→14140D670(return140D768)→14140D830，而非生成回调。原始PC及所有记录都保留，未从静态候选猜路径。
+- 沿这条实际链确认140CD2810的标记ExecuteGameCommand／gamecommand.cpp，140CD28BE以GameState2／context1／source gamecommand.cpp:60调用1433BD640，storage为RBP-20；140CD2BBC对同一storage调用1433BD750。现有生产AccessScopeEndThunk及IsNativeCapturePoint已经使用其返回CD2BC1；应复用这个完成点，不能因本轮发现再新增通用锁接口或重复完成钩子。此次实机栈补强实际trade调用被该作用域包围的证据，不等于所有输入writer已join。
+- 重要修正：FC1FE0每阶段间的1407BEB90不是任务等待。其完整体构造7BE8E0、析构7BEA60：受运行标记／计时条件控制，构造可调用1433BD820暂时清owns、置access3并释放root+590／SRW，析构1433BD8F0重新取得并恢复scope；另有计时／诊断记录。不能将它作为join屏障。实际shipping入口在FC2180这次间隔调用返回后，经FC2193进入，下一次间隔调用在FC2198；这只是已证调用顺序，仍须核对其间transitive调用及原版任务完成条件。E765E0也存在内联release／reacquire，单凭ctor／dtor或瞬时owns标记不授予完整原子租约。
+- 自有41000正常WM_CLOSE退出0；五原始保护输入逐字节保持，临时probe_access1原子恢复0；相关资源错误0，六条Unexpected token同基线，当前无游戏。未保存／提交／push，GUI手动。私有首个research参数误传VA被numpy拒绝，已加RVA范围守卫；一处按猜测文件名读assembly不存在，改用实际extent名；组合dump第二个无pdata的候选被assert拒绝，未放松边界或将不完整体作证明。
+- 实际调用链及作用域包围子项完成，三海路末端仍未修、主动搜索与正式逐lane权限生产方仍未启用。下一步复用现有CD2BC1完成点，沿ExecuteGameCommand及真实transitive任务等待／恢复路径补齐访问证明，并将当前world／map／request与真实权限生产方连接；不再重复buffer-only观察或把yield当join。改图、完整GUI／生命周期／性能及最终同构建A01–A27继续，goal ACTIVE。证据checkpoint2026-11-03-r191-trade-access-window/{source-change.diff,callback-types.json,callers-*.json,*-assembly.txt,build.log,tests.log,embedded.log,debug-default.log,deploy.log,live/loaded-modules.json,live/observation-counters.json,live/ownership-audit.json,live/stack-audit.json,live/session-freight.log,live/close.json,live/after.json,config-restored.json,audit.json,NEXT.md}。
+
+
+### 2026-11-03 — R191进行中：原版贸易重建调用栈与访问窗口
+
+R190的103次真实buffer转移／heap观察是实际进展。本轮按访问窗口主题完整重读01／02／03，沿同hash EXE完整汇编确认国内重建有3条直接caller，一条经callback注册，不能按首个caller推断本次启动路径。源码前备份checkpoint2026-11-03-r191-trade-access-window/before/overlay.cpp；只在原默认关闭probe_access观察器增加24帧有界调用栈及明确return PC，原函数仍只转发一次、无新搜索或正式发布。完整构建进行中，候选尚无统一回归／部署／实机结论；安装仍R19030596be5…／71dae36d…。继续核对acquire／yield／任务join；三末端未修，不push／GUI手动。
+
+
+### 2026-11-03 — R190：103次自然结果buffer转移与原版线程heap实机核对
+
+- R189原始机器码／21项隔离用例解决了结果移动语义，本轮将核对接入既有默认关闭probe_access诊断。源码前备份checkpoint2026-11-03-r190-natural-buffer-transfer/before；新增ObserveNativeThreadAllocator读取当前TLS索引（有界4096）、初始化标记／heap并双读，验证当前CPdxNewDeleteAllocator的VT及allocate／release方法；ObserveNativeTradeBuffer只双读24B descriptor，保留data／capacity／count／allocator，不解引用未来buffer或调用分配器。
+- 原版九槽wrapper的栈内trace保存其同次七槽query返回descriptor与heap观察，外层返回后核对scope／完整输入／结果内容及两阶段heap、buffer；借用地址只在同一自然调用栈中使用并记录数值，不交worker／权限批次。原函数仍各转发一次，没有新增搜索、原生分配释放、经济写入或正式路径发布。零count持capacity合法；错误方法／未初始化／无heap／索引或地址越界／任何字段不可读／复制期间变化／源销毁等回归接入既有native_access_tests，定向PASS。
+- 完整native/build.ps1退出0、统一build_tests.ps1退出0／58 PASS／零FAIL，embedded PASS、默认debug独立backend42592零UI顶点PASS。当前主体30596be5262b6c4e7b5c197c5865cf81770184c7e0e58b7aafee52b9474ae4af／51027697B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B；deploy.ps1安装，两份dist＝安装，实际28600模块路径／hash匹配。EXE SHA7f53e326…／运行基址7ff748fa0000，未跨构建复用探针RVA。
+- 自有28600普通续玩、无GUI／相机／推进输入，phase4／暂停／date59883804／world370ba76a000。完整4010自然query＝3907普通＋103国内，与实际DLL自有atomic双读计数和copy数完全相等；103条port selection各有唯一同sample／query／thread／build／country的ownership记录，全部ready1／same_allocator1／moved1，query_data＝final_data非空、capacity／count相同，旧destination均空。103次均在thread40024，TLS索引0／TLS15764b1a8a0／heap15779400000／TEB39875b9000一致。结果持有者确实接过原buffer；没有将该指针当跨调用身份或world代数。
+- 独立模块清单已在进程存活时归档。自有28600正常WM_CLOSE退出0，五原始保护输入逐字节保持，临时probe_access1原子恢复0；相关资源错误0，六条Unexpected token同基线，当前无游戏。未保存／提交／push。私有首版日志reader将历史前缀及安装消息计入selection而assert拒绝，按本次原始prefix及sample字段隔离后103对103严格匹配，并在退出后的最终session日志重复通过；未改原始日志或放松结果断言。
+- 自然结果转移／线程heap观察子项完成，明确不等于原生主动搜索的访问租约、完整写任务join、world-map-request epoch、真实分配释放与退休证明。下一步核对原版包围贸易重建的scope acquire／yield／reacquire／release及任务完成窗口，不能仅凭这组同值字段启用查询。三海路末端仍未修，正式逐lane权限生产方未绑定；地图兼容、完整GUI／生命周期／性能和最终同构建A01–A27继续，goal ACTIVE。证据checkpoint2026-11-03-r190-natural-buffer-transfer/{source-change.diff,native-access.log,build.log,tests.log,embedded.log,debug-default.log,deploy.log,live/loaded-modules.json,live/observation-counters.json,live/ownership-audit.json,live/session-freight.log,live/close.json,live/after.json,config-restored.json,audit.json,NEXT.md}。
+
+
+### 2026-11-03 — R190进行中：自然查询buffer转移与线程heap观察
+
+R189的21项原始机器码用例是实际进展，本轮继续同一调用所有权主题。源码前备份checkpoint2026-11-03-r190-natural-buffer-transfer/before。新增仅观察的当前TLS索引／heap就绪与精确allocator方法核对、24B buffer描述符双读；边界／读失败／变化／源销毁用例进入既有native_access_tests并定向PASS。默认关闭probe_access的自然端口wrapper及其嵌套query记录同次descriptor转移，原函数仍各转发一次，无额外搜索／分配／释放、无正式权限或路径发布。完整构建进行中，尚无本候选统一回归／部署／实机结论；安装仍950d3f32…／71dae36d…。不push、GUI手动，三海路末端及完整目标继续。
+
+
+### 2026-11-03 — R189：原版结果转移与分配器契约，21项隔离机器码用例通过
+
+- 接续R188完整4010查询是实际进展，本轮离线核对主动查询前的结果所有权，不启动游戏、不操作GUI、不push。精确EXE SHA7f53e326…／image140000000再次校验。停电后的Ghidra当前无打开程序；状态查询明确返回Program not found／空列表，改以同hash本机PE的完整原始汇编及RTTI核对，不将历史连接当当前可用。
+- 原版14512CDC0对象RTTI为CPdxNewDeleteAllocator，VT144419230；slot+8的14061BE50接受this／u64字节数／第三槽对齐，实际只转发字节数至14417D960，未消费第三槽。slot+10的14061BE90接受this／data，空指针不调用后端，非空尾调14417D850。不得跨构建复用此地址。14417D960依赖GS:58当前TLS索引1458F8C90及线程heap字段38／初始化44；14417D850从指针所属区域元数据与GS:30核对归属并分支回收。不能用DLL malloc/free或“任意线程调用operator new”代替原版分配器。
+- 关键纠正：R183／R186称copy的140D97AC0实际有消费源对象的移动语义。同allocator时先释放旧destination，再转移data／capacity／count并清空source；不同allocator时按目标容量复制或经140C6C8C0／140639FF0增长，source count清零但仍持原buffer供其自身析构。1414502E3调用后，141450306–319只在临时source仍非空时释放；同allocator移动分支不会释放已交给外层的buffer。旧文档“复制后释放内部结果”须按本条解释，不得据此监听一次预期不存在的临时free或重复释放外层内存。
+- 新私有隔离harness执行完整原始move／reserve／rebind／allocator wrapper机器码，仅替代底层heap与memcpy：同allocator空／非空／替换／零count有capacity、不同allocator复用／扩容及null-free共10例PASS，逐指针检查最终存活与回收，无重复释放／保留分配。再将原11项完整贸易wrapper／selector／filter harness中的假copy及allocator wrapper替换为这些真实方法，11例PASS，全部结果与R183逐项一致、临时分配全部释放、输入字节保持。合计21项隔离用例，不是实际游戏heap／TLS／主动查询安全证明。
+- 原始机器码／工具与fixture全部留外部checkpoint2026-11-01-r189-native-result-allocator，不加入玩家DLL或仓库测试；没有修改产品源码、构建、部署或运行游戏，未重跑无变化的产品统一入口。当前dist＝安装仍950d3f32…／71dae36d…，58 PASS／资源／默认debug为R188同产品历史证据；五保护输入仍一致、probe_access0、无游戏。最初私有脚本名inspect.py遮蔽stdlib导致导入失败，改inspect_allocator.py；无pdata叶函数最初无范围被assert拒绝，按完整14B／精确反汇编范围处理，未放松哈希／ABI边界。
+- 结果所有权的静态／隔离子项完成；下一步在已验证的自然外层调用栈内核对同次结果buffer转移及实际allocator／TLS上下文，不从render／worker另行调用。正式查询仍需真实访问窗口、完整world／map／request身份、原生完成／退休及输出寿命证据；不将上述fixture或指针相等冒充租约。三海路末端仍未修，逐lane权限生产方、改图、GUI／生命周期／性能／最终A01–A27继续，goal ACTIVE。
+
+
+### 2026-11-01 — R188：4,010次自然贸易查询完整覆盖，局部港口查询并未自然产生
+
+- 仅扩大默认关闭probe_access诊断额度：普通检查128→8192／复制32→4096，国内仍512／256；原函数仍只转发一次，country／options／同次分类／scope复核不变。没有主动搜索、正式权限发布、路线补画或经济写入。源码前备份checkpoint2026-11-01-r188-complete-trade-observation/before；不push／GUI手动。
+- 完整native/build.ps1退出0、统一build_tests.ps1退出0／58 PASS／零FAIL、embedded PASS、默认debug独立backend94292零UI顶点PASS。主体950d3f324047d94ef2b0686e047b37eeb512790d902a3584fa650de2752419c6／50968135B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B；deploy.ps1部署，dist与安装一致。只改变诊断额度，R185业务逻辑不变；旧用户缺段确认不扩为本构建完整GUI验收。
+- 自有95000普通续玩，phase4／暂停／date59883804，临时probe_access1。当前DLL符号表解析7个自有atomic地址，绑定进程创建时间／实际模块路径与hash，PROCESS_VM_READ两次计数相同：总4010＝普通3907＋国内103，分别与全部日志copy一一相等；port选择103／103。样本0–4009连续、283个country、已知无路0，无本轮额度截断或复制丢失。模块基址7ffdc2c80000由当时枚举／计数读取得到；事后完整modules.py因进程已不存在拒绝，未伪造模块清单。
+- 当前动态PORT_MISMATCH／MISSING_PORT／OWNED_LANE关联三处缺口，按同country／海省对／完整options核对：前两对完全没有自然请求，第三对也无对应country，仅另一country有1份。故本次启动中扩大被动观察已足够，不能借其他国家结果／基础矩阵补画，也不能把缺查询当原版无路。三海路末端仍未修，下一步核对完整原生查询的真实分配释放及调用访问窗口，或找到原版对应端点路径来源；不继续只加配额。
+- 恢复工作时95000已不存在，未发送WM_CLOSE、未kill、无close.json或退出码。用户明确说明停电造成电脑非正常关机，记为外部中断；本次正常退出验收未完成。Application事件查询未发现本次Victoria3／freight崩溃条目、最新游戏crash目录仍10月27日，这不能替代退出码。已归档现存日志并复核原始五输入逐字节保持，临时INI原子恢复原probe_access0；相关资源错误0，六条Unexpected token同基线。当前无游戏，没有保存／提交／push。
+- 自然调用覆盖核对子项完成，不代表三个局部查询已有原版结果或安全主动调用已证。正式world／map／request身份、访问租约／退休、逐lane权限生产方、改图、完整GUI／生命周期／性能及最终同构建A01–A27继续，整体goal ACTIVE。证据checkpoint2026-11-01-r188-complete-trade-observation/{build.log,tests.log,embedded.log,debug-default.log,deploy.log,live/observation-counters.json,live/all-natural-queries.json,live/approach-query-audit.json,live/port-census.log,live/owned-lanes.log,live/session-freight.log,live/after.json,config-restored.json,audit.json,NEXT.md}。
+
+
+### 2026-11-01 — R188进行中：完整贸易自然调用覆盖与港口接入查询
+
+- 上轮R187新增自有海区缓存复制并以真实差异否定基础矩阵等于最终查询，是实际进展。本轮继续三处末端：只将现有probe_access诊断的普通查询copy上限32→4096、检查上限128→8192，国内仍256／512，保留全部country／options／同次分类和scope校验。所有限制仍有界，不追加原生寻路，不修改正式路径或经济；不push／GUI手动。
+- 源码前备份checkpoint2026-11-01-r188-complete-trade-observation/before；完整native/build.ps1已退出0，当前候选两DLL待完整统一回归，尚无该候选部署／实机结论。安装仍R186719a2d83…，R187也未改过产品。
+- 私有只读coverage reader从本次交付DLL的COFF符号表导出自有atomic计数器地址，绑定实际模块路径／hash／进程创建时间后双读；不跨构建复用RVA，不读写引擎任务状态。后续以总调用／copy计数与解析日志核对覆盖，再由当前动态港口错配记录查同country／同海省对的完整自然查询，不借其他国家权限或基础缓存补画。
+
+
+### 2026-11-01 — R187：原版海区基础缓存自有复制与最终查询差异实机核对
+
+- 上轮R186的完整州选择为实际进展，本轮继续三处海路端点。新增native_sea_cache.h仅由既有native_access_tests使用，未接overlay／正式采集／worker。当前root→world+4500的typed CSeaProvincePathfinder、原版u16索引Robin探测、24B三角行、32B条目和i64距离／原始省份集合复制为自有值；不调用搜索／getter／引擎分配器。空缓存只是观察到空条目，不证明失败搜索，源＝目的属于原版另一个分支，显式不由此helper伪造；非空零距离保留。
+- 精确EXE SHA7f53e326…／image140000000；原版14141FA80缓存分支与14141EA10填充、RTTI VT044EB4D8和1413BAAF0构造核对。构造先发布owner+100指针，再调用填充，不能将指针存在或矩阵尺寸正确当完成见证。PE原始xref扫描的1412C2224候选是将call操作码误当disp的假引用，汇编排除；真实构造调用为1413BABAF。后续必须绑定构建完成／退休／world-map-request及原子访问窗口，当前纯复制器不授予这些能力。
+- 新测试进入原统一入口：方向与原版三角列、Robin碰撞／存在于错误位置不可被原版探测、类型／重复索引／key／数量／地址／范围／距离／读失败、复制中变化、scope退休与源销毁；定向PASS。完整build_tests.ps1退出0／58 PASS／零FAIL、embedded PASS。未改产品调用点、未重建或部署两份DLL；主体仍719a2d8313a57f86316449bbbb34b023a839d598e6a308d8dc61fa960bcebab4／50968135B，引导71dae36d…／779879B，dist＝安装＝before冻结，R186默认debug是同产品历史证据。
+- 自有3236普通续玩，复用R186默认关闭的自然观察临时probe_access1；实际模块为上述同产品、EXE base7ff63dec0000。当前自然135份最终查询（32普通＋103国内）与两个只读probe的cache scope同world4575261c000，phase4／暂停／date59883804，无GUI／相机／推进输入。以84个不同有向海省对复制128份非同省查询对应基础缓存，重复复制逐字节值一致：83份与最终查询的距离及全部范围顺序相同，45份不同＝30份缓存空但最终有路＋15份非空缓存距离更长；国内相同67／不同29，另7同省由原版本身已知零分支处理，未伪装为此缓存读取。
+- 此差异否定“原生基础缓存就是最终可通行贸易结果”的假设，不是将空条目当无路的理由。完整14141F1D0尚有候选／限制及141420800结果比较等逻辑；不能据上述值推断具体45份都走哪一分支，也不能绕过country／options／通行取得全路线。初比较脚本曾按全128必相同断言，sample0缓存空与实际正距离导致拒绝；纠正为逐项记录差异，保留失败说明，不把错误假设改成源数据。
+- 当前624份州港绑定动态错配13行／6地区，对应5个不同配置出口↔物理港口海区对，全部读得原生缓存。三处缺口对应的3对均两海省／一条当前海样条，空权限几何检查无governed adjacency；另一个错配对35987↔36029有直连几何key，但原版缓存为长路径／448997480、九条几何key且空权限检查挡6个有向governed邻接。这是不能按现有direct key补路的具体反例。三处局部缓存条目不等于完整商业选择见证，尚未据此补画／改变模型或放行海峡。
+- 自有3236只读后正常WM_CLOSE退出0，五原始保护输入逐字节保持，临时probe_access1原子恢复原0；扩展相关资源错误0、六条Unexpected token同基线。当前审计无游戏，未保存、提交或push。私有query probe首生成误套模板tail而被assert拒绝，后续编译找不到未生成文件；按实际owned-lane尾部修正并加生成失败守卫后编译通过。Ghidra未定义两个小函数时改读完整汇编，未创建假函数或放松结果。
+- 海区基础缓存的自有复制／实机条目核对子项完成，三海路末端与正式权限仍未修。下一步查完整贸易函数对当前这3对局部接入的真实选择／country／options，及原生构建完成、退休与身份交接；不把基础矩阵作最终路线回退。地图兼容、生命周期／GUI原生提交／性能及最终同构建A01–A27继续，整体goal ACTIVE。源码前备份与全部证据checkpoint2026-11-01-r187-native-sea-cache/{before,delivery-before,native-access.log,tests.log,embedded.log,cache-type.json,cache-getter-assembly.txt,cache-constructor-assembly.txt,cache-builder-callers.json,source-change.diff,live/natural-queries.json,live/query-cache-scope.log,live/cache-ports-scope.log,live/cache-query-comparison.json,live/loaded-modules.json,live/close.json,live/after.json,config-restored.json,audit.json,NEXT.md}。
+
+
+### 2026-11-01 — R187进行中：原生海区缓存复制与港口缺口只读核对
+
+- 上轮R186完成完整州／同次查询实机绑定，是实际进展。本轮继续三处海路末端，按现有主题与local-reverse-engineering精确EXE边界研究，不操作GUI、不push。源码前备份checkpoint2026-11-01-r187-native-sea-cache/before；产品源码／两份DLL未改，安装仍719a2d83…／71dae36d…。
+- 精确EXE及14141FA80原始缓存分支核对后，新增只在native_access_tests使用的native_sea_cache.h：当前root／world+4500、typed CSeaProvincePathfinder、原版u16→index Robin碰撞查找、24B三角行、32B条目与i64距离／省份集合复制。数据自有，未调用引擎／分配／搜索；空条目只表示观察到空缓存，不证明失败搜索或通行。异常／越界／错误类型／身份重复／原版探测不可达／复制中变化／退休／源销毁用例定向PASS，已在原统一入口目标内。
+- RTTI与构造调用确认VT044EB4D8；1413BAAF0先写owner+100缓存指针，再执行14141EA10填充，因此不能把非空指针当完成见证。PE初扫描的另一候选1412C2224经汇编判为把call操作码当disp产生的假xref，未当真实writer。后续正式消费仍需原生构建完成／寿命窗口与失效绑定，当前helper未接runtime或worker。
+- 完整统一回归仍在运行，无本轮最终PASS／实机结论。正在准备只读比较当前自然贸易返回与原生缓存，以及配置出口到物理港口的动态错配对；私有probe模板首生成错误因实际tail不同被assert拒绝，已按实际owned-lane模板修正并编译，不涉及产品代码或游戏。不能据已有direct key／无governed pair就补画；完整目标ACTIVE。
+
+
+### 2026-11-01 — R186：完整州选择与嵌套贸易返回实机交接，103次国内查询覆盖完整
+
+- 上轮R185是实际源码／部署及用户缺段确认进展；本轮继续原版海路端点绑定。R185的85984在新轮库存中已不存在，未由我方关闭。源码前备份checkpoint2026-11-01-r186-port-selection/before，沿既有local-reverse-engineering精确EXE／ABI／所有权门槛；手动GUI与不push继续。
+- 再次核对1414500F0及141419FEF原始caller：完整九槽void ABI，输出ProvinceSet、两个u16海省、两个完整u32州、距离i64、两份u32候选州组与country32；caller返回后才释放候选。原版将同次选中海省映射为完整州。新增CopyNativePortSearchInputs／Selection，保留完整句柄、零、重复和顺序；最终路径／海省／距离必须逐项等于同次嵌套贸易结果，完整州必须属于对应组。已知无路、未知读取失败及合法非空零距离分开；新边界／读失败／变更／方向／源销毁回归进入原native_access_tests。
+- 默认关闭probe_access下新增自然wrapper观察，只转发九槽原函数一次、不额外查询／分配／释放。TLS要求同完整country、同次恰好一次合法嵌套贸易调用，与外层前后world／machine／stateDB／date／phase／access／hidden／owns／context／paused及候选匹配，再复制最终州输出并查typed当前完整州；借用指针不出调用栈，日志只含自有数值。国内查询记录额度96→256、检查上限仍512；普通仍32／检查128。未向正式worker／权限批次／几何发布，顺序观察不授予访问租约／ABA安全。
+- 完整native/build.ps1退出0、统一build_tests.ps1退出0／58 PASS／零FAIL，embedded PASS、默认debug独立backend95408零UI顶点PASS。当前主体719a2d8313a57f86316449bbbb34b023a839d598e6a308d8dc61fa960bcebab4／50968135B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B；经deploy.ps1安装，源码／dist／安装／自有93548实际模块对应。EXE SHA7f53e326…／image140000000／加载base7ff63dec0000。只改变默认关闭的诊断与自有复制器，R185业务逻辑未改；R185用户GUI确认不冒充本轮完整GUI验收。
+- 普通EXE续玩、临时probe_access1，phase4／暂停／date59883804。完整取得135份查询＝32普通＋103国内，103份外层完整州选择与各自内层query编号／country／world／线程／构建诊断代数／日期／访问／海省／距离／全部范围逐项相同；17次非空原版重建的逐次classification数与query／port记录数完全相等，补齐R184漏7次。没有跳过，7份非空零距离合法，实际已知无路0，额外限制／受限变化仍未覆盖。
+- 同进程PROCESS_VM_READ生产shipping解码复制并释放读取句柄后比较：93条当前lane完整句柄／country／两端州／距离64／全部范围与最终构造记录一致；每条按同world／同batch／完整州对／距离／范围都只有1份外层选择结果相符，多义0。93条全部与原始查询方向相反，明确原版最终构造的方向转换，不能沿用查询两端顺序。此为同批值与方向的强对照，不是跨调用身份cookie／原生集合epoch／原子租约；三条历史部分海路均取得完整州／海省记录，尚未据此补画或改变权限。
+- 自有93548没有市场／相机／推进输入，正常WM_CLOSE退出0。五原始保护输入保持，临时probe_access1退出后原子恢复原0；额外校验当前临时INI仍为我方预期后才恢复，避免覆盖外部编辑。扩展相关资源错误0、六条Unexpected token同基线，当前审计无游戏。未保存、提交／push；完整构建／回归／本轮实机没有未解释失败。
+- 完整州选择的同次自有复制及实机对照子项完成。下一步追踪这三个实际端点的原版图形来源，并完成查询／最终lane的正式身份及world／map／request版本、访问窗口／退休更新与集合寿命；不得将采样代数充当正式generation。真实逐lane权限生产方仍未绑定，三海路末端未修；受限重算／已有lane更新、改图、GUI／原生提交与生命周期／性能／最终A01–A27继续，整体goal ACTIVE。
+- 证据E:/Code/v3-analysis/checkpoints/2026-11-01-r186-port-selection/{before,delivery-before,delivery,port-wrapper-assembly.txt,port-caller-assembly.txt,native-access.log,source-change.diff,build.log,tests.log,embedded.log,debug-default.log,deploy.log,live/session-freight.log,live/owned-lanes.log,live/port-selection-audit.json,live/loaded-modules.json,live/close.json,live/after.json,three-port-records.json,config-restored.json,audit.json,NEXT.md}。原始数据与诊断ID不进入玩家地图表／运行依赖。
+
+
+### 2026-11-01 — R186进行中：原版完整州选择与同次贸易返回交接
+
+- 上轮R185是实际源码进展并已取得用户缺段修复确认。本轮继续完整目标中的海路端点绑定；新轮开始未检测到游戏进程，未关闭任何用户会话。不push、手动GUI继续。源码前备份checkpoint2026-11-01-r186-port-selection/before；当前安装仍R18508e1e433…，原版正式通行生产方与三处末端仍待。
+- 汇编／原始caller再次核对1414500F0九槽void ABI：输出ProvinceSet、两个u16海省、两个完整u32运行州、距离i64、两份u32州组、country32；原版按选中海省从同次映射取完整州，caller在返回后才释放州组。新增两份自有复制器，保留完整句柄／0／重复／顺序，最终输出必须逐项等于同次嵌套贸易结果并属于对应候选组；已知无路与未知／读失败分开，非空零距离合法。原native_access_tests的复制／边界／变更／寿命／方向用例定向PASS。
+- 现有默认关闭probe_access下新增自然wrapper观察代码，只转发原函数一次并保留全部九槽；TLS同次恰好一个合法贸易查询、完整country、同世界／DB／日期／访问／线程上下文和前后候选匹配后才记录完整州输出，结果仅自有诊断。国内查询记录额度96→256补足R184103次中漏7次；检查额度仍512。未接正式权限／worker／几何，不把前后观察当租约或ABA证明。
+- 完整构建正在进行，新增observer尚无完整统一回归／部署或实机证据；不能继承R18558 PASS到本轮修改。后续先构建／统一检查，再在可用自有暂停会话只读核对完整州及原版最终构造方向；三海路末端和全目标继续ACTIVE。
+
+
+### 2026-11-01 — R185：同市场分属州装卸修复已部署，当前新会话保留
+
+- 用户新报分属地区道路缺段，本轮优先陆路。新反例在修复前FAIL：任意州接入点可独立装卸，货流绕过实际州内道路。新增自有landHubs，从当前typed主陆地节点role mask1复制完整控制点／省份完整运行州／region，核对原版方向、当前样条及联合复读；按同market／definition／geo共用有见证的主装卸点，进出必须走实体道路。不借州门中转、不按ID→key或最近点选枢纽；新字段进入缓存身份。这个位置是国内观察性模型假设，无主点见证区域仍保留旧接入，不称全图完成。
+- 01／02／03按数据／分配／地图主题重读，沿local-reverse-engineering精确版本边界。没有增加新hook／主动查询／经济写入。输入／输出反向、缺真实道路、外市场枢纽、坏／冲突主点及同revision缓存回归进入已有view测试；typed复制／反向原生定义／锚点及region异常／源销毁进入已有domestic测试。完整build.ps1退出0、统一build_tests.ps1退出0／58 PASS／零FAIL，embedded与默认debug独立backend93064零UI顶点通过。
+- 当前主体08e1e43388ece6d7e75d327a18e32dc44c46e454f725ff381991cc47af086932／50815294B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B；经deploy.ps1部署，dist＝安装＝自有81652实际加载，EXE SHA7f53e326…／image140000000／加载base7ff63dec0000。普通续玩、不加debug_mode、probe_access始终0。
+- 同一实际输入释放读取句柄后做自有回放：531主枢纽、25420条余额的target／available逐项保持，target140740221 milli；分配84807060→84922349、未满足55933161→55817872，9424笔按州／商品独立守恒。库尔努尔91501→91504道路（仅本存档诊断标签）从0变21笔；普通完整样条48197接缝broken0。生产facts／view／ribbon函数回放中该段quantity13041700（1e5展示单位），市场0共271段／271条、马德拉斯527共44段／44条，都包含该段。不是当前GUI点击／GPU像素验收。
+- 自有95032／81652全程观察phase4／暂停／date59883804，无市场／相机／推进输入，正常WM_CLOSE退出0；各自退出后五保护输入保持，扩展资源错误0、六条Unexpected token同原基线。随后检测到新进程85984（18:18:04），不视为我方测试会话，不操作／关闭／替换DLL，保留运行。未保存、提交或push。文档首归档脚本因断言“没有游戏”遇新进程而拒绝，尚未写最终记录；本次按保留新会话纠正，不把该拒绝当产品回归。
+- 2331同市场／2701含跨市场诊断道路没有端点落在别的连接内部，排除首路口假设，未添加无关拆边代码。首探针误传历史goods49被拒绝，按当前catalog53重跑通过。私有PASS打印遇GBK错误不影响完整测试，最终ASCII核对58条（44冒号前缀＋14其他）。下方“R185进行中”是先前记录；失败原始文件均保留。
+- 同市场分属州主枢纽装卸漏洞子项完成；用户在本次部署后明确反馈“现在没有发现这些问题了”“问题已修复”，本次州内缺段取得用户实机确认。该确认不外推所有地图／不同市场过境或最终矩阵；无真实货流不为视觉连续填假量。缺主节点见证／不同市场过境、更广场景继续。三海路末端、正式完整通行生产方、改图新字段、scope／写任务join／生命周期／性能及同构建A01–A27未完成，整体goal ACTIVE。备份／证据checkpoint2026-11-01-r185-split-state-land/{before,delivery-before,delivery,source-change.diff,before-test.log,after-test.log,build.log,tests.log,embedded.log,debug-default.log,deploy.log,live,live-final/formal-hub.log,live-final/loaded-modules.json,live-final/close.json,live-final/after.json,audit.json,NEXT.md}。
+
+
+### 2026-11-01 — R185进行中：分属州装卸入口导致州内道路漏流，修复已回放
+
+- 按用户新报的分属地区缺段转到陆路；未继续增加海路选择hook，不push。源码前备份在checkpoint2026-11-01-r185-split-state-land/before。自有95032普通续玩／probe_access0，暂停date59883804，只读复制后已正常WM_CLOSE退出0；五保护输入保持，无游戏。原版完整通行生产方、三海路末端和最终矩阵继续。
+- 2331条当前同市场陆路及2701条含跨市场诊断道路均无“整条连接内部遇到另一连接端点”，排除最初路口猜测。实际模型允许净供需在任一州接入点独立装卸；库尔努尔同市场分属州内91501→91504实体道路因此货流0，并不是样条缺失。马德拉斯还存在不同市场飞地，不能据截图统一放行。
+- 新增自有landHubs，从原版当前typed节点role mask1读取主陆地控制点及省份完整运行州、region关系；方向／锚点／原版几何、复读和世界检查保留。按同market／definition／geo将有见证的主枢纽作为州级净订单装卸位置，实际进出必须走实体道路；不以州门作中转。无已验证主枢纽的区域保留既有接入，仍是模型假设，不冒充原版逐笔运输；外市场枢纽不借用。身份比较纳入新字段。
+- 新反例在修复前FAIL、修复后原native_trade_view_tests通过；原native_domestic_tests新增typed主枢纽复制／异常与源销毁用例通过，随后增加反向定义用例待统一入口。相同真实自有输入复制531个主枢纽，25420条供需余额与target140740221 milli保持；分配84807060→84922349，9424笔逐州／商品独立守恒。库尔努尔该段从0变为21笔经过，普通完整样条48197接缝broken0；不等于截图像素／所有分属地区验收。
+- 完整native/build.ps1进行中；该修订尚无完整统一回归、部署或新DLL实载结论。旧b0a1c9c3…仍为当前安装，58 PASS仅属R184历史产品。首只读探针误传goods49被明确拒绝，按当前原生catalog53重跑通过；未把拒绝当模型失败。
+
+
+### 2026-11-01 — R184：自然贸易请求／同次分类实机复制，最终州选择仍待绑定
+
+- 上轮R183完成贸易函数第7选项与返回的隔离验证，是源码／证据进展；本轮继续真实原版数据闭环。新增CopyNativeTradeSearchInputs，完整复制两份u16候选及选项中的海峡完整句柄、海省对和u16选择值；保留顺序、重复及未知额外限制的原始数值，不把它们伪装为注册许可。界限／读失败／候选非法／复读变化拒绝，源销毁后自有；新异常用例已接原native_access_tests。
+- 默认关闭probe_access下新增精确14141F1D0自然观察钩子，入口签名及R183完整七槽ABI；原函数只转发一次，保留第6临时槽及原返回值，不发起额外搜索。读取前后核对world+4500仍为同一manager、world／machine／stateDB／date／phase／access／hidden／owns／context以及完整请求／选项；要求原返回地址等于传入输出，且TLS内同次mode1分类恰好一次、country完整ID一致、分类输出与原谓词trace相符，再复制40B结果。线程局部见证按RAII恢复，全部输出为自有数值；不发布正式路线、权限批次、worker或统计，顺序观察不授予租约／ABA安全。
+- 首候选648e9669…／50677026B完整构建、统一58 PASS、embedded及默认debug独立backend47472零顶点通过，部署／自有33448实载取得96份真实搜索，均caller RVA0122E6F8／build0。额度被先发生的普通国际查询耗尽，未覆盖国内重建；该覆盖不足已明确记录。正常暂停退出后，修订为普通查询检查128次／最多32份、国内重建检查512次／最多96份、每份最多256范围记录，保持有界且不给任一类借用旧数据。首候选及会话单独冻结，不将其证据混为最终构建。
+- 最终完整native/build.ps1退出0，统一build_tests.ps1为58 PASS／零FAIL／退出0、embedded PASS、默认debug独立backend94436零UI顶点PASS。当前主体b0a1c9c3384373b6cfa7f28b8ed494c4bde744e3b3ead351c81fbe03b1d6531c／50679724B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B；经deploy.ps1安装，源码／dist／安装／最终自有93928实际模块对应，EXE base7ff63dec0000，静态EXE SHA7f53e326…／image140000000。
+- 普通EXE续玩不加debug_mode，最终暂停会话实录128份：32普通＋96国内，后者来自13次重建／13个国家、caller RVA014502B1。全部phase4／date59883804／access2／owns1／context1，同一world；原返回缓冲allocator RVA0512CDC0，候选／选择／范围／距离复制通过，跳过0、分类拒绝0、构建绑定拒绝0。该批均额外限制数组为空、selectorFFFF、原始allowed为完整9项／denied空；只证明这批默认选项，不外推受限变更。4份非空原版结果距离0，未当无路或未知；本批没有已知无路场景。
+- 同进程PROCESS_VM_READ探针复用生产DecodeNativeShipping，释放读取句柄后导出自有记录；93条当前国内lane的完整句柄／country／两端州／64位距离／全部范围与同次构造绑定记录逐项一致。96份国内查询按同world／同build／country／距离／范围比对：55份只有一条最终记录数值相同（54个不同lane），33份对应多条同值记录（33个不同lane），8份无最终同值记录。不选首个、不把数值相同当获胜查询身份，不据此猜方向或共享地区的具体港口。全部17次非空重建合计103次分类／查询，当前额度只记录96；剩余7次及国家156／208／465／689不在查询记录内，三缺口中的两条因此也未取得该层记录。
+- 上述为真实自然贸易返回窗口复制及顺序只读对照，不是原子经济访问租约／完整写任务join、跨世界发布、主动查询分配／释放或最终州选择证明。当前查询只带选中海省，33份同值歧义表明后续须观察1414500F0原版选出的完整运行州／候选组输出，不能按country或地图地区找第一个州。三条末端仍为现有部分几何，未补猜测连接，也未启用军事权限替代商业权限。
+- 自有33448与93928均观察phase4／暂停／同date59883804，无市场／相机／推进输入，分别正常WM_CLOSE退出0。每次临时probe_access1均在退出后原子恢复原0；五原始保护输入逐字节保持，扩展资源错误0、六条Unexpected token同原基线，当前无游戏。未保存进度、未提交／push。首次及最终完整构建／测试无未解释失败；诊断限额调整是覆盖修正，不是生产物流算法变化。
+- 自然贸易请求与同次分类复制子项完成。下一步补原版完整州／港口选择输出与查询／构造／world／map／request版本的绑定，并给实际103次查询足够的诊断覆盖；访问窗口／结果寿命未证前不增加主动搜索。完整逐航线权限生产方仍未绑定／probe_access0，三处末端未修；当前手动GUI、改图、完整生命周期／性能及最终同构建A01–A27继续，整体goal ACTIVE。
+- 备份及证据E:/Code/v3-analysis/checkpoints/2026-11-01-r184-natural-trade-search/{before,delivery-before,delivery-first,delivery,build.log,build-final.log,tests.log,tests-final.log,embedded-final.log,debug-default-final.log,deploy-final.log,native-access.log,source-change.diff,live,live-domestic/owned-lanes.log,live-domestic/trade-query-audit.json,live-domestic/session-freight.log,live-domestic/loaded-modules.json,live-domestic/close.json,live-domestic/after.json,config-restored.json,audit.json,NEXT.md}。私有原始数据／辅助探针不进入Git或玩家运行依赖。
+
+### 2026-11-01 — R184进行中：自然贸易请求已捕获，补国内诊断额度
+
+- 首候选648e9669…／50677026B完整构建及统一58 PASS、embedded／默认debug零顶点通过，经deploy.ps1部署并在自有33448实载。暂停date59883804中记录96份七槽自然贸易搜索及同次mode1分类，全部默认选项；首次额度均由caller RVA0122E6F8／build0消耗，未覆盖国内港口重建，不能当国内端点绑定完成。
+- 自有33448无GUI／推进输入，正常WM_CLOSE退出0，五保护输入保持、原probe_access0已恢复，当前无游戏。证据checkpoint2026-11-01-r184-natural-trade-search/live及delivery-first；旧产品／原输入备份在before／delivery-before／protected。
+- 正在将诊断额度分为普通查询32份与国内重建96份、检查次数分别128／512，源码已改；最终构建正在执行，尚无该修订的新增测试／部署结论。无主动搜索、正式数据／几何消费或经济修改，不push；整体goal ACTIVE。
+
+### 2026-11-01 — R183：贸易搜索选项／返回契约隔离核验（未启用查询）
+
+- 上轮R182已取得两份自然舰队结果及当前连接的实机对照，是源码／证据进展；本轮按完整目标转回实际贸易函数，未将军事访问当商业许可。继续沿01／02／03和local-reverse-engineering的精确版本、完整ABI与所有权门槛；验证原版贸易函数的选项／结果后，仍须补真实调用／访问窗口才能启用。
+- 精确EXE SHA256 7f53e3260cf46b6247f6906837464944038c4f74e860274ad3d394e0c04f811f／image140000000。14141F1D0汇编确认RCX=manager、RDX=返回存储、R8／R9=两份u16候选数组，栈第5槽为country32、第7槽为选项指针；旧1414500F0反编译仅列五参，遗漏了实际写入caller rsp+30的选项指针。第6槽在本体作为临时变量写入后使用，不能给其发明业务含义，也不能按旧五参形式调用。
+- 当前wrapper的选项为两份24B数组：+0额外限制海峡完整句柄、+18额外限制海区省份对，+30为原样转发的u16搜索选择值（原调用默认FFFF，详细语义未启用假设）。函数先以country调用原版14141FDA0／mode1，将选项中确在allowed的海峡移到denied，将denied定义的两海省对与额外省份对合并；14141F910原版候选选择／141421820限制对筛选后，必要时走141420800受限搜索并比较原版距离值。原始分类结果不自动等于带选项查询的最终许可；后续采集不能丢掉这两份数组或假定总为空。
+- 独立进程执行精确14141F1D0包装、14141F910候选选择及141421820限制对筛选机器码，11例通过：完整country／海峡句柄、mode1接线、第7选项、限制对、候选最小值／相同值保留首项、受限结果替代或失败、无路、同省零距离、64位值、第6槽任意比特不影响所测结果，以及输入字节保持／替身分配器下临时数组释放。分类器、底层缓存／受限搜索、country查找、数组拷贝和分配服务为替身；这不是实际外交／运河判定、原版分配器／TLS初始化或游戏中主动调用安全证明。
+- 新增CopyNativeTradeSearchResult，仅现有native_access_tests调用；复制原版40B结果：数组头0..17、选中from／to在18／1A、64位距离20（十六进制偏移），保留原生范围记录顺序，不排序造路径。核对原请求候选、合法省份／重叠、范围／地址／数量界限、非负距离、复读变化；输出自有数值。必须先有已发生原版调用及请求／版本绑定的外部见证，初始化缓冲本身不能证明搜索执行。空范围＋FFFF／FFFF＋距离0为已知无路，与读取失败区分；非空零距离可合法，不能当未知。此复制器不自行验证country、world／map或许可。
+- 新异常／方向／源销毁／端点／溢出／同点／无路及复制中变化用例进入已有native_access_tests；11份原始机器码输出保存后，在源进程退出后用同一复制器回放均一致，包含2份已知无路及1份同省零距离。统一build_tests.ps1退出0、58 PASS／零FAIL，embedded PASS。新增函数没有正式调用点，本轮未重建产品、未部署／启动游戏、无新hook或游戏进程内查询，不push。
+- 私有脚本首版TLS getter少复制RET，独立进程异常；修正长度后又因只取第一条pdata范围，漏掉141421820的展开链后续代码，隔离执行失败。改用仓库已有ironpe.PE.extent，完整范围01421820..01421995后11例通过；没有修改通用ironpe或游戏。contract-first-error.log、contract-second-error.log、contract-trace.log及harness-before-unwind-fix.py保留，不将失败当PASS，不把替身服务扩大为真实原生寿命证明。
+- 产品保持R182主体b85b773fe2b5f220822e37d593966b90b8998ecb2f97090da0117dcc942cbfc9／50409230B、引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B，dist＝安装；R182实际32488加载是历史同产品证据，本轮无新实机。五原始保护输入保持／probe_access0、当前无游戏；原overlay源码未变，未保存、提交／push。新复制器源码／测试不是已交付的正式查询功能。
+- 贸易搜索选项／返回的隔离核验子项完成。下一步只在自然14141F1D0调用中观察完整请求、两份选项、原始分类／有效限制、返回与caller释放边界，并绑定原版所选州／港口与world／map／request版本；未取得原版访问窗口和分配释放证据前不增加主动搜索。三处末端未修，完整逐航线权限生产方仍未绑定；当前GUI／改图／生命周期／性能及最终同构建A01–A27继续，整体goal ACTIVE。
+- 备份与证据E:/Code/v3-analysis/checkpoints/2026-11-01-r183-trade-path-contract/{before,before-manifest.json,trade-search-assembly.txt,wrapper-assembly.txt,selector-assembly.txt,blocked-filter-assembly.txt,trade_contract_harness.py,native-function-extents.json,trade-contract-cases.json,contract-result.log,decoder-result.log,native-access.log,tests.log,embedded.log,source-change.diff,audit.json,NEXT.md}。私有机器码／反编译及原始结果不进入Git和玩家运行依赖。
+
+### 2026-11-01 — R182：自然舰队搜索结果观察已实机核对（正式路径仍未接入）
+
+- 上轮R181新增普通路径自有复制器并通过原始重建输出回放，是源码／证据进展；本轮验证自然原生调用，没有将其当作商业权限或港口修复。沿用01／02／03与local-reverse-engineering的精确版本／ABI／生命周期约束。原版搜索1414043D0两参及完整0／1返回、141404330结果初始化及调用后总返回结果地址、调用者的结果释放顺序均经汇编核对；没有主动调用原生搜索／构造／权限函数。
+- 精确EXE SHA256 7f53e3260cf46b6247f6906837464944038c4f74e860274ad3d394e0c04f811f／静态image140000000；RTTI独立恢复TPdxRefDatabase<CTravelNode,7>主vtable144439800。140C59AF0以global1459667F0取当前DB、按完整节点ID的24位槽查表并复核完整ID，1406B9D20的有效性判断为ID!=UINT32_MAX；没有最近点／名称／硬编码ID→key映射。ObserveNativeFleetPathRequest只接受当前typed CFormationPathfinder／fleet kind1及typed country和两个有效节点引用，复制原版定义坐标、country和遍历选择；未知、回收句柄、范围／类型错、读失败或复读变化拒绝，输出全自有数值。
+- 默认关闭的probe_access下新增1414043D0诊断钩子，精确入口签名核验；每个自然调用原样转发原函数一次，保留完整返回值。仅原版返回1、原结果初始为空且零总量、前后request一致及world／machine／DB／date／phase／access／hidden／owns／context观察一致时复制结果。最多观察前1024次调用、记录64份且每份不超512步；其他情况跳过。返回前同步复制、源指针不出调用栈、不发布worker／正式几何／权限批次。前后观察匹配不是原子租约或ABA证明。
+- 新请求复制的完整句柄、country、typed DB／node／definition、零节点、坐标、源销毁、未知类型／回收／越界／读失败／地址溢出及复制中变更用例加入原有native_access_tests。完整native/build.ps1退出0；统一build_tests.ps1为58 PASS／零FAIL／退出0，embedded PASS、默认debug独立backend PID4980零UI顶点PASS。R181的7组重建机器码为此前证据，本轮没有把它们重记为新原生搜索执行。
+- 当前主体b85b773fe2b5f220822e37d593966b90b8998ecb2f97090da0117dcc942cbfc9／50409230B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B；经deploy.ps1安装，dist＝安装＝自有PID32488实际双模块，EXE运行base7ff698bc0000。普通EXE续玩、不加debug_mode，临时probe_access1记录2份自然fleet搜索（thread80460／return caller RVA00D73139，原版结果均1，access2／owns1／context1）：country37，3392→3393／connection3841／distance=cost34949705；country201，3415→3416／connection3971／distance=cost37277911。均一条普通边，没有本轮长路径／自定义段实机覆盖。
+- 随后在同暂停存档使用PROCESS_VM_READ独立核对这两份自有日志记录与当前typed国家／节点DB／节点定义、源节点原生邻接表和完整连接句柄；原版两端指针方向、定义端点指针／固定坐标、+60距离逐项一致，两边均runtime kind5／definition kind2，总量与记录之和一致。组合复读未见变化。此为自然军事舰队结果及顺序只读当前对象对照，不证明贸易权限相同、不等于三条shipping lane的实际端点绑定，也未证明主动调用的分配器／访问窗口／释放ABI。
+- 观察phase4／暂停／date59883804保持，无市场／相机／推进输入。自有32488正常WM_CLOSE退出0，五保护输入与测试前原始字节保持；临时probe_access1在退出后原子恢复原ini／probe_access0。扩展资源错误0、六条Unexpected token同原基线，当前无游戏。未保存进度、未提交／push。delivery-before冻结R179双DLL及部署脚本，delivery冻结当前R182交付；备份不是自动回滚指令。
+- 自然搜索结果的受限观察子项完成，正式collector／海路仍未接新结果，三处港口末端未修复。下一步补实际端点请求与结果／地图版本绑定、商业通行语义、访问窗口与原生结果寿命后才可正式消费；完整逐航线权限生产方仍未绑定／probe_access0。当前手动GUI、改图、完整生命周期／性能／最终同构建A01–A27继续，整体goal ACTIVE。
+- 源码前备份、汇编、RTTI、全部构建／回归／实机与恢复证据E:/Code/v3-analysis/checkpoints/2026-11-01-r182-native-search-observer/{before,before-manifest.json,node-rtti.json,node-resolver-assembly.txt,search-entry.txt,wrapper-assembly.txt,caller-assembly.txt,native-access.log,build.log,tests.log,embedded.log,debug-default.log,deploy.log,source-change.diff,live/verified-paths.json,live/session-freight.log,live/loaded-modules.json,live/close.json,live/after.json,config-restored.json,audit.json,NEXT.md}。私有原始机器码／反编译／存档数据不进入Git和玩家运行依赖。
+
+### 2026-11-01 — R181：原版路径结果机器码核验与自有复制器（未接正式调用）
+
+- 上轮R180通过动态普查定位三处缺口为配置出口／实际港口海区错配，属于取得新证据的进展；本轮沿该证据验证原版路径结果，未缩小完整交付目标。重读01／02／03及local-reverse-engineering技能，复用既有测试与原生发现入口；最低通过标准为精确EXE重建输出／顺序／方向与自有解码一致、异常或变更拒绝，未取得权限／scope／寿命证据前不启用。
+- 精确EXE SHA256 7f53e3260cf46b6247f6906837464944038c4f74e860274ad3d394e0c04f811f／image140000000中，独立进程执行141405EF0原始路径重建、141407FB0追加及141403CE0坐标读取机器码。7组覆盖完整连接／节点ID、零节点、反向、三边顺序、64位距离／费用独立、零距离、自定义段与同点空路径，均通过且合成输入保持。使用合成前驱图和预分配输出，未执行原版搜索、权限、构造分配器或真实游戏对象寿命；没有以替身验证这些内容。
+- 新增native_path_probe.h，仅由现有native_access_tests包含；CopyNativePathResult复制原版已成功精确节点搜索的自有数值结果。按原版64B布局取完整连接／from／to及固定坐标、独立距离／费用；核对预期端点、每步连续性、总数／容量／地址界限、非负／64位溢出及总账，复读头与全部记录后返回。输出不保留引擎指针。UINT32_MAX自定义转移显式拒绝，不画直线；空结果仅接受同一完整节点和坐标且零总量。复制器不验证对象数据库、国家权限或世界租约，尚不能用于正式几何。
+- 异常用例加入已接统一入口的native_access_tests：缺字段／读失败、句柄方向、同ID异坐标、超量／溢出、负值／总账不符、复制期间头／内容变化、源销毁、自定义段及同点空路径。另将7份实际机器码输出原始记录保存为二进制，在原进程退出后用同一复制器回放，5份普通结果精确通过、2份自定义结果按预期拒绝。完整build_tests.ps1退出0、58 PASS／零FAIL；verify_embedded退出0。新增头不进入产品链接，无需重建或部署双DLL。
+- 独立PE调用扫描补齐Ghidra空调用表：原版141404330初始化结果、调用1414043D0后始终返回结果地址，不能将非空地址当搜索成功；后续自然调用观察须在实际搜索返回点核验原版成功值。141401E90、140D72D80及140D87950为其他实际搜索调用者，国家舰队构造引用在1411304D0／141130760；仅静态候选。R180的基础权限恒true与舰队军事访问差异继续有效，不用其绕过商业权限。
+- 两份产品保持R179主体f53f81d65f1058b9a066ba2b48e4ce8159fa16765f36fc5d89bce4728db588e0／50222428B、引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B，dist＝安装。没有启动／操作游戏、没有新增native调用／hook、未保存／提交／push；五保护输入与R180退出后基线逐字节一致，原版probe_access0保持。统一入口的独立D3D／加载器harness不是当前游戏实机验收。
+- 结果重建／普通路径复制子项完成，三处海路末端仍未修复。下一步验证自然搜索调用的类型／国家／参数／成功值、结果所有权与访问窗口，才能谈正式端点接入。逐航线完整通行批次生产方仍未绑定；当前UI、原生scope、改图、生命周期、性能及最终同构建A01–A27继续，整体goal ACTIVE。
+- 源码前备份与完整证据E:/Code/v3-analysis/checkpoints/2026-11-01-r181-native-path-result/{before,before-manifest.json,reconstruction_harness.py,reconstruction-result.log,reconstruction-cases.json,native-result-0.bin,decoder-native-result.log,native-access-result.log,tests.log,embedded.log,original-search-callers.json,reconstruct-assembly.txt,append-assembly.txt,audit.json,NEXT.md}。私有机器码／反编译／输出只留外部checkpoint，不进入Git或玩家运行依赖。
+
+### 2026-11-01 — R180：港口出口错配普查与原生舰队寻路候选（未启用）
+
+- 本轮只做当前数据只读核对及精确EXE静态分析，未修改产品源码／DLL、未构建／部署、不提交／push。当前主体仍R179 f53f81d65f1058b9a066ba2b48e4ce8159fa16765f36fc5d89bce4728db588e0／50222428B，引导71dae36d…／779879B；R179统一58 PASS为同产品历史证据，本轮没有新增整套PASS。R177港内路径与R179物理可达性已在生产使用，本轮发现的寻路候选仍未启用。
+- 独立PROCESS_VM_READ探针复用生产解码器，在同一EconomyReadWindow内复制当前州、港口／海路／样条／naval_exit定义并复核窗口；释放读取句柄后分析自有数据。624份运行州港口绑定中13份、共6个物理地区的配置出口海区与实际港口所在海区不同。当前三条不完整lane218103887／218103899／218103903均配置出口属于成员、实际港口海区不属于成员。动态普查不使用ID→key地图表；上述句柄只是本次证据标签。外部顺序读取仍不构成原子原生访问租约。
+- naval_exit模板索引来自当前typed CStateRegionTemplateDatabase；141572DE0汇编以JBE接受index==bound，故+F60是包含端点的最大索引。私有初版误用排他上限，漏四份州，保留port-census.log；修正后的port-census-final.log为最终624份记录，未将此新字段接入产品。1425E8450→1425E8690→1425E8070原版成员边界调用传入成员地区，非外侧邻居；没有可直接改成peer的静态证据。三个当前外侧直连key存在且第一省份对未命中海峡定义，不等价原版选择／通行许可，未补画外侧海段。
+- 精确EXE 7f53e326…／image140000000确认NTravelNetwork::CPathFinder构造141403EF0、搜索1414043D0和结果重建141405EF0；基础vtable权限回调为常量true，不能用于绕过原版权限。CFormationPathfinder国家构造140D6CD80／vtable1444A0438的type+168=1由FLEET_CONNECTION_CHARTED_COST_MULT原版常量引用独立确认；通行回调140D6CE50同时涉及海峡谓词140BE7C10及军事地区访问14140B890，不能把军事语义自动当贸易许可，+190遍历选择也不能与type混用。
+- 原版搜索参数+40为结果数组，+58原版距离／+60费用；重建候选每条64B：connection+0、fromNode+4、fromXY+8/+10、toNode+18、toXY+20/+28、distance+30、cost+38（偏移均十六进制）。这些是静态候选，尚无真实调用／结果生命周期验收；构造器涉及引擎／TLS分配，不主动调用、不挂新钩子、不向worker交指针。下一步须验证原版country／mode／访问窗口、结果方向、分配释放及寿命后，才讨论末端几何接入。
+- 自有正常续玩PID7468实际加载对应双DLL，观察phase4／暂停／date59883804；无市场／相机／推进输入，正常WM_CLOSE退出0，五保护输入逐字节保持，扩展资源错误0、六条Unexpected token同基线，当前无游戏。证据及文档前备份E:/Code/v3-analysis/checkpoints/2026-11-01-r180-native-port-access/{before,audit.json,port_census.cpp,pathfinder-rtti.json,formation-pathfinder-rtti.json,pathfinder-callers.json,naval-exit-assembly.txt,trade-render-boundary-assembly.txt,fleet-cost-define-assembly.txt,live/port-census-final.log,live/loaded-modules.json,live/close.json,live/after.json}。
+- 港口出口错配调查子项完成，三处末端仍未修复。真实通行批次生产方仍未绑定／probe_access0；当前UI、原生scope、改图、生命周期、性能及最终同构建A01–A27继续，整体goal ACTIVE。
+
+### 2026-11-01 — R179：物理可达性前置分配，断路不再冒充已满足
+
+- 先复现州级连接把不相连的港／道路节点视为同一终端，导致不可达廉价货源抢走真实替代供给；before-test.log为预期失败。国内模型现按当前实体land／localLand／原版shipping／港内路径建物理节点图，再调用既有最小费用最大流；删除分配后补路和缺转接占位。节点保留当前market／definition／geo及完整控制点，未知地区仍按完整运行州隔离；没有跨市场、最近点或ID→key表，没有新原生调用。
+- 沿用州级订单聚合假设：州的净供需可从它已验证的接入节点装卸，不定位建筑内部。AllocateFreight可选自有stateAccess以独立有向收／发门共享该州供需上限；这些门不能形成中转捷径，最终route仅保留物理边。原单终端／旧图入口保持。无实际路径留下供给／未满足；已知原版海运和港内连接仅缺绘图时保留数量／不完整几何；同一已证物理点可有合法零距离货流。零距离、Freight目标／满足／未满足与原生1e5数据仍分开。
+- 新增断开中转、收货／供货州不能跳节点、实际替代供应、恢复接驳、共享供给上限、残余重分配最优、空图／空接入、越界／重复／缺失／冲突接入、同点零距离及缺控制点但已知连接用例，均进入原有freight_tests／native_trade_view_tests。旧反向测试改为检验TravelEdge方向与strip方向组合；旧端口再生／混合筛选夹具原本依赖缺接驳仍满足，先验明断路未满足，再补实际路段测试原交互。after-test.log／after-test-2.log保留这两次旧预期失败，after-test-3.log及完整入口通过。完整构建、统一58 PASS／零FAIL／退出0、embedded PASS、默认debug关闭零UI顶点PASS。
+- 当前主体f53f81d65f1058b9a066ba2b48e4ce8159fa16765f36fc5d89bce4728db588e0／50222428B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B，经deploy.ps1安装，源码／dist／安装／自有79444实际模块对应。普通续玩暂停date59883804，只读复制后关闭读取句柄，在同一自有输入上运行R178模型与新模型，25420份州／商品目标及可用供给逐项相同；国内目标140740221 milli，满足94128826→84807060，未满足46611395→55933161，差额9321766转为未满足，并非删需求或清零原版贸易。最终shipment9275→8842，1344份余额分配变化；市场0国内量23523099→14210265 milli。
+- 私有探针持久化8842笔最终货流与25420份余额，独立逐州／商品汇总输入输出，所有供应上限、需求上限与守恒通过。20笔零距离货流复核当前相同definition／geo，非虚造线路。已知完整几何38838接缝broken0，伦敦344次港内连接broken0；只排除40次原版部分海路腿，非海路不完整0。3条原版部分海路为218103887(10→207，使用8次)、218103899(922→936，32次)、218103903(611→608，0次)，合计40，继续修复。初版私有报告按数据库槽位枚举lane却按完整ID排序的模型下标取腿，标签错配；修正诊断排序后最终记录正确，生产排序未变。初版physical.log保留，不引用其错误逐航线标签。
+- 上述为外部顺序只读观察及自有重放，不是原子原生访问租约／当前GUI可见验收。未操作市场面板／相机／推进，不能沿用R178的界面数量作为新构建可视证据。单次外部计算新125ms／旧47ms只是此次重放，不满足渲染P95／模拟速度性能矩阵。世界／通行批次正式生产方仍未绑定，probe_access0；海峡权限、3处末端、改图、生命周期、性能及最终同构建A01–A27继续，整体goal ACTIVE。
+- 自有79444观察始终暂停同日期，正常WM_CLOSE退出0，save／settings／ini／content／continue五输入字节保持，扩展相关错误0、六条Unexpected token同原基线，当前无游戏。未保存进度、未提交／push。首次私有freight测试编译误列仅有头文件的freight_ribbons.cpp，更正命令后通过；完整产品构建及统一入口无未解释失败。
+- 源码及原R178两DLL部署前备份、失败／通过和逐笔证据E:/Code/v3-analysis/checkpoints/2026-10-31-r179-physical-domestic-allocation/{before,before-manifest.json,source-change.diff,before-test.log,after-test.log,after-test-2.log,after-test-3.log,freight-final.log,build.log,tests.log,embedded.log,debug-default.log,deploy.log,live/final-physical.log,live/loaded-modules.json,live/close.json,live/after.json,audit.json}；目录按开始备份日期命名，实机验收为11月1日。
+
+
+### 2026-10-31 — R178：跨地区真实道路转接，缺段1395→556次
+
+- 继续用户分属地区缺段报告，R177暂停存档只读分类为83组州／端点共1360次缺转接，另35次既有部分海路腿；其中839次可沿当前同市场道路绕行邻州。旧转接只查单地区，遗漏已存在的跨地区实体连接，没有按距离／名称造线或扩大市场权限。
+- 转接节点改为(当前market／definition／geo，完整控制点)，未知地区仍按完整运行州隔离。纳入已验证kind2／3／4的当前同市场跨地区land，按原版方向把两端绑定各自地区；只有实体连接才允许跨区。不同市场、无连接的异地区重号点、未知地区不自动合并；无新海路／新ABI。绕行距离／费用／工作量入最终shipment，州级原分配数量与Freight需求账保持。更正NativeDirectedStrip的bit63及complete注释，与R177港内几何及缺转接事实一致。
+- 跨地区用例先失败(before-test.log)后通过，并覆盖原版定义反向。扩大转接读取暴露旧夹具把rail key低位1绑定strip低位0，after-test.log保留失败；修正夹具768→769，不弱化生产校验，final-test.log及统一入口通过。完整构建、统一58 PASS／零FAIL／退出0、embedded PASS、默认debug关闭零UI顶点PASS。
+- 主体fc6744227ae3ea510da72842cde61ca3dfbf7c2a2f7884c4a04e3fdc8ae9c8bd／50721811B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B，经deploy.ps1安装，dist＝安装＝自有78692实际模块。前后暂停／date59883804只读复制并关闭读取句柄后重放：69组／839次使用从缺段集合消失，其余14组／521次逐字段保持，无新缺口；总1395→556，另35次仍来自3条部分海路。937陆连接／93海连接／9275 shipment和市场0国内quantity23523099 milli保持，不是吨数。
+- 按有向原始控制点复核已知完整路径58810个接缝，broken0，明确跳过556次不完整腿；伦敦564次港内连接仍broken0。此为外部顺序读取后的自有几何重放，不是原子原生访问租约、当前GUI逐像素验收或性能矩阵。本轮没有市场面板／镜头操作，不把实载当全界面验收。
+- 余521次在当前已采集且允许的地面／港内图不可达：state227=16、232=10、356=5、547=453、852=4、1053=33。232／547合计463次涉及另一市场的港内端点，不因此自动放行；另58次继续查原版有效连接。当前仍州级先分配再补物理转接，缺路径保留已分配量，不等价完整物理节点优化；真正不可达与仅缺几何需区分，并将可达性约束前移。源／终端州内路径、海峡正式收集、改图、寿命、性能及最终A01–A27继续，整体goal ACTIVE，不称缺货／断路全部闭环。
+- 自有54032／78692均正常WM_CLOSE退出0，观察暂停同日期；五保护输入save／settings／ini／content／continue字节保持，扩展相关错误0、六条Unexpected token同基线，当前无游戏。未保存进度、未提交／push。私有探针首编误加-municode导致wWinMain链接失败，去除后成功，不涉及产品构建失败；未启用kind0／1或虚拟节点新路径。
+- 证据及源码前备份E:/Code/v3-analysis/checkpoints/2026-10-31-r178-transfer-gap-audit/{before,source-change.diff,before-test.log,after-test.log,final-test.log,build.log,tests.log,embedded.log,debug-default.log,deploy.log,gap-baseline.json,audit.json,live/gaps.log,live/raw.log,validation/seams.log,validation/loaded-modules.json,validation/close.json,validation/after.json}。
+
+
+### 2026-10-31 — R177：原版无key港内路径已接入生产／绘制，伦敦564次控制点连续
+
+- 按R176证据实现NativePortTransfer：只接受当前kind5／definition type5／keyMAX且typed节点角色为陆港1与海军8／9／10、两端同当前region、陆港省份完整运行州与州E78一致的原版连接。复制完整连接ID、原版方向anchor、固定起点及原版[累计距离,X,Z]路径；数组／类型／角色／地区／省份／路径端点与距离校验和outer reread均保留。其他kind5不作为陆路放开，无新引擎调用、无硬编码地图表。
+- 模型按同地区同市场转接图接入港内路径，端点通过与原版坐标同一floor量化校验后对齐当前精确样条控制，内部点保留原版路径。复制几何使用自有bit63命名空间并保存在NativeDomesticModel，正式ribbon读取自有路径，不修改原生SplineDB。sea筛选包含港内接入段；距离来自原版末记录1e5单位，费用系数1是模型假设，数量仍按最终货流一次，Freight需求账不递归／不重复。
+- 初始港内接入用例先失败后通过；新增角色／省份／地区／数组／负距离／端点错误及源销毁用例、正反向路径／真实距离／正式ribbon用例通过。补货运引擎指纹中的localLand和portTransfers；同revision路径变化用例先失败(cache-before.log)，修复后进入统一套件通过。完整构建、统一58 PASS／零FAIL／退出0、embedded PASS和默认debug零顶点PASS。
+- 主体732a7e5e3bbf254830f8bb64374d73f08de97310e174c226614beec78f0baa7e／50666726B，引导71dae36d…／779879B，经deploy.ps1安装，dist＝安装＝实际73120模块。普通续玩／暂停／date59883804中，外部只读生产解码及复制后重放取得372条港内路径、全部有绘图几何、最终使用1282次，伦敦使用564次。逐有向控制点核对伦敦564次，broken0；缺转接由R175的2642次降到1395次。顺序外部观察不是原子原生快照，数量改善不等于其他1395次全部已修复。
+- 正式市场页及伦敦海陆流线实见(london-flows／london-port-close.png)，卡片26483.90517／铁路510.99 MU保持；港口附近原版旗标遮挡部分局部画面，564次端点连续的精确结论来自只读重放，不把截图当逐像素接缝证明。第一批UI脚本首次前台guard拒绝点击，PowerShell仍继续后续步骤；截图核对后改为每步退出码守卫重执行，未将首次步骤当成功验收。
+- 自有73120全程观察暂停／同日期，正常WM_CLOSE退出0；五受保护输入字节保持，扩展相关错误0、六条Unexpected token与既有基线一致，无游戏。未保存进度、未提交／push。原版港内连接接入子项完成；其他缺转接、源／终端州内路径、海峡正式权限、新地图／寿命／性能及最终A01–A27仍继续，不宣称全部道路断点消失。
+- 证据E:/Code/v3-analysis/checkpoints/2026-10-31-r177-native-port-transfer/{before-test.log,cache-before.log,after-test.log,build.log,tests.log,embedded.log,debug-default.log,deploy.log,live/continuity.log,live/loaded-modules.json,live/london-port-close.png,live/close.json,live/after.json}；源码前备份before。
+
+### 2026-10-31 — R176：找到原版无样条key的港内连接及实际路径
+
+- 延续港口断点调查，当前源码／两DLL仍R175 e20043d3…／71dae36d…，本轮无产品代码／构建／部署变化、不push。Ghidra确认当前victoria3.exe／image140000000，独立PE精确SHA7f53e326…核验；R175完整58 PASS仅作为同产品历史证据，未重复整套测试。
+- 当前原版splnet没有8390108→1503连接；旧gen_splines.py按geo后缀＋locator／gap阈值生成短桥，不能直接用于当前运行地图。进一步独立PE RIP引用扫描及.pdata边界找到141580FF0：陆路后缀3映射角色1，海军同region陆地区域映射角色10，分别写CTravelNodeDefinition+40完整anchor、+58当前region指针、+60角色位集；保留当前+44省份和+48／50原版固定坐标，不建立硬编码ID地图表。该静态语义由汇编归档交叉核对，未主动调用引擎。
+- 只读探针在正常暂停会话54216枚举6112个当前CTravelConnection，复读字段并检查当前世界后释放进程句柄。实际372条港内连接均kind5、definition key UINT64_MAX、path_count1；陆路角色bit1与海军bit8／9／10共享当前region。伦敦原版连接为8390108(role400)→1503(role2)，definition type5，原版起点固定坐标407200000／277900000、终点407200000／278100000，路径第一／末记录均[200000,407200000,278100000]。这是引擎当前保存的实际连接／路径，不是最近点或自造直线；外部顺序观察仍不是原子原生scope证明。
+- 修正调查中的窄角色掩码：初版仅含bit8／9，漏掉此处沿海角色bit10，报告bridge0；按141580FF0核对后加入bit10，372条全部匹配，初版与最终port-scan日志均保留。1412A0910及141729250跳表证明definition type2–6走统一运行kind5分支，因此kind5不能统一解读成不可用；也不能因本病例而把全部kind5作为陆路。生产必须单独识别同region的真实港内连接，验证两个typed端点、当前省份／州／市场、路径与角色，再复制自有几何。
+- 自有54216仅正常续玩、全程观察暂停／date59883804，没有界面输入／推进／保存；正常WM_CLOSE退出0，五输入字节保持，扩展相关错误0、六条Unexpected token与基线一致。实际模块与安装／dist匹配。归档反编译首尝试超过Windows命令长度206而未执行，随后用编辑工具写入外部静态证据成功；Ghidra xrefs／字符串空结果不作为无调用／无字符串证明。
+- 本单元完成港内连接来源定位，正式断点仍未修复。下一步将该原版路径单独接入原子快照／自有几何／转接及距离统计，补异常、跨市场／分属、路径变化与回归，再实机验收伦敦海路→中英格兰连续。禁止仅按keyMAX、kind5或固定角色后缀造线。证据E:/Code/v3-analysis/checkpoints/2026-10-31-r176-port-node-relation/{static-decompilation.json,node-builder-assembly.txt,node-vtable-refs.json,connection-predicate-table.json,port_probe.cpp,port-audit.json,live/port-scan-final.log,live/loaded-modules.json,live/close.json,live/after.json}。
+
+### 2026-10-31 — R175：同地区同市场分属州的物理转接，剩余断点继续
+
+- 用户截图补充分属地区仍割裂。R174按完整运行州隔离localLand，导致相同物理地区内另一个分属州的可用道路不能进入转接。新增同地区同市场分属州用例先失败（before-test.log），再修复。按当前market＋region definition＋geo三元身份组织转接，沿用完整运行州作为订单身份；无地区见证退回精确本州，未知不授权共享。没有写死州ID→地图表。
+- 转接同时纳入当前同地区同市场的跨运行州land连接，可以实际跨分属边界再返回，而非把两个逻辑州强制合并。不同市场／不同地区／未知定义用例拒绝补接；保持原数量账，路径仍为现有可用样条，缺线继续不完整。新增两段跨属地实体路段用例验证最终四腿路径。经济分配仍为原有州级观察模型，不把该模型转接宣称原版逐笔贸易路线。
+- 完整构建及统一58 PASS／零FAIL／退出0，embedded PASS。当前主体e20043d34ec5c1ef0d051fcec89ffcfa16a50ba1751a949c9852561b074d6b5d／49780394B，引导71dae36d…／779879B，dist＝deploy.ps1安装＝实际26228模块。原有未提交源码保持本地，不push；没有本轮重新执行独立默认debug测试。
+- 同一原存档／date59883804／暂停，独立只读复制后模型重放识别60组同市场分属地区；转接腿使用16373次、缺转接2642次，R174同存档观察为15690／2936。外部顺序复制不是原子原生快照，计数改善不等同所有路径修复。经原版地点查找器定位海得拉巴，再打开英国市场物流页，印度道路流线及26483.90517／510.99 MU卡片实见（india-flows.png）；镜头范围和色彩不同于用户截图，未逐断点同镜头对照，不将其当全部可视验收。
+- 自有26228会话观察始终暂停／同日期，正常WM_CLOSE退出0，原save／settings／ini／content／continue五输入字节保持；扩展相关资源错误0，六条Unexpected token与基线一致。当前无游戏。测试未保存推进、未修改游戏经济。初始Ghidra复核025E8070只说明原海路的海军锚点规则，字符串搜索没有返回，不据此建立海陆锚点关系或启用新ABI。
+- 本单元修正转接范围过窄，但仍有2642次缺转接（非唯一断点数），伦敦海军／陆路港口位置差异尚未解决；其他不连续场景、真实港口关系、海峡权限和最终矩阵继续。证据E:/Code/v3-analysis/checkpoints/2026-10-31-r175-split-state-transfer/{before-test.log,after-test.log,build.log,tests.log,embedded.log,live/split.log,live/india-flows.png,live/loaded-modules.json,live/close.json,live/after.json}；源码前备份before。
+
+### 2026-10-31 — R174：州内陆路转接补入最终路径；伦敦海陆锚点仍待连接
+
+- 用户报告海路到伦敦周边再到中英格兰时箭头断开。静态定位DecodeNativeDomesticSources丢弃同州道路，BuildNativeDomesticModel以整州节点分配，已选各段的物理端点不一定相接。新增海路→州内道路→跨州陆路用例先失败（before-test.log），不是仅按截图猜测。
+- 采集localLand保留当前已验证可用的同州type2／3／4连接，单独纳入内容身份，不制造自发自收货流；模型按连续两段的真实进出控制点，在该州当前连接上用同费率选择州内转接段并缓存。最终shipment插入有向自有样条，数量及目标／满足账保持，新增距离、费用、工作量计入shipment。无当前道路时插入不完整标记、保留已有片段及数量，不造直线。该转接是国内观察模型，不称原版逐笔已选路径。
+- 新端点逐段连续及缺道路用例、原版逐行解码器的同州道路／铁路保留用例通过；原有混合方式用例自身无州内连接，调整为明确断点的三段路径断言，原有数量／筛选仍通过。完整构建和统一58 PASS／退出0、embedded PASS；主体9a795e01572823c0995709d7210d50aba4d37b1002a7e69c209d5f6a0794775e／49592982B，引导71dae36d…／779879B。经deploy.ps1安装，dist＝安装＝实际71336模块。本轮没有重新执行独立默认debug测试，不沿用旧构建结论。
+- 当前存档独立只读复制后关闭句柄的重放取得1394条州内连接，模型最终货流使用15690次转接腿，另2936次缺合法转接；这是顺序外部观察，不是原子原生快照或完整可视验收。伦敦运行州5的四条localLand对应控制点1500–1504，实际使用0次。海军港口锚点8390108坐标4072.53589／2779.91675，陆路端点1503为4072.21387／2781.49634，既非同一控制ID也非同坐标；因此新增州内路径仍不能单独接通用户的伦敦海陆例子。禁止将最近点／硬编码ID绑定或随意直线升级为正式连接。
+- 实机仅核对正常加载与生产采集，没有完成伦敦连接可视验收。自有71336始终所观察日期59883804／暂停，正常WM_CLOSE退出0；save／settings／ini／content／continue五输入字节保持，相关扩展资源错误0、六条Unexpected token与既有基线一致。当前无游戏；用户不push要求继续，未提交／推送。
+- 下一步查原版当前港口的海军锚点与陆路港口节点之间的实际关系／几何，完成该端点后再对伦敦→中英格兰实际连续路径验收。海峡权限等原有未完成项继续，不能宣称本Bug全修复。证据E:/Code/v3-analysis/checkpoints/2026-10-31-r174-land-continuity/{before-test.log,after-test.log,build.log,tests.log,embedded.log,live/continuity.log,live/anchors.log,live/loaded-modules.json,live/close.json,live/after.json}；源码前备份before。
+
+### 2026-10-30 — R173：恢复构建／统一回归及正常存档加载，当前会话保留
+
+- 用户明确恢复正常启动游戏测试，覆盖此前资源占用期的离线／不测试限制；不push要求继续有效。本轮未继续GUI队列改码，先验证R169–R172累计改动。完整native/build.ps1退出0、统一build_tests.ps1为58 PASS／零FAIL／退出0，新增完整航线绑定、快照邮箱及会话退休用例均进入原有套件并通过；verify_embedded和test_debug_default也退出0。默认关闭ImGui的独立实际backend记录零顶点。未发生需修复的编译或测试失败。
+- 经deploy.ps1安装，当前主体c82435daf55b0a00f7fbcb1a374a6e5c0d0492f4d44c05f842f022c9f9a8ec99／48822550B，引导71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e／779879B，dist＝安装。正常EXE续玩入口、不加debug_mode，实际PID39984加载两份对应DLL；初始phase4／暂停／date59883804。原ini保持probe_access0，未强启未验证的生产方。
+- 初始市场0物流页截图实见原版贸易＋国内模型量26483.90517、已铺铁路510.99 MU、逐商品数量／占比及地图线，生产日志显示owner10／frame1／220条ribbon。此为当前构建加载及既有正式路径回归，不是原生完整通行批次已接入：正式overlay仍未提供新批次，海峡故障、受限重建、已有航线更新及全生命周期矩阵继续。
+- 随后的悬停／关闭步骤期间，实际日期推进至59885904且暂停状态在0／1间变化，截图相机、面板及日志owner也变化，来源未确定；本轮脚本没有主动解暂停或推进命令。停止进一步自动输入／退出，保留仍在运行的39984，不把这段混合操作视为受控关闭重开／悬停不改统计／性能验收，也不声称正常退出。关闭截图实际为海区面板，不能按文件名当作成功关闭复现。
+- 截至只读audit，原存档／settings／ini／content／continue五输入哈希均与启动前一致，两份dist／安装／实际模块一致，采样error.log中扩展相关错误0；会话未结束，这不替代最终退出后检查或所有游戏错误对照。原存档保护基线仍8008fc75…。未修改经济、未保存进度、未提交或推送。证据E:/Code/v3-analysis/checkpoints/2026-10-30-r173-offline-changes-validation/{build.log,tests.log,embedded.log,debug-default.log,deploy.log,audit.json,live/loaded-modules.json,live/logistics.png,live/session-observations.jsonl}。
+- 当前目标继续：真实原生收集／退休事件驱动、GUI排队写入和原生提交边界仍待，三处港口末端／改图／性能／最终同构建A01–A27未完成。后续可继续只读核对和源码研究；对当前疑似同时操作的会话不争夺输入、不强制关闭或替换DLL。
+
+### 2026-10-30 — R172：批次退休接入会话／帧／统计校验（未构建／未测试）
+
+- 按用户最新要求继续仅本地离线修改，不构建、不运行测试、不操作游戏、不部署、不push。上一轮邮箱检查是源码进展，本轮延续到已交worker及地图的会话结果。所有R169–R172改动仍未经编译／执行，不继承R167历史PASS。
+- LogisticsSession在适配层保留自有原子代数及期望值，worker仍只收到原有不可变数值快照。SetSnapshot拒绝过期或不完整见证；HasEquivalentSnapshot要求同token／同代数，避免相同内容跨集合寿命跳过重新绑定。Overlay将采集结果的见证沿PublishRealEconomy传给会话；旧无见证路径保留。
+- SnapshotIsCurrent、FrameIsCurrent、StatisticsAreCurrent及Frame／Status增加代数复核，退休后可在下一次相应检查时拒绝已有结果，不等待UI合并。Poll在提交工作前撤下退休快照／帧并取消worker；消费回复及发布文档前再次复核，原有owner选择保留，当前替代快照可恢复相同面板。未将批次退休冒充世界变化，未改国内分配、国际数量或游戏经济。
+- 在已接统一入口的logistics_session_tests写入待执行用例：真实worker产出后的帧／统计退休、相同数字不同token、同内容定时采集、退休后替换恢复、未完成回复拒绝、不完整见证和世界退休不可绕过。用例尚未运行，静态阅读与diff空白检查不是并发／渲染／UI验收。
+- 原生收集器仍未填充批次及驱动失效token；已有航线更新、受限重建、首次绑定前退休／ABA、GUI已排队写入及原生提交边界的完整失效时序仍待核对。原子检查与后续使用之间不是全链事务，不宣称所有竞态消失或海峡已修复。备份E:/Code/v3-analysis/checkpoints/2026-10-30-r172-session-lane-retirement/before；资源可用后先构建并执行相关统一回归。
+
+### 2026-10-30 — R171：逐航线批次的邮箱发布／取出失效检查（未构建／未测试）
+
+- 本轮延续只离线改代码、不测试、不push要求。前一轮完成可选采集入口，属于源码进展；本轮补其返回后到邮箱和UI交接间的失效检查。未编译、未运行测试、未操作游戏、未部署／推送；当前修改仍全部保留本地，没有新增PASS。
+- 将R170任意current回调简化为共享自有atomic代数见证；输入同时匹配world／revision／generation，生产方必须单调推进代数、冻结批次，不得恢复旧值或跨集合寿命复用token。NativeCaptureResult仅在适配层保留token及期望代数，worker的EconomySnapshot继续只含数值副本。
+- Publish先保留既有请求身份和版本顺序检查，再拒绝已退休批次并通过既有错误通道报告；TakeError和Take复核未取副本，NativeCaptureMatches复核已取的保留副本。迟到旧版本在触及当前结果前拒绝，避免旧失败清除新结果；无批次见证的历史调用仍按原路径处理，缺一半见证则拒绝。
+- 已在统一入口现有native_snapshot_tests写入待执行用例：发布后未取即退休、取出后退休、返回到发布间退休、错误检查到取出间退休、新版本重试、旧结果不清除新结果、缺token／缺代数及源释放后的自有存储。只做文本审阅，尚未执行这些用例，不能宣称并发或生命周期验收。
+- 正式原生收集器尚未绑定新输入，也尚未驱动这些token；首次绑定前退休、已有航线更新、受限重建、已发布worker／原生帧即时撤回及全部竞态仍需完成。顺序原子读取不是全链事务，不以本轮邮箱校验替代这些要求；现行海峡显示故障未验收。备份E:/Code/v3-analysis/checkpoints/2026-10-30-r171-lane-epoch-publication/before；资源可用后先构建并执行R169–R171相关回归。
+
+### 2026-10-30 — R170：采集入口接入自有逐航线批次（未构建／未测试）
+
+- 延续用户仅离线改代码、暂不测试及不push的最新要求。本轮只改源码与记录，未编译、未运行测试、未启动／操作游戏、未部署／推送；上一轮是源码进展，本轮继续推进可选交接入口。两轮源码均未取得新增PASS，现有DLL保持历史产物。
+- NativeLaneAccessInput仅在适配层持有不可变自有批次、独立采集代数及只读自有epoch的current回调；世界／版本／代数不匹配或缺少有效性见证即拒绝。CopyNativeSnapshot新增默认空的可选输入，采集前、绑定时和全部复制完成返回前核对有效性；按本次复制的航线及海峡注册表执行R169完整绑定，worker只获得复制后的逐航线允许列表，不获得回调或引擎指针。
+- 明确拒绝同时传入逐航线批次与旧国家权限回调，避免混用两个时点的语义。旧调用点参数不变，正式overlay仍未提供新输入；未启用任何未经验证的原生函数，现行注册回退仍未修复。持有shared_ptr不延长批次的有效代数，生产方必须冻结批次并独立维护失效事件。
+- 在既有native_snapshot_tests增加待执行用例，覆盖世界／版本／代数不匹配、见证缺失／退休、源释放后自有所有权、零身份、冲突来源，以及无效批次在读取引擎前拒绝。仅文本审阅；整份成功采集及复制中失效路径尚缺执行证据，不把入口拒绝用例等同完整快照验收。
+- 下一步仍需原版创建和已有航线更新的正式收集、首次绑定前退休／ABA、受限重建与当前集合代数；返回后到邮箱发布的批次退休、当前帧撤回也未闭环，不能只凭本次返回前复核启用。资源可用后先构建并执行R169／R170相关回归，再补真实生产方接线及最终验收。源码前备份E:/Code/v3-analysis/checkpoints/2026-10-30-r170-snapshot-lane-access/before。
+
+### 2026-10-30 — R169：逐航线通行结果交接与消费代码（未构建／未测试）
+
+- 用户本轮要求仅离线改代码，暂不测试以保留资源；随后明确不需要push。本轮未编译、未运行任何测试、未启动或操作游戏、未部署、未推送，改动保留本地。现有dist／安装未由本轮更新，R167的58 PASS不适用于新增源码。
+- 新增native_lane_access.h，将既有自有分类／已选航线值类型从诊断头移入共享头；BindNativeLaneAccess按独立传入的world／revision／collection generation、完整lane句柄、国家、两端州、64位距离及全部省份范围匹配当前副本。完整允许／拒绝集合必须无重复且恰好覆盖当前海峡注册表；缺失／重复／过期或同句柄内容变化整批拒绝。输出为按完整航线句柄索引的自有允许列表，不写死地图身份、不按国家借用其他航线的结果。
+- NativeDomesticSources新增可选laneStraitAccess，国内几何消费优先使用逐航线结果；字段存在但缺某条非空航线时拒绝，不回退国家表／注册表。该字段加入NativeTradeEquivalent，权限变化可使缓存不等价；国内模型数量口径不变。原生采集器尚未填充新字段，现行注册回退仍存在，本轮不宣称海峡已修复。
+- 在已接统一入口的native_access_tests与native_trade_view_tests写入待执行用例：世界／版本／代数不匹配、句柄与港口／距离／成员变化、源销毁、完整分类、同国两航线不同结果、缓存失效与缺记录拒绝。只做文本审阅，未执行复现或回归，未取得任何新增PASS。
+- 交接函数不证明引擎访问租约或原子性；未来生产方必须从独立当前采集状态取得expected，并在发布前再次确认。原版创建／已有航线更新的完整收集、首次绑定前世界退休、受限重建、批次寿命与正式采集接线仍待；不得把诊断采样代数直接当正式集合代数。备份E:/Code/v3-analysis/checkpoints/2026-10-30-r169-lane-access-handoff/before；下一步待资源可用后先构建并运行相关回归，再继续生产方接线。
+
 ### 2026-10-30 — R168：按用户要求同步当前开发源码到GitHub
 
 - 用户明确要求更新完成后push。核对现有main／origin及docs/GITHUB.md的既有公开上传范围，使用已有NoFires SSH远程，不新建仓库、不改写历史。fetch确认基线与origin/main一致后，将自前次发布以来的物流源码、测试、GUI／shader与记录整理为源码提交a688e34c709423a7c56ffece7ab309f1edd744dc：90文件、10466增加／199删除；其中包括当前R167默认关闭的分类／最终航线创建观察与回归。

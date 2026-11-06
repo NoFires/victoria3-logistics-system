@@ -18,6 +18,7 @@ namespace v3 {
 namespace {
 constexpr int64_t kMaxQuantity = 1000000000000LL;
 constexpr uint32_t kNone = UINT32_MAX;
+constexpr uint32_t kAccess = UINT32_MAX-1;
 struct Arc {
   uint32_t to, reverse, edge;
   int64_t capacity, original;
@@ -51,15 +52,23 @@ uint8_t HeatBand(double throughput, double reference) {
 }  // namespace
 
 FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph& graph,
-                             const FreightPolicy& policy, const std::function<bool()>& cancelled) {
+                             const FreightPolicy& policy, const std::function<bool()>& cancelled,
+                             const std::map<uint32_t,std::vector<uint32_t>>& stateAccess) {
   FreightResult result;
   result.world = snapshot.world; result.snapshotRevision = snapshot.revision;
   result.graphRevision = policy.graphRevision;
   try {
     CheckCancel(cancelled);
-    if ((!graph.Valid() && (snapshot.stateTerminals.empty() || graph.nodes.empty())) || graph.nodes.size() > 1000000)
+    if ((!graph.Valid() && stateAccess.empty() && (snapshot.stateTerminals.empty() || graph.nodes.empty())) || graph.nodes.size() > 1000000)
       throw std::runtime_error("invalid transport graph");
     if (snapshot.orders.size() > 1000000) throw std::runtime_error("economy snapshot too large");
+    if (!stateAccess.empty() && !snapshot.stateTerminals.empty()) throw std::runtime_error("conflicting state terminals");
+    auto access=stateAccess;
+    for (auto& [state,nodes] : access) {
+      std::sort(nodes.begin(),nodes.end());
+      if (std::adjacent_find(nodes.begin(),nodes.end())!=nodes.end() || (!nodes.empty() && nodes.back()>=graph.nodes.size()))
+        throw std::runtime_error("invalid physical state access");
+    }
     for (double c : policy.costPerDistance)
       if (!std::isfinite(c) || c <= 0) throw std::runtime_error("invalid route cost");
     std::map<uint32_t, const FreightGood*> goods;
@@ -72,7 +81,8 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
     std::map<std::pair<uint32_t,uint32_t>,bool> uniqueOrders;
     std::map<uint32_t,std::pair<uint32_t,uint32_t>> stateIdentities;
     for (const auto& o : snapshot.orders) {
-      if (!goods.count(o.good) || (snapshot.stateTerminals.empty() && o.region > UINT32_MAX/100) || o.production < 0 || o.consumption < 0 ||
+      if (!goods.count(o.good) || (snapshot.stateTerminals.empty() && access.empty() && o.region > UINT32_MAX/100) ||
+          (!access.empty() && !access.count(o.state)) || o.production < 0 || o.consumption < 0 ||
           o.production > kMaxQuantity || o.consumption > kMaxQuantity ||
           !uniqueOrders.emplace(std::make_pair(o.state,o.good),true).second)
         throw std::runtime_error("invalid or duplicate state orders");
@@ -102,7 +112,8 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
     for (uint32_t i=0;i<graph.edges.size();++i) {
       const auto& e=graph.edges[i];
       if (e.from >= graph.nodes.size() || e.to >= graph.nodes.size() || e.from == e.to ||
-          !std::isfinite(e.length) || e.length < 0 || (e.length==0 && (snapshot.stateTerminals.empty() || e.type!=2)) ||
+          !std::isfinite(e.length) || e.length < 0 || (e.length==0 &&
+          ((snapshot.stateTerminals.empty() && access.empty()) || (e.type!=2 && (access.empty() || e.type!=4)))) ||
           e.type > 4 || !edgeIndex.emplace(e.id,i).second)
         throw std::runtime_error("invalid transport edge");
       if (e.type == 1 && snapshot.builtRailEdges.count(e.id)) result.builtRailLength += e.length;
@@ -146,7 +157,7 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
       for (size_t i : indices) { available += result.balances[i].availableExport; wanted += result.balances[i].targetImport; }
       const int64_t limit=std::min(available,wanted);
       if (!limit) return;
-      uint32_t source=uint32_t(graph.nodes.size()), sink=source+1;
+      uint32_t source=uint32_t(graph.nodes.size()+(access.empty()?0:indices.size()*2)), sink=source+1;
       Network net(sink+1);
       const double groupFlowStart = nowMs();
       for (const auto& [id,ei] : edgeIndex) {
@@ -159,9 +170,22 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
       }
       struct Terminal { size_t balance; uint32_t node, arc; };
       std::vector<Terminal> exporters, importers;
-      for (size_t i : indices) {
+      for (size_t position=0;position<indices.size();++position) {
+        const size_t i=indices[position];
         const auto& b=result.balances[i];
         auto [region,market]=stateIdentities.at(b.state);
+        if (!access.empty()) {
+          // Separate directed source/sink gates share a state's quantity across
+          // its actual access nodes. They cannot become a physical transit link.
+          const uint32_t departure=uint32_t(graph.nodes.size()+position*2),arrival=departure+1;
+          for (uint32_t node : access.at(b.state)) {
+            if (b.availableExport) AddArc(net,departure,node,limit,0,kAccess);
+            if (b.targetImport) AddArc(net,node,arrival,limit,0,kAccess);
+          }
+          if (b.availableExport) exporters.push_back({i,departure,AddArc(net,source,departure,b.availableExport,0)});
+          if (b.targetImport) importers.push_back({i,arrival,AddArc(net,arrival,sink,b.targetImport,0)});
+          continue;
+        }
         uint32_t anchor=UINT32_MAX;
         if(snapshot.stateTerminals.empty())anchor=anchorFor(region);
         else {
@@ -254,9 +278,11 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
           shipment.market=group.first;shipment.good=group.second;shipment.quantity=amount;
           for (uint32_t v=dest.node;v!=origin.node;v=parentNode[v]) {
             uint32_t u=parentNode[v],i=parentArc[v];const auto& a=net[u][i];
-            const auto& edge=graph.edges[a.edge];
-            remaining[u][i]-=amount;shipment.route.push_back({edge.id,a.forward});
-            shipment.distance+=edge.length;shipment.cost+=a.cost;
+            remaining[u][i]-=amount;
+            if (a.edge!=kAccess) {
+              const auto& edge=graph.edges[a.edge];shipment.route.push_back({edge.id,a.forward});
+              shipment.distance+=edge.length;shipment.cost+=a.cost;
+            }
           }
           std::reverse(shipment.route.begin(),shipment.route.end());
           double quantity=double(amount)/kQuantityScale;

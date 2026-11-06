@@ -19,19 +19,19 @@ struct Fixture {
     Put(positions+category*0x100+slot*0x28,transform);
   }
   Fixture(){
-    Put(module+0x0592d128,root);Put(root+0x608,machine);Put(machine+0x120,world);
-    Put(module+0x05901fa0,graphics);Put(graphics,module+0x0464e4e8);Put(graphics+0x290,manager);
-    Array(world+0x3c70,regions,503);Array(module+0x051385c0,types,5);Zero(types,5*16);
-    Array(manager+0x1f8,headers,5);
+    Put(module+0x05c07c68,root);Put(root+0x608,machine);Put(machine+0x120,world);
+    Put(module+0x05bdcaf0,graphics);Put(graphics,module+0x048caec0);Put(graphics+0x290,manager);
+    Array(world+0x3b08,regions,503);Array(module+0x053e61b0,types,5);Zero(types,5*16);
+    Array(manager+0x210,headers,5);
     for(unsigned i=0;i<2;++i){
-      Put(regions+(501+i)*8,region+i*0x100);Put(region+i*0x100,module+0x044df758);
+      Put(regions+(501+i)*8,region+i*0x100);Put(region+i*0x100,module+0x046b8bf8);
       Put(region+i*0x100+0x90,definition+i*0x100);Zero(definition+i*0x100,0x48);
-      Put(definition+i*0x100,module+0x044e7850);Put(definition+i*0x100+0x10,uint32_t(501+i));
+      Put(definition+i*0x100,module+0x046ba948);Put(definition+i*0x100+0x10,uint32_t(501+i));
       Put(definition+i*0x100+0x40,uint32_t(1001+i));Put(definition+i*0x100+0x44,uint8_t(1));
     }
     for(unsigned category=0;category<5;++category){
       const uint64_t object=type+category*0x200;
-      Put(types+category*16,object);Zero(object,0xa0);Put(object,module+0x047295f0);
+      Put(types+category*16,object);Zero(object,0xa0);Put(object,module+0x049aec58);
       Put(object+0x90,category);Put(object+0x98,category);
       Array(object+0x50,instances+category*0x100,2);Zero(instances+category*0x100,2*0x30);
       for(unsigned slot=0;slot<2;++slot){
@@ -65,7 +65,7 @@ int main(){
   Check(literal && literal->at(0),"literal native eligibility accepts one zero and one negative coordinate");
   f.Position(4,0,0,0);literal=f.Decode();
   Check(literal && !literal->at(0),"current origin is ineligible even when authored position exists");
-  f.bytes=original;f.Put(Fixture::type+4*0x200,Fixture::module+0x047435c8);literal=f.Decode();
+  f.bytes=original;f.Put(Fixture::type+4*0x200,Fixture::module+0x049c9a28);literal=f.Decode();
   Check(literal && !literal->at(0),"native null hub type is known ineligible, not a guessed nearest port");
   f.bytes=original;f.Put(Fixture::type+4*0x200+0x90,UINT32_MAX);literal=f.Decode();
   Check(literal && literal->at(0),"locator IsValid is constant true; category ID is not a parsed-type validity flag");
@@ -74,25 +74,25 @@ int main(){
   bad([](auto& m){m.current=false;},"retired source cannot read hubs");
   bad([](auto& m){m.template Put<uint64_t>(Fixture::graphics,1);},"unknown graphics object rejected");
   bad([](auto& m){m.template Put<uint64_t>(Fixture::graphics+0x290,0);},"missing current manager rejected");
-  bad([](auto& m){m.template Put<uint32_t>(Fixture::world+0x3c78,502);},"current region count above capacity rejected");
+  bad([](auto& m){m.template Put<uint32_t>(Fixture::world+0x3b10,502);},"current region count above capacity rejected");
   bad([](auto& m){m.states[0].definition=503;},"state template outside runtime region array rejected");
   bad([](auto& m){m.template Put<uint64_t>(Fixture::region,1);},"unknown current region type rejected");
   bad([](auto& m){m.template Put<uint32_t>(Fixture::definition+0x40,1003);},"state template and actual runtime region geo mismatch rejected");
   bad([](auto& m){m.states[Fixture::second].geo=1001;},"two different definitions cannot impersonate one geo ID");
-  bad([](auto& m){m.template Put<uint32_t>(Fixture::module+0x051385cc,4);},"incomplete current hub registration is unavailable");
+  bad([](auto& m){m.template Put<uint32_t>(Fixture::module+0x053e61bc,4);},"incomplete current hub registration is unavailable");
   bad([](auto& m){m.template Put<uint64_t>(Fixture::type,1);},"unknown hub type rejected");
-  bad([](auto& m){m.template Put<uint64_t>(Fixture::type,Fixture::module+0x04725b98);},"parsed map object type cannot impersonate the current registered locator");
+  bad([](auto& m){m.template Put<uint64_t>(Fixture::type,Fixture::module+0x049aaea8);},"parsed map object type cannot impersonate the current registered locator");
   bad([](auto& m){m.template Put<uint32_t>(Fixture::type+0x98,5);},"native finalized type index outside transforms rejected");
   bad([](auto& m){m.template Put<uint32_t>(Fixture::type+0x5c,3);},"instance count above capacity rejected");
   bad([](auto& m){m.template Put<uint32_t>(Fixture::headers+12,1);},"current transform count mismatch rejected");
   bad([](auto& m){m.template Put<uint32_t>(Fixture::instances+4,1003);},"unsorted original instance IDs rejected");
-  bad([](auto& m){m.template Put<uint64_t>(Fixture::manager+0x1f8,UINT64_MAX-8);},"transform header pointer overflow rejected");
+  bad([](auto& m){m.template Put<uint64_t>(Fixture::manager+0x210,UINT64_MAX-8);},"transform header pointer overflow rejected");
   bad([](auto& m){m.template Put<uint64_t>(Fixture::headers,UINT64_MAX-8);},"current position pointer overflow rejected");
   bad([](auto& m){m.Position(4,0,std::numeric_limits<float>::quiet_NaN(),20);},"nonfinite current hub position rejected");
   bad([](auto& m){m.bytes.erase(Fixture::positions);},"unreadable current position rejects whole copy");
-  for(auto a:{Fixture::module+0x0592d128,Fixture::graphics+0x290,Fixture::world+0x3c70,
+  for(auto a:{Fixture::module+0x05c07c68,Fixture::graphics+0x290,Fixture::world+0x3b08,
       Fixture::regions+501*8,Fixture::region+0x90,Fixture::definition,Fixture::types,Fixture::type,
-      Fixture::manager+0x1f8,Fixture::headers,Fixture::instances,Fixture::positions})
+      Fixture::manager+0x210,Fixture::headers,Fixture::instances,Fixture::positions})
     bad([&](auto& m){m.mutate=a;},"mutation in any observed port component rejects the entire copy");
   f.bytes=original;f.current=true;f.mutate=0;unsigned calls=0;
   Check(!v3::DecodeNativePortHubs([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,f.states,

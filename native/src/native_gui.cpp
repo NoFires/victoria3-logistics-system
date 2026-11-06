@@ -82,7 +82,7 @@ bool PatchNativeMarketGui(const std::vector<uint8_t>& original,const std::string
   try {
     if(!patched)throw std::runtime_error("native GUI output is missing");
     if(Sha256Bytes(original.data(),original.size())!=kMarketGuiHash)
-      throw std::runtime_error("market_panel.gui differs from verified 1.13.11; native UI patch disabled");
+      throw std::runtime_error("market_panel.gui differs from verified 1.15.0; native UI patch disabled");
     if(tabOverride.empty())throw std::runtime_error("native tab override is empty");
     std::string text(original.begin(),original.end());
     if(text.starts_with("\xef\xbb\xbf"))text.erase(0,3);
@@ -118,7 +118,7 @@ bool PatchNativeStateGui(const std::vector<uint8_t>& original,std::string* patch
   try {
     if(!patched)throw std::runtime_error("native state GUI output is missing");
     if(Sha256Bytes(original.data(),original.size())!=kStateGuiHash)
-      throw std::runtime_error("states_panel.gui differs from verified 1.13.11; native state UI patch disabled");
+      throw std::runtime_error("states_panel.gui differs from verified 1.15.0; native state UI patch disabled");
     std::string text(original.begin(),original.end());
     if(text.starts_with("\xef\xbb\xbf"))text.erase(0,3);
     const std::string marker="visible =  \"[InformationPanel.IsTabSelected('local_goods')]\"";
@@ -213,7 +213,10 @@ bool PrepareNativeGui(HMODULE self,const std::wstring& gameRoot,const std::wstri
     const auto own=Resource(self,301);
     std::string logistics(own.begin(),own.end());
     const std::string marker="__IRONROAD_NATIVE_MARKET_PRICE__";
-    logistics.replace(Unique(logistics,marker),marker.size(),source.substr(price.first+1,price.second-price.first-1));
+    std::string priceWidget=source.substr(price.first+1,price.second-price.first-1);
+    const std::string priceSize="size = { 215 55 }";
+    priceWidget.replace(Unique(priceWidget,priceSize),priceSize.size(),"size = { 210 55 }");
+    logistics.replace(Unique(logistics,marker),marker.size(),priceWidget);
     Braces(logistics);
     const auto files=EditableResources(cacheRoot+L"\\native-gui",{
       {"gui/market_panel.gui",{patched.begin(),patched.end()}},

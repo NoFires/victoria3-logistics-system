@@ -1,12 +1,15 @@
 #pragma once
 #include "native_trade_geometry.h"
 #include <type_traits>
+#include <tuple>
 
 namespace v3 {
 struct NativeDomesticModel {
   FreightResult allocation;
   std::vector<NativeTradeGeometry> edges; // model edge index -> current native strips
   std::vector<bool> seaEdges; // same indices; current port lane vs current land connection
+  // Bit63 distinguishes copied original keyless paths from native spline IDs.
+  std::map<uint64_t,std::vector<NativeSplinePoint>> portPaths;
   uint32_t landConnections=0,seaConnections=0,unavailableSea=0,partialSea=0;
 };
 // Only the domestic allocation is a model. Its network consists of CURRENT
@@ -33,8 +36,6 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
   for(const auto* current:ordered(trade.states)){
     const auto& state=*current;
     if(!markets.emplace(state.id,state.market).second)return fail("duplicate domestic state");
-    model.stateTerminals.emplace(state.id,uint32_t(graph.nodes.size()));
-    graph.nodes.push_back({state.id,0,0}); // terminals are actual states; coordinates do not select them
   }
   std::set<uint32_t> goods;
   for(const auto& good:model.goods)goods.insert(good.id);
@@ -64,61 +65,97 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     order.production+=imported;order.consumption+=exported;
   }
   for(const auto& [key,order]:orders)model.orders.push_back(order);
-  auto add=[&](uint32_t from,uint32_t to,uint32_t type,NativeTradeGeometry geometry,std::optional<double> nativeDistance={}){
-    if(!markets.count(from) || !markets.count(to) || from==to || markets.at(from)!=markets.at(to))return false;
+  // State orders remain aggregated at a witnessed primary land hub when known.
+  // Physical transit never merges a state's other access points.
+  using Area=std::tuple<uint32_t,uint32_t,uint32_t>; // market, definition, current geo
+  using Node=std::pair<Area,uint64_t>; // exact control, or opaque missing sea endpoint
+  std::map<uint32_t,Area> areas;
+  std::map<uint32_t,std::vector<uint32_t>> access;
+  for(const auto& [state,market]:markets){
+    const auto region=trade.seaGeography->states.find(state);
+    areas[state]=region==trade.seaGeography->states.end() || region->second.definition==UINT32_MAX ||
+        region->second.geo==UINT32_MAX?Area{market,UINT32_MAX,state}:
+        Area{market,region->second.definition,region->second.geo};
+    access.emplace(state,std::vector<uint32_t>{});
+  }
+  std::map<Node,uint32_t> nodes;
+  auto node=[&](uint32_t state,uint64_t control){
+    auto [where,inserted]=nodes.emplace(Node{areas.at(state),control},uint32_t(graph.nodes.size()));
+    if(inserted)graph.nodes.push_back({where->second,0,0}); // owned indices, not map identities
+    access.at(state).push_back(where->second);return where->second;
+  };
+  auto add=[&](uint32_t from,uint32_t to,uint32_t type,NativeTradeGeometry geometry,
+      std::optional<double> nativeDistance={},std::optional<std::array<uint64_t,2>> endpoints={}){
+    if(!markets.count(from) || !markets.count(to) || markets.at(from)!=markets.at(to))return false;
     double length=0;
-    for(const auto& strip:geometry.strips){
+    if(nativeDistance)length=*nativeDistance;
+    else for(const auto& strip:geometry.strips){
       const auto found=network.strips.find(strip.id);if(found==network.strips.end() || found->second.size()<2)return false;
       const NativeSplinePoint* previous=nullptr;
       for(uint32_t id:found->second){
-        const auto p=network.points.find(id);if(p==network.points.end())return false;
+        const auto p=network.points.find(id);
+        if(p==network.points.end() || !std::isfinite(p->second.x) || !std::isfinite(p->second.z))return false;
         if(previous)length+=std::hypot(double(p->second.x)-previous->x,double(p->second.z)-previous->z);
         previous=&p->second;
       }
     }
-    if(nativeDistance)length=*nativeDistance;
     if(length<0 || (!nativeDistance && length==0) || !std::isfinite(float(length)))return false;
-    const auto id=uint32_t(graph.edges.size());
-    graph.edges.push_back({id,model.stateTerminals.at(from),model.stateTerminals.at(to),type,0,0,float(length)});
-    if(type==1)model.builtRailEdges.insert(id);
-    result.edges.push_back(std::move(geometry));result.seaEdges.push_back(type==2);return true;
+    if(!endpoints){
+      if(geometry.strips.empty())return false;
+      const auto& first=geometry.strips.front();const auto& last=geometry.strips.back();
+      const auto& a=network.strips.at(first.id);const auto& b=network.strips.at(last.id);
+      endpoints=std::array<uint64_t,2>{first.forward?a.front():a.back(),last.forward?b.back():b.front()};
+    }
+    const auto a=node(from,(*endpoints)[0]),b=node(to,(*endpoints)[1]);
+    const auto id=uint32_t(result.edges.size());
+    result.edges.push_back(std::move(geometry));result.seaEdges.push_back(type==2 || type==4);
+    // Split states at the same witnessed port can share a zero-length terminal;
+    // a self-loop grants no extra connectivity or physical transport distance.
+    if(a!=b){
+      graph.edges.push_back({id,a,b,type,0,0,float(length)});
+      if(type==1)model.builtRailEdges.insert(id);
+    }
+    return true;
   };
-  for(const auto* current:ordered(trade.domestic->land)){
-    const auto& connection=*current;
-    if(cancelled && cancelled())return fail("cancelled");
-    if(connection.type!=2 && connection.type!=3 && connection.type!=4)return fail("unavailable domestic land connection");
+  auto addLand=[&](const NativeLandConnection& connection){
+    if(connection.type!=2 && connection.type!=3 && connection.type!=4)return false;
     const auto binding=network.connections.find(connection.spline);
-    if(binding==network.connections.end() || binding->second.empty() || (connection.spline&63)>1)
-      return fail("current domestic land geometry unavailable");
+    if(binding==network.connections.end() || binding->second.empty() || (connection.spline&63)>1)return false;
     NativeTradeGeometry shape;uint32_t anchor=uint32_t(connection.spline>>6)&0x1fffffff;
+    const auto start=anchor;
     for(uint64_t strip:binding->second){
       const auto controls=network.strips.find(strip);
-      if(controls==network.strips.end() || controls->second.size()<2)return fail("invalid current domestic land strip");
+      if(controls==network.strips.end() || controls->second.size()<2 || (strip&63)!=(connection.spline&63))return false;
       const auto& points=controls->second;const bool along=points.front()==anchor;
-      if(!along && points.back()!=anchor)return fail("disconnected current domestic land geometry");
+      if(!along && points.back()!=anchor)return false;
       shape.strips.push_back({strip,along});anchor=along?points.back():points.front();
     }
-    if(anchor!=uint32_t(connection.spline>>35))return fail("current domestic land endpoint mismatch");
+    if(anchor!=uint32_t(connection.spline>>35) || anchor==start)return false;
     if(!connection.forward){std::reverse(shape.strips.begin(),shape.strips.end());for(auto& strip:shape.strips)strip.forward=!strip.forward;}
-    if(!add(connection.source,connection.destination,connection.type==4?1:0,std::move(shape)))
-      return fail("invalid domestic land scope or geometry");
+    return add(connection.source,connection.destination,connection.type==4?1:0,std::move(shape));
+  };
+  for(const auto* connection:ordered(trade.domestic->land)){
+    if(cancelled && cancelled())return fail("cancelled");
+    if(connection->source==connection->destination || !addLand(*connection))return fail("invalid current domestic land connection");
     ++result.landConnections;
   }
   for(const auto* current:ordered(trade.domestic->shipping.lanes)){
     const auto& lane=*current;
     if(cancelled && cancelled())return fail("cancelled");
-    if(lane.kind!=0 || !markets.count(lane.fromState) || !markets.count(lane.toState))return fail("invalid domestic original port lane");
+    if(lane.kind!=0 || lane.fromState==lane.toState || !markets.count(lane.fromState) || !markets.count(lane.toState))
+      return fail("invalid domestic original port lane");
     if(markets.at(lane.fromState)!=markets.at(lane.toState))continue;
     if(lane.provinces.empty())continue; // known empty ORIGINAL path grants no connection
     if(lane.travelDistanceFixed<0)return fail("invalid current native shipping distance");
     NativeTradeDestination destination;destination.state=lane.toState;destination.selected=0;
     NativeTradePath path;path.provinces=lane.provinces;
-    // Prefer owned original country-specific passage results when available.
-    // The current capture does not yet provide them; preserve its legacy
-    // registration-only behavior until the native access window is verified.
-    if(trade.domestic->straitAccess){
-      const auto found=trade.domestic->straitAccess->find(lane.country);
-      if(found==trade.domestic->straitAccess->end() || !std::is_sorted(found->second.begin(),found->second.end()) ||
+    // Per-lane results take precedence, including a known denied/empty list.
+    // A missing entry in an engaged map is not a country/registry fallback.
+    // Production capture is still unbound; the legacy path remains unchanged.
+    const auto& access=trade.domestic->laneStraitAccess?trade.domestic->laneStraitAccess:trade.domestic->straitAccess;
+    if(access){
+      const auto found=access->find(trade.domestic->laneStraitAccess?lane.id:lane.country);
+      if(found==access->end() || !std::is_sorted(found->second.begin(),found->second.end()) ||
          std::adjacent_find(found->second.begin(),found->second.end())!=found->second.end())
         return fail("invalid current domestic strait access");
       for(uint32_t id:found->second)
@@ -134,12 +171,73 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     // Current CShippingLane is the connectivity fact. Original native travel
     // distance(+60), including a valid zero within one sea region, is its model
     // route metric. A missing graphics key cannot erase this known connection.
-    if(!add(lane.fromState,lane.toState,2,std::move(available),double(lane.travelDistanceFixed)/kNativeShippingDistanceScale))
+    auto endpoint=[&](uint32_t state,uint32_t side)->uint64_t{
+      const auto region=trade.seaGeography->states.find(state);
+      if(region!=trade.seaGeography->states.end() && region->second.definition!=UINT32_MAX && region->second.geo!=UINT32_MAX)
+        return ((region->second.geo*100)&0x1fffffff)|0x800000; // original naval anchor encoding
+      // Known original lane, unknown port identity: keep its endpoint isolated
+      // from roads/other lanes, rather than using a loose graphics end as a port.
+      return (uint64_t(1)<<63)|(uint64_t(lane.id)<<1)|side;
+    };
+    if(!add(lane.fromState,lane.toState,2,std::move(available),double(lane.travelDistanceFixed)/kNativeShippingDistanceScale,
+        std::array<uint64_t,2>{endpoint(lane.fromState,0),endpoint(lane.toState,1)}))
       return fail("invalid domestic port lane scope or distance");
     ++result.seaConnections;
   }
+  for(const auto* connection:ordered(trade.domestic->localLand)){
+    if(cancelled && cancelled())return fail("cancelled");
+    if(connection->source!=connection->destination || !addLand(*connection))return fail("invalid current intra-state connection");
+  }
+  std::set<uint32_t> portIds;
+  for(const auto* transfer:ordered(trade.domestic->portTransfers)){
+    if(cancelled && cancelled())return fail("cancelled");
+    if(!areas.count(transfer->state) || transfer->id==UINT32_MAX || !portIds.insert(transfer->id).second || transfer->path.empty() ||
+       transfer->path.size()>4096 || transfer->anchors[0]==transfer->anchors[1])
+      return fail("invalid owned native port transfer");
+    int64_t previous=0;
+    for(const auto& point:transfer->path){
+      if(point[0]<previous)return fail("invalid native port transfer distance");previous=point[0];
+    }
+    NativeTradeGeometry shape;
+    const auto start=network.points.find(transfer->anchors[0]),end=network.points.find(transfer->anchors[1]);
+    if(start==network.points.end() || end==network.points.end())shape.complete=false;
+    else{
+      const auto same=[](const std::array<int64_t,2>& fixed,const NativeSplinePoint& point){
+        const double x=double(fixed[0])/100000,z=double(fixed[1])/100000;
+        return !(fixed[0]%100000) && !(fixed[1]%100000) && std::isfinite(point.x) && std::isfinite(point.z) &&
+            x<=point.x+.001 && point.x<x+1.001 && z<=point.z+.001 && point.z<z+1.001;
+      };
+      const auto& last=transfer->path.back();
+      if(!same(transfer->origin,start->second) || !same({last[1],last[2]},end->second))
+        return fail("native port transfer differs from current controls");
+      std::vector<NativeSplinePoint> points{start->second};
+      for(size_t i=0;i<transfer->path.size();++i){
+        const auto& point=transfer->path[i];
+        points.push_back(i+1==transfer->path.size()?end->second:NativeSplinePoint{float(double(point[1])/100000),float(double(point[2])/100000)});
+      }
+      const uint64_t strip=(uint64_t(1)<<63)|(uint64_t(transfer->id)<<6);
+      if(!result.portPaths.emplace(strip,std::move(points)).second)return fail("duplicate native port transfer handle");
+      shape.strips.push_back({strip,true});
+    }
+    // Original keyless access has its own model fee1, not the sea tariff0.25.
+    if(!add(transfer->state,transfer->state,4,std::move(shape),double(transfer->path.back()[0])/100000,
+        std::array<uint64_t,2>{transfer->anchors[0],transfer->anchors[1]}))
+      return fail("invalid native port transfer scope or distance");
+  }
+  std::map<Area,uint32_t> hubs;
+  for(const auto& [state,control]:trade.domestic->landHubs){
+    if(!areas.count(state) || !network.points.count(control))return fail("invalid current domestic land hub");
+    const auto index=node(state,control);
+    const auto [where,inserted]=hubs.emplace(areas.at(state),index);
+    if(!inserted && where->second!=index)return fail("ambiguous current domestic land hub");
+  }
+  for(auto& [state,points]:access){
+    const auto hub=hubs.find(areas.at(state));
+    if(hub!=hubs.end()){points={hub->second};continue;}
+    std::sort(points.begin(),points.end());points.erase(std::unique(points.begin(),points.end()),points.end());
+  }
   FreightPolicy policy;policy.graphRevision=snapshot.revision;
-  result.allocation=AllocateFreight(model,graph,policy,cancelled);
+  result.allocation=AllocateFreight(model,graph,policy,cancelled,access);
   if(!result.allocation.complete){if(error)*error=result.allocation.error;return {};}
   if(error)error->clear();return result;
 }

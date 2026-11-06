@@ -1,6 +1,7 @@
 #pragma once
 #include "native_world_trade.h"
 #include "native_splines.h"
+#include "native_travel.h"
 
 namespace v3 {
 // Adapter-only bridge for a separately validated original permission call.
@@ -11,14 +12,14 @@ std::optional<std::map<uint32_t,std::vector<uint32_t>>> DecodeDomesticStraitAcce
     const Reader& reader,uint64_t module,const NativeDomesticSources& domestic,
     const NativeWorldTradeSnapshot& trade,const Current& current,const Select& select,std::string* error=nullptr) {
   auto fail=[&](const char* why)->std::optional<std::map<uint32_t,std::vector<uint32_t>>>{if(error)*error=why;return {};};
-  if(!module || module>UINT64_MAX-0x059667f8 || !current())return fail("missing current domestic access scope");
+  if(!module || module>UINT64_MAX-0x05c43138 || !current())return fail("missing current domestic access scope");
   EconomyReadWindow window(reader);
   auto read=[&](uint64_t a,void* p,size_t n){return window.Read(a,p,n);};
   auto field=[&](uint64_t p,uint64_t off,auto& value){return p && off<=UINT64_MAX-p && read(p+off,&value,sizeof(value));};
   uint64_t countriesDb=0,countries=0,straitsDb=0,straits=0,type=0;uint32_t countrySlots=0,straitSlots=0;
-  if(!field(module,0x05964e20,countriesDb) || !field(countriesDb,0x20,countries) ||
+  if(!field(module,0x05c42c20,countriesDb) || !field(countriesDb,0x20,countries) ||
      !field(countriesDb,0x2c,countrySlots) || countrySlots>65536 ||
-     !field(module,0x059667f8,straitsDb) || !field(straitsDb,0,type) || type!=module+0x04439720 ||
+     !field(module,0x05c43138,straitsDb) || !field(straitsDb,0,type) || type!=module+0x0471cc78 ||
      !field(straitsDb,0x20,straits) || !field(straitsDb,0x2c,straitSlots) || straitSlots>4096)
     return fail("invalid domestic access databases");
   std::map<uint32_t,uint64_t> countryObjects,straitObjects;
@@ -27,7 +28,7 @@ std::optional<std::map<uint32_t,std::vector<uint32_t>>> DecodeDomesticStraitAcce
     if(countryObjects.count(lane.country))continue;
     uint64_t object=0;uint32_t id=UINT32_MAX;
     if((lane.country&0xffffff)>=countrySlots || !field(countries,8+uint64_t(lane.country&0xffffff)*16,object) ||
-       !field(object,0,type) || type!=module+0x04494cb8 || !field(object,0x18,id) || id!=lane.country)
+       !field(object,0,type) || type!=module+0x0468fce0 || !field(object,0x18,id) || id!=lane.country)
       return fail("stale domestic access country");
     countryObjects.emplace(id,object);
   }
@@ -35,10 +36,10 @@ std::optional<std::map<uint32_t,std::vector<uint32_t>>> DecodeDomesticStraitAcce
     uint64_t object=0,definition=0;uint32_t id=UINT32_MAX,definitionId=UINT32_MAX;
     std::array<uint16_t,2> sea{};std::array<uint8_t,4> controls{};uint8_t marker=0;
     if(item.id==UINT32_MAX || (item.id&0xffffff)>=straitSlots ||
-       !field(straits,8+uint64_t(item.id&0xffffff)*16,object) || !field(object,0,type) || type!=module+0x04490548 ||
-       !field(object,8,id) || id!=item.id || !field(object,0xa0,definition) ||
-       !field(definition,0,type) || type!=module+0x044f85a0 || !field(definition,0x10,definitionId) ||
-       !field(definition,0x44,sea) || !field(definition,0x4b,marker) || !field(object,0xa8,controls) ||
+       !field(straits,8+uint64_t(item.id&0xffffff)*16,object) || !field(object,0,type) || type!=module+0x046c9758 ||
+       !field(object,8,id) || id!=item.id || !field(object,0x120,definition) ||
+       !field(definition,0,type) || type!=module+0x04786528 || !field(definition,0x10,definitionId) ||
+       !field(definition,0x44,sea) || !field(definition,0x58,marker) || !field(object,0x128,controls) ||
        definitionId!=item.definition || sea!=item.seaProvinces || controls!=item.accessControls || marker!=item.canalDefinition ||
        !straitObjects.emplace(id,object).second)return fail("stale domestic access strait");
   }
@@ -75,14 +76,13 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     const std::vector<NativeStateEconomy>& states,uint32_t goodCount,const NativeSplineNetwork& network,
     const Current& current,std::string* error=nullptr) {
   auto fail=[&](const char* why)->std::optional<NativeDomesticSources>{if(error)*error=why;return {};};
-  if(!module || module>UINT64_MAX-0x05964e28 || states.empty() || states.size()>65536 ||
+  if(!module || module>UINT64_MAX-0x05c42c28 || states.empty() || states.size()>65536 ||
      !goodCount || goodCount>128 || !current())return fail("missing current domestic source identity");
   EconomyReadWindow window(reader);
   GoodsMemoryReader read=[&](uint64_t a,void* p,size_t n){return window.Read(a,p,n);};
   auto field=[&](uint64_t p,uint64_t off,auto& value){return p && off<=UINT64_MAX-p && read(p+off,&value,sizeof(value));};
   auto u64=[](const auto& b,size_t at){uint64_t n=0;std::memcpy(&n,b.data()+at,8);return n;};
   auto u32=[](const auto& b,size_t at){uint32_t n=0;std::memcpy(&n,b.data()+at,4);return n;};
-  auto u16=[](const auto& b,size_t at){uint16_t n=0;std::memcpy(&n,b.data()+at,2);return n;};
   NativeDomesticSources result;std::map<uint32_t,uint32_t> markets;
   auto counter=[&](uint64_t object,uint64_t offset,std::vector<int64_t>& values){
     std::array<uint8_t,0x30> header{};
@@ -104,7 +104,7 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     const auto object=ReadNativeStateObject(read,module,state.id);
     if(!object || !markets.emplace(state.id,state.market).second)return fail("invalid domestic state roster");
     std::vector<int64_t> production,consumption;
-    if(!counter(object,0xc8,production) || !counter(object,0x78,consumption))return fail("invalid domestic goods counter");
+    if(!counter(object,0xd0,production) || !counter(object,0x80,consumption))return fail("invalid domestic goods counter");
     for(uint32_t g=0;g<goodCount;++g)if(production[g] || consumption[g])
       result.orders.push_back({state.id,UINT32_MAX,state.market,g,production[g]/100,consumption[g]/100});
   }
@@ -115,12 +115,12 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     auto found=references.find(lane.country);
     if(found==references.end()){
       uint64_t db=0,entries=0,country=0,type=0;uint32_t slots=0,id=UINT32_MAX;
-      if(!field(module,0x05964e20,db) || !field(db,0x20,entries) || !field(db,0x2c,slots) || slots>65536 ||
+      if(!field(module,0x05c42c20,db) || !field(db,0x20,entries) || !field(db,0x2c,slots) || slots>65536 ||
          (lane.country&0xffffff)>=slots || !field(entries,8+uint64_t(lane.country&0xffffff)*16,country) ||
-         !field(country,0,type) || type!=module+0x04494cb8 || !field(country,0x18,id) || id!=lane.country)
+         !field(country,0,type) || type!=module+0x0468fce0 || !field(country,0x18,id) || id!=lane.country)
         return fail("domestic lane country is not current");
       std::array<uint8_t,0x18> header{};
-      if(country>UINT64_MAX-0x350 || !read(country+0x338,header.data(),header.size()) ||
+      if(country>UINT64_MAX-0x3b8 || !read(country+0x3a0,header.data(),header.size()) ||
          u32(header,12)>u32(header,8) || u32(header,8)>131072)return fail("invalid country port-connection roster");
       std::vector<uint32_t> ids(u32(header,12));
       if(!ids.empty() && !read(u64(header,0),ids.data(),ids.size()*4))return fail("unreadable country port connections");
@@ -131,85 +131,97 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     if(!found->second.count(lane.id))return fail("domestic lane absent from original country port connections");
     result.shipping.lanes.push_back(lane);
   }
-  uint64_t root=0,machine=0,world=0,type=0,provinces=0;uint32_t provinceCap=0,provinceCount=0;
-  if(!field(module,0x0592d128,root) || !field(root,0x608,machine) || !field(machine,0x120,world) ||
+  uint64_t root=0,machine=0,provinces=0;uint32_t provinceCap=0,provinceCount=0;
+  if(!field(module,0x05c07c68,root) || !field(root,0x608,machine) ||
      !field(machine,0xb0,provinces) || !field(machine,0xb8,provinceCap) || !field(machine,0xbc,provinceCount) ||
-     provinceCount>provinceCap || provinceCap>131072 || !field(world,0x5618,type) || type!=module+0x044bb380)
-    return fail("current domestic travel/province manager unavailable");
-  std::array<uint8_t,0x18> header{};
-  if(world>UINT64_MAX-0x5698 || !read(world+0x5680,header.data(),header.size()) ||
-     u32(header,12)>u32(header,8) || u32(header,8)>131072)return fail("invalid domestic travel roster");
-  std::vector<uint64_t> roster(u32(header,12));
-  if(!roster.empty() && !read(u64(header,0),roster.data(),roster.size()*8))return fail("unreadable domestic travel roster");
-  std::set<uint64_t> seen;std::set<uint32_t> ids;
-  auto endpoint=[&](uint64_t object,uint64_t expected)->std::optional<uint32_t>{
-    uint64_t vt=0,definition=0,province=0;uint16_t provinceId=0;uint32_t state=UINT32_MAX;
-    if(!field(object,0,vt) || vt!=module+0x044e3d78 || !field(object,0x78,definition) || definition!=expected ||
-       !field(definition,0,vt) || vt!=module+0x044f8a78 || !field(definition,0x44,provinceId) ||
-       !provinceId || provinceId==UINT16_MAX || provinceId>=provinceCount ||
-       !field(provinces,uint64_t(provinceId)*8,province) || !field(province,0,vt) || vt!=module+0x04437a00 ||
-       !field(province,0x18,state) || !markets.count(state))return {};
+     provinceCount>provinceCap || provinceCap>131072)return fail("current domestic province manager unavailable");
+  auto travel=DecodeNativeTravelNetwork(read,module,current,error);if(!travel)return {};
+  auto node=[&](const NativeTravelEndpoint& endpoint)->const NativeTravelNode&{
+    return travel->nodes[endpoint.naval][endpoint.index];
+  };
+  auto endpoint=[&](const NativeTravelNode& n)->std::optional<uint32_t>{
+    uint64_t province=0,type=0,definition=0,region=0,stateRegion=0;uint32_t state=UINT32_MAX;
+    if(!n.province || n.province==UINT16_MAX || n.province>=provinceCount ||
+       !field(provinces,uint64_t(n.province)*8,province) || !field(province,0,type) || type!=module+0x046ac1c0 ||
+       !field(province,0x18,state) || !markets.count(state) || !field(province,8,definition) ||
+       !field(definition,0,type) || type!=module+0x046ab568 || !field(definition,0xc8,region) ||
+       !field(ReadNativeStateObject(read,module,state),0xf10,stateRegion) || region!=stateRegion)return {};
     return state;
   };
-  for(uint64_t object:roster){
-    std::array<uint8_t,0x38> row{};std::array<uint8_t,0x60> def{};
-    if(!seen.insert(object).second || !read(object,row.data(),row.size()) || u64(row,0)!=module+0x044e08d8 ||
-       u32(row,8)==UINT32_MAX || !ids.insert(u32(row,8)).second || u32(row,0x20)>7)
-      return fail("invalid domestic travel connection");
-    const auto kind=u32(row,0x20);
-    if(kind!=2 && kind!=3 && kind!=4)continue; // original currently usable land categories
-    const uint64_t definition=u64(row,0x18);
-    if(!read(definition,def.data(),def.size()) || u64(def,0)!=module+0x04515e20 || u32(def,0x10)==UINT32_MAX)
-      return fail("invalid domestic travel definition");
-    const uint64_t key=u64(def,0x50);
-    if(kind==4 && (u32(def,0x58)!=1 || (key&63)!=1))return fail("current built rail has no rail spline definition");
-    if((key&63)>1)continue; // sea/coastal/other definitions are not a new sea solver
-    const auto link=network.connections.find(key);
-    if(link==network.connections.end())return fail("domestic travel key absent from current spline table");
-    auto source=endpoint(u64(row,0x28),u64(def,0x40)),destination=endpoint(u64(row,0x30),u64(def,0x48));
+  for(const auto& connection:travel->connections[1]){
+    if(connection.kind!=6 || connection.development!=5 || connection.spline!=UINT64_MAX)continue;
+    const auto& from=node(connection.endpoints[0]);const auto& to=node(connection.endpoints[1]);
+    const bool fromLand=!connection.endpoints[0].naval && (from.roles&0x7f)==2;
+    const bool toLand=!connection.endpoints[1].naval && (to.roles&0x7f)==2;
+    if(!((fromLand && connection.endpoints[1].naval && (to.roles&0x380)==0x200) ||
+         (toLand && connection.endpoints[0].naval && (from.roles&0x380)==0x200)))continue;
+    const auto state=endpoint(fromLand?from:to);
+    if(!state || from.control>=0x1fffffff || to.control>=0x1fffffff || from.control==to.control)
+      return fail("native port access province or control mismatch");
+    NativePortTransfer transfer;transfer.id=connection.id;transfer.state=*state;
+    transfer.anchors={from.control,to.control};transfer.origin=from.position;
+    // CA8550 builds the original leg from these definition positions/distance;
+    // CA7D40 emits that leg unchanged when the native spline key is absent.
+    transfer.path.push_back({connection.distanceFixed,to.position[0],to.position[1]});
+    result.portTransfers.push_back(std::move(transfer));
+  }
+  for(const auto& connection:travel->connections[0]){
+    const auto kind=connection.development;
+    if(kind!=2 && kind!=3 && kind!=4)continue;
+    const uint64_t key=connection.spline;
+    if(kind==4 && (connection.kind!=2 || (key&63)!=1))return fail("current built rail has no rail spline definition");
+    if(key==UINT64_MAX || (key&63)>1)continue;
+    const auto& from=node(connection.endpoints[0]);const auto& to=node(connection.endpoints[1]);
+    if(connection.endpoints[0].naval || connection.endpoints[1].naval)return fail("land connection uses naval endpoint");
+    const auto source=endpoint(from),destination=endpoint(to);
     if(!source || !destination)return fail("domestic travel endpoint province/state mismatch");
     const bool modeled=*source!=*destination && markets.at(*source)==markets.at(*destination);
-    if(!modeled && kind!=4)continue;
+    const bool local=*source==*destination;
+    if(!modeled && !local && kind!=4)continue;
+    const auto link=network.connections.find(key);
+    if(link==network.connections.end())return fail("domestic travel key absent from current spline table");
     if(link->second.empty()){
       if(kind==4)return fail("current built rail has no physical path");
       continue;
     }
-    std::vector<NativeSplinePoint> points;uint32_t anchor=uint32_t(key>>6)&0x1fffffff;
+    uint32_t anchor=uint32_t(key>>6)&0x1fffffff;const uint32_t last=uint32_t(key>>35);
+    const bool along=from.control==anchor && to.control==last;
+    if(!along && (from.control!=last || to.control!=anchor))return fail("domestic land controls differ from current spline");
+    std::vector<NativeSplinePoint> points;
     for(uint64_t stripId:link->second){
-      auto found=network.strips.find(stripId);
+      const auto found=network.strips.find(stripId);
       if(found==network.strips.end() || (stripId&63)!=(key&63) || found->second.size()<2)
         return fail("invalid domestic land spline strip");
-      const auto& refs=found->second;const bool along=refs.front()==anchor;
-      if(!along && refs.back()!=anchor)return fail("disconnected domestic land spline");
+      const auto& refs=found->second;const bool forward=refs.front()==anchor;
+      if(!forward && refs.back()!=anchor)return fail("disconnected domestic land spline");
       for(size_t i=points.empty()?0:1;i<refs.size();++i){
-        auto p=network.points.find(refs[along?i:refs.size()-1-i]);
-        if(p==network.points.end())return fail("domestic land spline point unavailable");
-        points.push_back(p->second);
+        const auto point=network.points.find(refs[forward?i:refs.size()-1-i]);
+        if(point==network.points.end() || !std::isfinite(point->second.x) || !std::isfinite(point->second.z))
+          return fail("domestic land spline point unavailable");
+        points.push_back(point->second);
       }
-      anchor=along?refs.back():refs.front();
+      anchor=forward?refs.back():refs.front();
     }
-    if(anchor!=uint32_t(key>>35) || points.size()<2 || points.size()>4096)
-      return fail("domestic land spline endpoints differ");
+    if(anchor!=last || points.size()<2 || points.size()>4096)return fail("domestic land spline endpoints differ");
     auto same=[](const std::array<int64_t,2>& fixed,const NativeSplinePoint& p){
-      const double x=double(fixed[0])/100000,z=double(fixed[1])/100000;
-      return !(fixed[0]%100000) && !(fixed[1]%100000) && std::isfinite(p.x) && std::isfinite(p.z) &&
-          x<=p.x+.001 && p.x<x+1.001 && z<=p.z+.001 && p.z<z+1.001;
+      return double(fixed[0])==std::floor(double(p.x))*100000 && double(fixed[1])==std::floor(double(p.z))*100000;
     };
-    std::array<int64_t,2> origin{};std::array<uint8_t,0x18> pathHeader{};
-    if(!read(u64(def,0x40)+0x48,origin.data(),sizeof(origin)) || definition>UINT64_MAX-0x80 ||
-       !read(definition+0x68,pathHeader.data(),pathHeader.size()) ||
-       u32(pathHeader,12)!=points.size()-1 || u32(pathHeader,12)>u32(pathHeader,8) || u32(pathHeader,8)>4096)
-      return fail("domestic land definition path bounds differ");
-    bool along=same(origin,points.front());
-    if(!along){if(!same(origin,points.back()))return fail("domestic land origin differs from current spline");
-      std::reverse(points.begin(),points.end());}
-    std::vector<std::array<int64_t,3>> path(points.size()-1);
-    if(!read(u64(pathHeader,0),path.data(),path.size()*24))return fail("unreadable domestic land definition path");
-    for(size_t i=0;i<path.size();++i)if(!same({path[i][1],path[i][2]},points[i+1]))
+    if(!same(from.position,along?points.front():points.back()) || !same(to.position,along?points.back():points.front()))
       return fail("domestic land definition geometry differs from current spline");
-    NativeLandConnection copy{u32(row,8),*source,*destination,kind,key,along};
+    NativeLandConnection copy{connection.id,*source,*destination,kind,key,along};
+    for(size_t side=0;side<2;++side){
+      const auto& n=side?to:from;if((n.roles&0x7f)!=1)continue;
+      uint64_t region=0,type=0;uint32_t definitionId=UINT32_MAX,geo=UINT32_MAX;uint8_t valid=0;
+      const auto state=side?*destination:*source;
+      if(!field(ReadNativeStateObject(read,module,state),0xf10,region) || !field(region,0,type) || type!=module+0x046ba948 ||
+         !field(region,0x10,definitionId) || definitionId==UINT32_MAX || !field(region,0x40,geo) || geo==UINT32_MAX ||
+         !field(region,0x44,valid) || valid!=1)return fail("current primary land hub region mismatch");
+      const auto [where,inserted]=result.landHubs.emplace(state,n.control);
+      if(!inserted && where->second!=n.control)return fail("ambiguous current primary land hub");
+    }
     if(kind==4)result.builtRails.push_back(copy);
     if(modeled)result.land.push_back(copy);
+    if(local)result.localLand.push_back(copy);
   }
   if(!window.Unchanged())return fail("domestic sources changed during copy");
   if(!current())return fail("retired domestic sources");

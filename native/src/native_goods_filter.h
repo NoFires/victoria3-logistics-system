@@ -38,6 +38,18 @@ inline NativeGoodsFilter DecodeNativeGoodsFilter(const GoodsMemoryReader& reader
   uint32_t cacheLock=0;uint8_t dirty=1;
   if(!field(match,0x54,cacheLock) || (cacheLock&1) || !field(match,0x320,dirty) || dirty)
     return fail("native goods rows pending refresh");
+  // Original2037570 also requires1442F60(match+58), independently of dirty.
+  // Copy its current invalidation entry; never call the getter or take its lock.
+  uint64_t root=0,machine=0,type=0,epochs=0;
+  uint32_t initialized=0,phase=0,key=0,generation=0,epochCount=0,liveGeneration=1;
+  if(!field(module,0x05404748,initialized) || !initialized ||
+     !field(module,0x05c07c68,root) || !field(root,0,type) || type!=module+0x04660618 ||
+     !field(root,0x588,phase) || phase!=4 || !field(root,0x608,machine) ||
+     !field(match,0x58,key) || !field(match,0x5c,generation) || !field(machine,0x114,epochCount))
+    return fail("native goods cache generation unavailable");
+  if(key<epochCount && (!field(machine,0x108,epochs) || !field(epochs,uint64_t(key)*4,liveGeneration)))
+    return fail("native goods cache invalidation entry unavailable");
+  if(generation!=liveGeneration)return fail("native goods cache generation expired");
   std::array<uint8_t,32> text{};
   if(match>UINT64_MAX-0x328 || !read(match+0x328,text.data(),text.size()))return fail("native goods query unavailable");
   uint64_t size=0,cap=0;std::memcpy(&size,text.data()+16,8);std::memcpy(&cap,text.data()+24,8);

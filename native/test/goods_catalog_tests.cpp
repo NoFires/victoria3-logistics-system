@@ -29,7 +29,7 @@ struct Fixture {
 struct ContextFixture {
   Fixture goods;
   static constexpr uint64_t module=0x140000000, tlsArray=0x30000, storage=0x40000;
-  std::array<uint8_t,0x8650> tls{};
+  std::array<uint8_t,0x86c0> tls{};
   std::array<uint8_t,256> slots{};
   uint64_t first=storage;
   template<class T> void Tls(size_t offset,T value){std::memcpy(tls.data()+offset,&value,sizeof(value));}
@@ -38,7 +38,7 @@ struct ContextFixture {
     goods.layout={module+kRvaGoodsDatabaseVtable,module+kRvaGoodVtable};
     goods.Put(Fixture::db,goods.layout.databaseVtable);
     for(uint32_t i=0;i<4;++i)goods.Put(Fixture::base+0x300+0x70*i,goods.layout.goodVtable);
-    Tls(0x8600,uint32_t(1));Tls(0x8648,uint64_t(0x100000003));
+    Tls(0x8670,uint32_t(1));Tls(0x86b8,uint64_t(0x100000003));
     Slot(0,uint64_t(UINT64_MAX-3));Slot(8,uint8_t(1)); // first populated slot is deliberately invalid
     Slot(3*16,uint64_t(Fixture::db));Slot(3*16+8,uint8_t(1));
   }
@@ -79,12 +79,12 @@ int main(){
   Check(!changed.ok && changed.goods.empty(),"heap content mutation rejected even when definition is unchanged");
   ContextFixture ctx;
   auto current=ctx.Decode();Check(current.ok && current.goods[0].key=="grain","current TLS context selects slot 3, never first populated slot 0");
-  ctx.Tls(0x8600,uint32_t(0));Check(!ctx.Decode().ok,"uninitialized context is not initialized by decoder");
-  ctx=ContextFixture();ctx.Tls(0x8648,uint64_t(16));Check(!ctx.Decode().ok,"out-of-range context rejected");
+  ctx.Tls(0x8670,uint32_t(0));Check(!ctx.Decode().ok,"uninitialized context is not initialized by decoder");
+  ctx=ContextFixture();ctx.Tls(0x86b8,uint64_t(16));Check(!ctx.Decode().ok,"out-of-range context rejected");
   ctx=ContextFixture();ctx.Slot(3*16+8,uint8_t(0));Check(!ctx.Decode().ok,"inactive current slot is not replaced by another context");
   ctx=ContextFixture();int contextReads=0;
   auto contextChanged=DecodeThreadGoodsCatalog([&](auto a,auto p,auto n){
-    if(a==ContextFixture::tlsArray && ++contextReads==2)ctx.Tls(0x8648,uint64_t(0x200000003));
+    if(a==ContextFixture::tlsArray && ++contextReads==2)ctx.Tls(0x86b8,uint64_t(0x200000003));
     return ctx.Read(a,p,n);
   },ContextFixture::module,ContextFixture::tlsArray);
   Check(!contextChanged.ok && contextChanged.goods.empty(),"context token change invalidates completed catalog");

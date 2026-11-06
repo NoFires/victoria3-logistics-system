@@ -93,6 +93,17 @@ uint64_t HashNativeTrade(uint64_t hash, const NativeWorldTradeSnapshot& trade) {
     for(const auto* link:ordered(trade.domestic->land,[](const auto& c){return c.id;})){
       value(link->id);value(link->source);value(link->destination);value(link->type);value(link->spline);value(link->forward);
     }
+    value(trade.domestic->localLand.size());
+    for(const auto* link:ordered(trade.domestic->localLand,[](const auto& c){return c.id;})){
+      value(link->id);value(link->source);value(link->destination);value(link->type);value(link->spline);value(link->forward);
+    }
+    value(trade.domestic->portTransfers.size());
+    for(const auto* transfer:ordered(trade.domestic->portTransfers,[](const auto& c){return c.id;})){
+      value(transfer->id);value(transfer->state);
+      for(auto anchor:transfer->anchors)value(anchor);
+      for(auto coordinate:transfer->origin)value(coordinate);
+      value(transfer->path.size());for(const auto& point:transfer->path)for(auto component:point)value(component);
+    }
     value(trade.domestic->shipping.lanes.size());
     value(trade.domestic->builtRails.size());
     for(const auto* link:ordered(trade.domestic->builtRails,[](const auto& c){return c.id;})){

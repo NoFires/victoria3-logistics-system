@@ -21,7 +21,7 @@ struct NativeVfsConfiguration {
   std::vector<NativeVfsReplacement> replacements;
   std::vector<std::string> exclusions;
 };
-// Enumeration at 03B4AF80: exclusion is a literal byte prefix; replacement
+// Enumeration at 03DF37C0: exclusion is a literal byte prefix; replacement
 // matches this directory exactly and keeps the owning root and higher roots.
 // Recursive traversal and physical directory/ZIP resolution are separate.
 inline size_t NativeVfsDirectoryRootCount(const NativeVfsConfiguration& configuration,const std::string& directory) {
@@ -35,7 +35,7 @@ inline size_t NativeVfsDirectoryRootCount(const NativeVfsConfiguration& configur
   return count;
 }
 
-// 1.13.11 only: caller verifies the executable and supplies its current TLS
+// 1.15.0 only: caller verifies the executable and supplies its current TLS
 // filesystem context index. This copies frozen configuration, never calls VFS.
 // Mounts and replace/exclude rules are copied together. This does not yet
 // resolve effective files. Directory enumeration policy uses only these copies.
@@ -46,7 +46,7 @@ std::optional<NativeVfsConfiguration> DecodeNativeVfsConfiguration(
   auto fail=[&](const char* reason)->std::optional<NativeVfsConfiguration>{
     if(error)*error=reason;return std::nullopt;
   };
-  if(!current() || !module || context>=16 || module>UINT64_MAX-0x05145900)
+  if(!current() || !module || context>=16 || module>UINT64_MAX-0x053f3bc1)
     return fail("invalid filesystem context");
   struct Copy {uint64_t address;std::vector<uint8_t> bytes;};
   std::vector<Copy> copies;size_t stringBytes=0;
@@ -70,7 +70,7 @@ std::optional<NativeVfsConfiguration> DecodeNativeVfsConfiguration(
     }
     return false;
   };
-  const uint64_t fs=module+0x05144588+uint64_t(context)*0x128;
+  const uint64_t fs=module+0x053f2948+uint64_t(context)*0x128;
   uint8_t ready=0,frozen=0;uint64_t raw=0,paths=0,node=0;
   if(!field(fs,0x120,ready) || ready!=1 || !field(fs,0xb8,raw) ||
      !field(raw,0xfa,frozen) || frozen!=1 || !field(raw,8,node) || !node ||
@@ -91,9 +91,9 @@ std::optional<NativeVfsConfiguration> DecodeNativeVfsConfiguration(
     uint64_t enumerate=0,open=0,stat=0;
     if(!field(item[5],0x38,enumerate) || !field(item[5],0x40,open) || !field(item[5],0x68,stat))
       return fail("unreadable filesystem backend");
-    if(enumerate==module+0x03b33d80 && open==module+0x03b33fe0 && stat==module+0x03b34220)
+    if(enumerate==module+0x03ddc5c0 && open==module+0x03ddc820 && stat==module+0x03ddca60)
       mount.kind=NativeVfsKind::Directory;
-    else if(enumerate==module+0x03b40a50 && open==module+0x03b40cc0 && stat==module+0x03b410e0)
+    else if(enumerate==module+0x03de9290 && open==module+0x03de9500 && stat==module+0x03de9920)
       mount.kind=NativeVfsKind::Zip;
     else return fail("unverified filesystem backend");
     mounts.push_back(std::move(mount));node=item[6];

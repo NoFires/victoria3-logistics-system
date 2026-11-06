@@ -9,8 +9,8 @@
 #include <vector>
 
 namespace v3 {
-// Copied-memory decoder for the exact 1.13.11 layout. R72 verified this layout on
-// 53 live definitions. This helper does not establish a caller's access window.
+// Copied-memory decoder for the exact 1.15.0 layout. R195 checked the fields on
+// 54 live definitions; R72 is historical 1.13.11 evidence. This helper does not establish a caller's access window.
 // The supplied reader must fail safely; it must never be a raw memcpy of engine
 // memory. No pointer, callback or native string escapes in the returned catalog.
 struct GoodsMetadata {

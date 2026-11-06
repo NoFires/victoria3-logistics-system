@@ -34,12 +34,17 @@ uint32_t LogisticsSession::EffectiveOwnerLocked() const {
 }
 
 bool LogisticsSession::SetSnapshot(std::shared_ptr<const EconomySnapshot> snapshot,
-                                   std::string* reason, bool synthetic) {
+                                   std::string* reason, bool synthetic,
+                                   std::shared_ptr<const std::atomic<uint64_t>> laneEpoch, uint64_t laneGeneration) {
   if (!snapshot) {
     if (reason) *reason = "missing economy snapshot";
     return false;
   }
   LockGuard lock(m_mutex);
+  if (laneGeneration ? !laneEpoch || laneEpoch->load()!=laneGeneration : bool(laneEpoch)) {
+    if (reason) *reason = "retired native lane collection";
+    return false;
+  }
   if (m_haveIdentity) {
     if (snapshot->world < m_lastWorld || (m_worldRetired && snapshot->world == m_lastWorld)) {
       if (reason) *reason = "stale world generation";
@@ -51,6 +56,8 @@ bool LogisticsSession::SetSnapshot(std::shared_ptr<const EconomySnapshot> snapsh
     }
   }
   m_snapshot = std::move(snapshot);
+  m_laneEpoch = std::move(laneEpoch);
+  m_laneGeneration = laneGeneration;
   m_lastWorld = m_snapshot->world;
   m_lastRevision = m_snapshot->revision;
   m_haveIdentity = true;
@@ -69,12 +76,18 @@ bool LogisticsSession::SetSnapshot(std::shared_ptr<const EconomySnapshot> snapsh
   return true;
 }
 
-bool LogisticsSession::HasEquivalentSnapshot(const EconomySnapshot& snapshot) const {
+bool LogisticsSession::LaneAccessCurrentLocked() const {
+  return m_laneGeneration ? m_laneEpoch && m_laneEpoch->load()==m_laneGeneration : !m_laneEpoch;
+}
+
+bool LogisticsSession::HasEquivalentSnapshot(const EconomySnapshot& snapshot,
+    std::shared_ptr<const std::atomic<uint64_t>> laneEpoch, uint64_t laneGeneration) const {
   LockGuard lock(m_mutex);
   // Compare values, not a hash: revision counts captures, whereas the owned
   // snapshot identity changes only when real inputs change. Vector ordering is
   // the adapter's deterministic state/good order; rail insertion order is irrelevant.
-  return m_snapshot && !m_worldRetired && !m_synthetic &&
+  return LaneAccessCurrentLocked() && laneEpoch==m_laneEpoch && laneGeneration==m_laneGeneration &&
+      m_snapshot && !m_worldRetired && !m_synthetic &&
       snapshot.world==m_snapshot->world && snapshot.revision>=m_lastRevision &&
       snapshot.primaryMarket==m_snapshot->primaryMarket && snapshot.goods==m_snapshot->goods &&
       ((snapshot.nativeTrade && m_snapshot->nativeTrade)
@@ -86,7 +99,7 @@ bool LogisticsSession::HasEquivalentSnapshot(const EconomySnapshot& snapshot) co
 
 bool LogisticsSession::StatisticsAreCurrent(const std::shared_ptr<const FreightFrame>& frame) const {
   LockGuard lock(m_mutex);
-  if (!frame || !m_frame ||
+  if (!LaneAccessCurrentLocked() || !frame || !m_frame ||
       (!(frame->allocation && frame->allocation==m_frame->allocation) &&
        !(frame->nativeFacts && frame->nativeFacts==m_frame->nativeFacts)) ||
       !m_snapshot || m_snapshotDirty || m_synthetic ||
@@ -103,6 +116,7 @@ void LogisticsSession::ResetWorld() {
   for (auto& [owner, state] : m_owners) state.active = false;
   m_effectiveOwner = 0;
   m_snapshot.reset();
+  m_laneEpoch.reset();m_laneGeneration = 0;
   m_worldRetired = m_haveIdentity;
   m_frame.reset();
   m_snapshotDirty = m_selectionDirty = false;
@@ -180,23 +194,27 @@ uint32_t LogisticsSession::FirstMarket(const EconomySnapshot& snapshot) {
 
 LogisticsStatus LogisticsSession::Status() const {
   LockGuard lock(m_mutex);
+  if (!LaneAccessCurrentLocked()) {
+    auto status=m_status;status.snapshotReady=status.haveFrame=status.active=false;
+    status.ribbons=0;status.applied=0;status.error="retired native lane collection";return status;
+  }
   return m_status;
 }
 
 std::shared_ptr<const FreightFrame> LogisticsSession::Frame() const {
   LockGuard lock(m_mutex);
-  return m_frame;
+  return LaneAccessCurrentLocked() ? m_frame : nullptr;
 }
 
 bool LogisticsSession::SnapshotIsCurrent(const std::shared_ptr<const EconomySnapshot>& snapshot) const {
   LockGuard lock(m_mutex);
-  return snapshot && snapshot==m_snapshot;
+  return LaneAccessCurrentLocked() && snapshot && snapshot==m_snapshot;
 }
 
 bool LogisticsSession::FrameIsCurrent(const std::shared_ptr<const FreightFrame>& frame,
                                       uint64_t applied) const {
   LockGuard lock(m_mutex);
-  return frame && frame == m_frame && m_snapshot && m_effectiveOwner &&
+  return LaneAccessCurrentLocked() && frame && frame == m_frame && m_snapshot && m_effectiveOwner &&
       !m_snapshotDirty && !m_selectionDirty && m_status.active && m_status.haveFrame &&
       applied && applied == m_status.applied && applied == m_worker.Generation() &&
       frame->world == m_snapshot->world && frame->economyRevision == m_snapshot->revision;
@@ -206,6 +224,13 @@ std::shared_ptr<const LogisticsDocument> LogisticsSession::Poll() {
   FreightJob job;
   {
     LockGuard lock(m_mutex);
+    if (m_snapshot && !LaneAccessCurrentLocked()) {
+      m_worker.Cancel();m_snapshot.reset();m_frame.reset();
+      m_laneEpoch.reset();m_laneGeneration=0;
+      m_snapshotDirty=m_selectionDirty=false;
+      m_status=LogisticsStatus{};m_status.error="retired native lane collection";
+      return {};
+    }
     if (m_effectiveOwner && m_snapshot && (m_snapshotDirty || m_selectionDirty)) {
       auto& owner = m_owners[m_effectiveOwner];
       if (owner.selection.market == 0 && !owner.selection.explicitMarket)
@@ -232,7 +257,7 @@ std::shared_ptr<const LogisticsDocument> LogisticsSession::Poll() {
     LockGuard lock(m_mutex);
     // LatestWorker::Poll is a retained mailbox, not a consuming read. A stable
     // generation must not rebuild/re-publish its document every UI timer tick.
-    if (reply->generation == m_lastApplied) return {};
+    if (!LaneAccessCurrentLocked() || reply->generation == m_lastApplied) return {};
     snapshot = m_snapshot;
     filter = m_filter;
     effective = m_effectiveOwner;
@@ -241,7 +266,7 @@ std::shared_ptr<const LogisticsDocument> LogisticsSession::Poll() {
   if (!snapshot || !effective) return {};
   if (!reply->error.empty() || !reply->value.error.empty()) {
     LockGuard lock(m_mutex);
-    if (m_snapshot != snapshot || m_effectiveOwner != effective ||
+    if (!LaneAccessCurrentLocked() || m_snapshot != snapshot || m_effectiveOwner != effective ||
         reply->generation != m_worker.Generation()) return {};
     m_status.error = reply->error.empty() ? reply->value.error : reply->error;
     m_status.allocationBuilds = reply->value.stats.allocations;
@@ -262,7 +287,7 @@ std::shared_ptr<const LogisticsDocument> LogisticsSession::Poll() {
   document->synthetic = synthetic;
   {
     LockGuard lock(m_mutex);
-    if (m_effectiveOwner != effective || m_snapshot != snapshot || m_snapshotDirty ||
+    if (!LaneAccessCurrentLocked() || m_effectiveOwner != effective || m_snapshot != snapshot || m_snapshotDirty ||
         m_selectionDirty || reply->generation != m_worker.Generation() ||
         reply->generation == m_lastApplied || !SameFilter(m_filter, filter)) return {};
     m_frame = std::move(frame);

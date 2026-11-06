@@ -28,7 +28,7 @@ struct Memory {
   }
 };
 int main(){
-  constexpr uint64_t base=0x10000000,fs=base+0x05144588;
+  constexpr uint64_t base=0x10000000,fs=base+0x053f2948;
   Memory good;good.Put<uint8_t>(fs+0x120,1);good.Put<uint64_t>(fs+0xb8,0x20000);
   good.Put<uint8_t>(0x200fa,1);good.Put<uint64_t>(0x20008,0x30000);
   good.Put<uint64_t>(fs+0x28,0x40000);
@@ -41,9 +41,9 @@ int main(){
     for(size_t j=0;j<item.size();++j)good.Put<uint64_t>(node+j*8,item[j]);
     good.String(root,n==0?"E:\\Mods\\改图":"E:/Game/base.zip");
     good.Put<uint64_t>(0x40000+n*8,root);
-    good.Put<uint64_t>(backend+0x38,base+(n==0?0x03b33d80:0x03b40a50));
-    good.Put<uint64_t>(backend+0x40,base+(n==0?0x03b33fe0:0x03b40cc0));
-    good.Put<uint64_t>(backend+0x68,base+(n==0?0x03b34220:0x03b410e0));
+    good.Put<uint64_t>(backend+0x38,base+(n==0?0x03ddc5c0:0x03de9290));
+    good.Put<uint64_t>(backend+0x40,base+(n==0?0x03ddc820:0x03de9500));
+    good.Put<uint64_t>(backend+0x68,base+(n==0?0x03ddca60:0x03de9920));
   }
   good.Put<uint64_t>(0x40010,0);
   auto check=[&](Memory& memory,uint32_t context=0,uint64_t module=0x10000000){

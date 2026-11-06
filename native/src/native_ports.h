@@ -2,14 +2,14 @@
 #include "native_sea_geography.h"
 
 namespace v3 {
-// Raw read-only equivalent of the eligibility test used by025E8070/02607620.
+// Raw read-only equivalent of the eligibility test used by028FBC00.
 // Current manager transforms, not authored fallback positions or nearest coast.
 // Caller owns the verified access scope and outer combined snapshot window.
 template<class Reader,class Current>
 std::optional<std::map<uint32_t,bool>> DecodeNativePortHubs(const Reader& reader,uint64_t module,
     const std::map<uint32_t,NativeSeaRegion>& states,const Current& current,std::string* error=nullptr) {
   auto fail=[&](const char* why)->std::optional<std::map<uint32_t,bool>>{if(error)*error=why;return {};};
-  if(!module || module>UINT64_MAX-0x0592d130 || states.empty() || states.size()>65536 || !current())
+  if(!module || module>UINT64_MAX-0x05c07c70 || states.empty() || states.size()>65536 || !current())
     return fail("missing current native port identity");
   EconomyReadWindow window(reader);
   auto read=[&](uint64_t at,void* out,size_t size){return window.Read(at,out,size);};
@@ -20,14 +20,14 @@ std::optional<std::map<uint32_t,bool>> DecodeNativePortHubs(const Reader& reader
     return read(at,h.data(),h.size()) && u32(h,12)<=u32(h,8) && u32(h,8)<=limit;
   };
   uint64_t root=0,machine=0,world=0,graphics=0,type=0,manager=0;
-  if(!field(module,0x0592d128,root) || !field(root,0x608,machine) || !field(machine,0x120,world) ||
-     !field(module,0x05901fa0,graphics) || !field(graphics,0,type) || type!=module+0x0464e4e8 ||
-     !field(graphics,0x290,manager) || !manager || manager>UINT64_MAX-0x210 || !world || world>UINT64_MAX-0x3c88)
+  if(!field(module,0x05c07c68,root) || !field(root,0x608,machine) || !field(machine,0x120,world) ||
+     !field(module,0x05bdcaf0,graphics) || !field(graphics,0,type) || type!=module+0x048caec0 ||
+     !field(graphics,0x290,manager) || !manager || manager>UINT64_MAX-0x228 || !world || world>UINT64_MAX-0x3b20)
     return fail("current native port sources unavailable");
   std::array<uint8_t,0x18> regionHeader{},typesHeader{},transformsHeader{};
-  if(!array(world+0x3c70,65536,regionHeader) || !u32(regionHeader,12) ||
-     !array(module+0x051385c0,64,typesHeader) || u32(typesHeader,12)!=5 ||
-     !array(manager+0x1f8,65536,transformsHeader))return fail("invalid native port source bounds");
+  if(!array(world+0x3b08,65536,regionHeader) || !u32(regionHeader,12) ||
+     !array(module+0x053e61b0,64,typesHeader) || u32(typesHeader,12)!=5 ||
+     !array(manager+0x210,65536,transformsHeader))return fail("invalid native port source bounds");
   std::map<uint32_t,bool> result;
   std::map<uint32_t,uint32_t> wanted; // geo ID -> region definition ID
   for(const auto& [id,region]:states){
@@ -35,10 +35,10 @@ std::optional<std::map<uint32_t,bool>> DecodeNativePortHubs(const Reader& reader
       return fail("native state region outside current world");
     uint64_t object=0,definition=0;
     if(!field(u64(regionHeader,0),uint64_t(region.definition)*8,object) ||
-       !field(object,0,type) || type!=module+0x044df758 || !field(object,0x90,definition))
+       !field(object,0,type) || type!=module+0x046b8bf8 || !field(object,0x90,definition))
       return fail("unavailable current native state region");
     std::array<uint8_t,0x48> row{};
-    if(!read(definition,row.data(),row.size()) || u64(row,0)!=module+0x044e7850 ||
+    if(!read(definition,row.data(),row.size()) || u64(row,0)!=module+0x046ba948 ||
        u32(row,0x10)!=region.definition || u32(row,0x40)!=region.geo || row[0x44]!=1)
       return fail("state geography differs from current native port region");
     auto [found,inserted]=wanted.emplace(region.geo,region.definition);
@@ -53,13 +53,13 @@ std::optional<std::map<uint32_t,bool>> DecodeNativePortHubs(const Reader& reader
   for(unsigned category:{3u,0u,2u,1u,4u}){
     const uint64_t object=types[category*2];
     if(!field(object,0,type))return fail("unavailable native hub type");
-    if(type==module+0x047435c8)continue; // original null type: IsValid returns false
+    if(type==module+0x049c9a28)continue; // original null type: IsValid returns false
     std::array<uint8_t,0xa0> row{};
     // The registered hubs are CGameObjectLocator, not parsed CMapObjectType.
-    // Its native IsValid slot50 is constant true0624690; +90 is a category ID.
-    if(type!=module+0x047295f0 || !read(object,row.data(),row.size()))return fail("unknown native hub type");
+    // Its native IsValid slot50 is constant true067B920; +90 is a category ID.
+    if(type!=module+0x049aec58 || !read(object,row.data(),row.size()))return fail("unknown native hub type");
     const uint32_t cap=u32(row,0x58),count=u32(row,0x5c),index=u32(row,0x98);
-    // Finalize02C04CF0 assigns this runtime transform index.
+    // The current locator+98 field assigns this runtime transform index.
     if(count>cap || cap>65536 || index>=u32(transformsHeader,12))return fail("invalid native hub instance bounds");
     std::array<uint8_t,0x18> positions{};
     const uint64_t headers=u64(transformsHeader,0),offset=uint64_t(index)*0x18;
@@ -77,7 +77,7 @@ std::optional<std::map<uint32_t,bool>> DecodeNativePortHubs(const Reader& reader
       const uint64_t data=u64(positions,0);
       if(!data || slot*0x28>UINT64_MAX-data || !read(data+slot*0x28,transform.data(),sizeof(transform)) ||
          !std::isfinite(transform[0]) || !std::isfinite(transform[2]))return fail("invalid current native hub position");
-      // Literal02607620 condition: do not tighten it to both coordinates >=0.
+      // Literal028FBC00 condition: do not tighten it to both coordinates >=0.
       available[geo]|=(transform[0]>=0 || transform[2]>=0) && (transform[0]!=0 || transform[2]!=0);
     }
   }
@@ -89,7 +89,7 @@ std::optional<std::map<uint32_t,bool>> DecodeNativePortHubs(const Reader& reader
 
 inline std::array<uint64_t,2> NativePortSplineKeys(uint32_t sea,uint32_t land) {
   auto keys=NativeSeaSplineKeys(sea,land);
-  for(auto& key:keys)key=(key&~uint64_t(63))|3; // literal025E8070: same packing, type3
+  for(auto& key:keys)key=(key&~uint64_t(63))|3; // current02884080 packing, type3
   return keys;
 }
 struct NativeRouteConnections {

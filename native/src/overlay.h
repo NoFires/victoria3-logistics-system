@@ -86,7 +86,8 @@ class Overlay {
   void PublishLogisticsDocument(std::shared_ptr<const LogisticsDocument> document);
   // Debug/economy probe: feed a real engine-read snapshot into the logistics
   // session (synthetic=false). The formal UI labels it "model allocation".
-  void PublishRealEconomy(std::shared_ptr<const EconomySnapshot> snapshot);
+  void PublishRealEconomy(std::shared_ptr<const EconomySnapshot> snapshot,
+      std::shared_ptr<const std::atomic<uint64_t>> laneEpoch = {}, uint64_t laneGeneration = 0);
   std::optional<LogisticsSelection> TakeLogisticsRequest();
 
  private:

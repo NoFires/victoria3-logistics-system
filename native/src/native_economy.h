@@ -2,6 +2,7 @@
 #include "freight.h"
 #include "state_market.h"
 #include "state_region.h"
+#include <map>
 #include <unordered_map>
 
 namespace v3 {
@@ -11,8 +12,11 @@ class EconomyReadWindow {
  public:
   explicit EconomyReadWindow(GoodsMemoryReader reader):m_reader(std::move(reader)){}
   bool Read(uint64_t address,void* out,size_t size) {
-    if(!m_reader || !address || !size || size>UINT64_MAX-address || size>32*1024*1024-m_total ||
-       !m_reader(address,out,size))return false;
+    if(!m_reader || !address || !size || size>UINT64_MAX-address)return false;
+    const auto previous=m_seen.find({address,size});
+    if((previous==m_seen.end() && size>32*1024*1024-m_total) || !m_reader(address,out,size))return false;
+    if(previous!=m_seen.end())return !std::memcmp(out,m_copies[previous->second].bytes.data(),size);
+    m_seen.emplace(std::pair{address,size},m_copies.size());
     m_total+=size;m_copies.push_back({address,{(uint8_t*)out,(uint8_t*)out+size}});return true;
   }
   bool Unchanged() const {
@@ -25,21 +29,22 @@ class EconomyReadWindow {
   struct Copy {uint64_t address;std::vector<uint8_t> bytes;};
   GoodsMemoryReader m_reader;
   std::vector<Copy> m_copies;
+  std::map<std::pair<uint64_t,size_t>,size_t> m_seen;
   size_t m_total=0;
 };
 // Exact typed lookup used by State.Get*. No native call or lifetime guarantee:
 // the address is local to the adapter's access window, never a worker input.
 inline uint64_t ReadNativeStateObject(const GoodsMemoryReader& read,uint64_t module,uint32_t id) {
-  if(!read || !module || module>UINT64_MAX-0x05964ef8 || id==UINT32_MAX)return 0;
+  if(!read || !module || module>UINT64_MAX-0x05c42e20 || id==UINT32_MAX)return 0;
   auto field=[&](uint64_t p,uint64_t off,auto& value){
     return p && off<=UINT64_MAX-p && sizeof(value)<=UINT64_MAX-(p+off) &&
         read(p+off,&value,sizeof(value));
   };
   uint64_t db=0,entries=0,object=0,type=0;uint32_t slots=0,actual=UINT32_MAX;
-  if(!field(module,0x05964ef0,db) || !field(db,0x20,entries) || !field(db,0x2c,slots) ||
+  if(!field(module,0x05bd69c8,db) || !field(db,0x20,entries) || !field(db,0x2c,slots) ||
      slots>65536 || (id&0xffffff)>=slots ||
      !field(entries,8+uint64_t(id&0xffffff)*16,object) ||
-     !field(object,0,type) || type!=module+0x044de308 || !field(object,8,actual) || actual!=id)return 0;
+     !field(object,0,type) || type!=module+0x046bad90 || !field(object,8,actual) || actual!=id)return 0;
   return object;
 }
 // region is a legacy derived-map index, never an engine definition/geo ID.
@@ -50,12 +55,12 @@ inline std::optional<std::vector<NativeStateEconomy>> DecodeNativeTradeStates(
     const GoodsMemoryReader& reader,uint64_t module,const std::function<bool()>& current,
     std::string* error=nullptr) {
   auto fail=[&](const char* why)->std::optional<std::vector<NativeStateEconomy>>{if(error)*error=why;return {};};
-  if(!reader || !module || module>UINT64_MAX-0x05964ef8 || !current || !current())
+  if(!reader || !module || module>UINT64_MAX-0x05c42e20 || !current || !current())
     return fail("missing native state roster identity");
   EconomyReadWindow window(reader);
   GoodsMemoryReader read=[&](uint64_t a,void* p,size_t n){return window.Read(a,p,n);};
   uint64_t db=0,entries=0;uint32_t slots=0;
-  if(!read(module+0x05964ef0,&db,8) || !db || db>UINT64_MAX-0x30 ||
+  if(!read(module+0x05bd69c8,&db,8) || !db || db>UINT64_MAX-0x30 ||
      !read(db+0x20,&entries,8) || !read(db+0x2c,&slots,4) || !slots || slots>65536)
     return fail("invalid native state roster bounds");
   std::vector<uint64_t> roster(size_t(slots)*2);
@@ -87,7 +92,7 @@ inline std::optional<NativeEconomyCopy> DecodeNativeEconomy(const GoodsMemoryRea
     uint64_t module,const std::unordered_map<std::string,uint32_t>& regions,uint32_t goodCount,
     const std::function<bool()>& current,std::string* error=nullptr) {
   auto fail=[&](const char* text)->std::optional<NativeEconomyCopy>{if(error)*error=text;return {};};
-  if(!reader || !module || module>UINT64_MAX-0x05964ef8 || regions.empty() ||
+  if(!reader || !module || module>UINT64_MAX-0x05c42e20 || regions.empty() ||
      !goodCount || goodCount>128 || !current || !current())return fail("missing economy identity");
   struct Copy {uint64_t address;std::vector<uint8_t> bytes;};
   std::vector<Copy> copies;size_t total=0;
@@ -102,7 +107,7 @@ inline std::optional<NativeEconomyCopy> DecodeNativeEconomy(const GoodsMemoryRea
   auto u64=[](const auto& bytes,size_t at){uint64_t n=0;std::memcpy(&n,bytes.data()+at,8);return n;};
   auto u32=[](const auto& bytes,size_t at){uint32_t n=0;std::memcpy(&n,bytes.data()+at,4);return n;};
   uint64_t db=0,entries=0;uint32_t slots=0;
-  if(!field(module,0x05964ef0,db) || !field(db,0x20,entries) || !field(db,0x2c,slots) ||
+  if(!field(module,0x05bd69c8,db) || !field(db,0x20,entries) || !field(db,0x2c,slots) ||
      !slots || slots>65536)return fail("invalid state database bounds");
   std::vector<uint64_t> roster(size_t(slots)*2);
   if(!read(entries,roster.data(),roster.size()*8))return fail("unreadable state roster");
@@ -135,7 +140,7 @@ inline std::optional<NativeEconomyCopy> DecodeNativeEconomy(const GoodsMemoryRea
     if(!key || !regions.count(*key) || !market)return fail("state region or market unavailable");
     const uint32_t region=regions.at(*key);result.states.push_back({id,region,*market});
     std::vector<int64_t> production,consumption;
-    if(!counter(object,0xc8,production) || !counter(object,0x78,consumption))
+    if(!counter(object,0xd0,production) || !counter(object,0x80,consumption))
       return fail("invalid goods counter bounds, mask or quantity");
     for(uint32_t g=0;g<goodCount;++g)if(production[g] || consumption[g])
       result.orders.push_back({id,region,*market,g,production[g]/100,consumption[g]/100});

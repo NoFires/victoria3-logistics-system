@@ -16,8 +16,8 @@ struct Fixture {
     Zero(at,0x28);Put(at+8,data);Put(at+0x10,count);Put(at+0x14,mask);
   }
   Fixture(){
-    Put(module+0x05901fa0,graphics);Put(graphics,module+0x0464e4e8);Put(graphics+0x2c0,database);
-    Put(module+0x058fccf0,templates);Put(templates,module+0x0441c938);Put(templates+0x240,pixels);
+    Put(module+0x05bdcaf0,graphics);Put(graphics,module+0x048caec0);Put(graphics+0x2c0,database);
+    Put(module+0x05bd7308,templates);Put(templates,module+0x046d6850);Put(templates+0x240,pixels);
     Put(pixels+0x50,uint32_t(300));Put(pixels+0x54,uint32_t(200));
     Map(database,points,4,7);Map(database+0x28,strips,2,1);Map(database+0x50,connections,1,1);
     Zero(points,8*0x1c);Zero(strips,2*0x30);Zero(connections,2*0x38);
@@ -91,7 +91,7 @@ int main(){
     m.template Put<uint32_t>(Fixture::database+0x60,2);},"duplicate full native connection rejected");
   test([](auto& m){m.bytes.erase(Fixture::controls);},"unreadable native controls rejected");
   test([](auto& m){m.template Put<uint32_t>(Fixture::database+0x60,0);},"unloaded native connection geometry unavailable");
-  for(auto address:{Fixture::module+0x05901fa0,Fixture::graphics+0x2c0,Fixture::templates+0x240,Fixture::pixels+0x54,
+  for(auto address:{Fixture::module+0x05bdcaf0,Fixture::graphics+0x2c0,Fixture::templates+0x240,Fixture::pixels+0x54,
       Fixture::database,Fixture::points,Fixture::strips,Fixture::connections,Fixture::controls,Fixture::segments})
     test([&](auto& m){m.mutate=address;},"mutation in any input rejects the combined native geometry copy");
   f.bytes=original;f.mutate=0;f.reads=0;int checks=0;
