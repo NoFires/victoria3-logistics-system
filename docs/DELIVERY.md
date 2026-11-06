@@ -33,7 +33,7 @@
   `2028e03b…`／`c8020412…` 保留在回滚副本。安装时必须无游戏进程，以 `.tmp` + rename 原子替换。
 - 回滚副本：`E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery\dist`（已验收的
   `2028e03b…`／`c8020412…`），源码对应交付提交 `3ec16a0` 一带；候选源码为本地 `main` HEAD
-  （`2a2ef1e`，代码提交 `b5efd46`）。
+  （`f306eab`，代码提交 `b5efd46`）。
 
 ## 2. 构建、测试、部署
 
