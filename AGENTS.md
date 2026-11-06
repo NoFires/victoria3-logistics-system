@@ -203,6 +203,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R225：本地 main 构建验收（进行中）
+
+本地 `main` 快进到 `2a2ef1e`；旧并行线归档在 `archive/main-r202-uncommitted`（`5a7b647`）与 `checkpoint2026-11-06-main-working-r202-final`。主工作区完整构建：`freight 2fac6a05…`／50,220,030B、`version 9369c1dc…`／779,879B（与 worktree 构建的哈希差来自 `-g` 调试源码路径，代码相同）。完整等价入口35/35、零失败；`verify_embedded`、GUI 4项、flow GPU（含负对照）、loader runtime、harness selftest（960×960／560,434亮像素）通过。已安装到游戏（安装=dist）。同构建六臂性能与20轮缓存／生命周期进行中；结果随后更新。
+
 ### 2026-11-06 — R224：纠正州分组表偏移与恢复等值绑定
 
 R200 实机 `binding=1 count=4463`（同一含 5 个多 hub 区域的存档）证明 `state+0x8C0`＋`detailed==grouped` 在 1.15 成立；本分支此前把 `world+0x870`（世界组名册）误当州分组表，R197 的“grouped 值不同”结论撤回。`native_world_trade.h` 州表偏移 `0x870→0x8c0`；`native_trade_routes.h` 恢复 `detailed==grouped` 等值校验；`native_trade_routes_tests.cpp` 改用 R200 的绑定回归（含多中心/陈旧中心/空集/溢出）；`native_world_trade_tests` 分组表 fixture 改 `0x8C0`。定向 world-trade／trade-routes／trade-view PASS。构建 `ec8350d3…`／50,224,638B；实机 pid31852：快照 `total=343/328/329ms`、`selected=4290`、states=1157、无 WARN／ERROR；市场物流页 201 ribbons、贸易量13982.47687／铁路510.99MU不变、无 `native detailed and grouped exports differ`；WM_CLOSE退出0，恢复未安装状态，freight.ini不变。完整等价入口35/35、零失败；证据 `checkpoint2026-11-06-multi-hub-equality-live`。R221／R223 中“未引入 `0x8C0`／等值”的表述由本条取代。

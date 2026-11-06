@@ -1,5 +1,12 @@
 # 当前状态
 
+### 2026-11-06 — R225：本地 main 构建验收（进行中）
+
+- 本地 `main` 快进到 `2a2ef1e`；旧并行线归档在 `archive/main-r202-uncommitted`（`5a7b647`）与 `checkpoint2026-11-06-main-working-r202-final`，不再参与交付。
+- 主工作区完整构建：`freight 2fac6a05…`／50,220,030B、`version 9369c1dc…`／779,879B。与 worktree 构建 `ec8350d3…` 的哈希差仅来自 `-g` 源码路径，代码同为 `b5efd46`。
+- 完整等价入口35/35、零失败；`verify_embedded`（SHA256=2fac6a05…）、GUI 4项、flow GPU（八档/方向/海面高度/负对照）、loader runtime（配置优先/迁移）、harness selftest（exit0、242帧、960×960／560,434亮像素，阈值5000）通过。
+- 已安装主工作区构建到游戏（`.tmp`+rename，安装=dist；`deploy.ps1` 因沙箱未执行）。同构建六臂性能与20轮缓存／生命周期进行中；结果随后更新。
+
 ### 2026-11-06 — R224：纠正州分组表偏移与恢复等值绑定
 
 - R200 实机 `binding=1 count=4463`（同一存档 5 个多 hub 区域：237×1、3×2、1×3、1×4）证明 `state+0x8C0`＋`detailed==grouped` 在 1.15 成立；本分支此前把 `world+0x870`（世界组名册）误当州分组表，R197 的“grouped 值不同”结论撤回。
