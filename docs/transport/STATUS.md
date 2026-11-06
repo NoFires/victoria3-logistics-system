@@ -1,5 +1,12 @@
 # 当前状态
 
+### 2026-11-06 — R226：官方 PowerShell 入口实测与 1.15 spline 测试迁移
+
+- `native\build_tests.ps1` 首轮在 `tools\test_splines.py` 暴露 1.13 旧期望（33780／4273／4271），当前 1.15 为 33765／4281／4279；移植对方线的源 hash `3fb78a74…`＋计数断言，5 tests OK，官方入口重跑 **exit 0**。
+- `tools\selftest.ps1` **PASS**：loader＋ImGui，960×960／560,432 亮像素（阈值 5,000）。
+- `deploy.ps1` **exit 0**：安装 bootstrap＋core，安装＝dist（`2fac6a05…`／`9369c1dc…`）。
+- 官方 `build.ps1` 未重跑，避免替换已验收产物；设备丢失 A24 仍缺。日志：`checkpoint2026-11-06-main-build/{ps-build-tests-2.log,ps-selftest.log,ps-deploy.log}`。
+
 ### 2026-11-06 — R225：本地 main 构建验收
 
 - 本地 `main` 快进到 `2a2ef1e`；旧并行线归档在 `archive/main-r202-uncommitted`（`5a7b647`）与 `checkpoint2026-11-06-main-working-r202-final`，不再参与交付。

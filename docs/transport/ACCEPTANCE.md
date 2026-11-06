@@ -7,14 +7,14 @@
 | ID | 检查 | 1.15状态 | 当前证据与限制 |
 |---|---|---|---|
 | A01 | 原始材料与现状审计 | PASS | 00–03 与 MASTER 已按主题重读；1.15 适配记录在 STATUS R195–R203 |
-| A02 | 构建与导出 | PASS | 主工作区构建 `2fac6a05…`／`9369c1dc…`；官方等价原生入口 35/35；`verify_embedded`、GUI 4项、flow GPU（含负对照）、引导隔离全 PASS；构建用 build.sh（沙箱禁 PowerShell）。不同路径构建的哈希差来自 `-g` 调试路径，未做路径归一化 |
-| A03 | 部署 | PASS | 主构建原子 .tmp+rename 安装，安装＝dist（`2fac6a05…`／`9369c1dc…`）；`deploy.ps1` 因沙箱未运行（需在可用环境补跑） |
+| A02 | 构建与导出 | PASS | 主工作区构建 `2fac6a05…`／`9369c1dc…`；官方 `build_tests.ps1` exit 0（含 1.15 spline 测试）；`verify_embedded`、GUI 4项、flow GPU（含负对照）、引导隔离全 PASS；构建产物由 build.sh 生成，官方 build.ps1 未重跑 |
+| A03 | 部署 | PASS | 官方 `deploy.ps1` exit 0，安装＝dist（`2fac6a05…`／`9369c1dc…`） |
 | A04 | 能力门控 | PASS（离线+实机装载） | 未知 GUI 版本拒绝、资源归档校验；1.15 实机嵌入资源预枚举 hook 安装 |
 | A05 | 原版入口 | PASS | 主构建市场物流页13982.47687／510.99MU、201 ribbons；州页沿用同代码构建 |
 | A06 | UI 原行为 | PARTIAL | 1.15 原版结余排序、商品详情（价格/订单/生产消费/用途页）、右键上下文菜单（信息/钉选/消费税/关税/生产者/消费者）实机通过；菜单项未逐项点击 |
 | A07 | GUI 生效 | PASS | GUI 锚点/回调/布局 4 项 PASS；实机无 ironroad GUI 报错 |
 | A08 | ABI 与对象 | PASS | 1.15 状态/市场/贸易/旅行网络/样条/渲染/资源租约静态+实机解码链，检查点含完整证据 |
-| A09 | 单线与 pass | PASS | D3D11 harness 在统一入口通过；主构建 selftest 等价回读 960x960／560,434 亮像素（R225，阈值5000）；实机渲染 pass 与默认关闭 ImGui |
+| A09 | 单线与 pass | PASS | 官方 `selftest.ps1` PASS：loader＋ImGui，960x960／560,432 亮像素（阈值5000）；实机渲染 pass 与默认关闭 ImGui |
 | A10 | 几何贴合 | PARTIAL | flow GPU 八档/方向/负对照 PASS；1.15 海路-港口接缝数据连续 breaks=0；正常缩放伦敦—海峡—大陆目视连续（R217）；像素级多相机矩阵未做 |
 | A11 | 河流与海岸 | PASS（离线） | spline_tests 通过；1.15 港口合成路径和样条点绑定实机 |
 | A12 | 铁路与断路 | PARTIAL | 主构建铁路 MU 510.99、201 ribbons；seaOnly端点回退后unavailableSea 1／partialSea 38（未知端口端保留），伦敦—海峡目视连续（R217） |

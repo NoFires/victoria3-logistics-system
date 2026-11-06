@@ -9,7 +9,8 @@
 > 完整等价入口35/35、两个目标 EXE 机器码 harness、embedded／GUI／GPU／loader、selftest
 > （960×960／560,434亮像素）通过；同构建三对 P95 `+0.568／+0.564／+0.714 ms`（≤2），模拟最大
 > 降幅 `0.31%`（≤5%）；20轮稳定revision `uploads=0 reused=201/200 pool=230 overrun_frames=0`。
-> 设备丢失重建（A24）与官方 PowerShell 脚本仍未完成，其余 A01–A27 PARTIAL 见 `ACCEPTANCE.md`。
+> 设备丢失重建（A24）仍未完成；官方 PowerShell 测试／部署／selftest 已实际执行，其余 A01–A27
+> PARTIAL 见 `ACCEPTANCE.md`。
 > 实际安装＝`dist`（`2fac6a05…`／`9369c1dc…`），`freight.ini` `df06e5c0…` 保持；旧主体以
 > `freight.dll.r196a-backup` 保留。
 
@@ -47,11 +48,11 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1                # 游戏关�
 powershell -ExecutionPolicy Bypass -File deploy.ps1 -Uninstall
 ```
 
-本次交付在受限会话中使用了等价的 bash 构建/测试入口与原子部署（PowerShell 被工作区沙箱拒绝），
-其内容与上述脚本一致；`selftest.ps1` 的判据（`IRONROAD_READBACK=1`、harness 回读）已用同一二进制、
-同一环境变量实际通过：960x960、561,019 亮像素（阈值 5,000），证据在
-`checkpoints\2026-11-06-final-delivery\readback.ppm` 与 `selftest-run.log`。最终应在可用终端补跑一次
-官方脚本存档。
+官方 PowerShell 入口已实际执行（2026-11-06）：`native\build_tests.ps1` exit 0（完整测试，含迁移后的
+1.15 `test_splines.py` 源 hash／计数）；`tools\selftest.ps1` PASS（loader＋ImGui，960×960／560,432
+亮像素，阈值 5,000）；`deploy.ps1` exit 0（安装＝`dist`，`2fac6a05…`／`9369c1dc…`）。构建产物由
+本地 `main` 的等价 `build.sh` 生成；官方 `build.ps1` 未重跑，避免替换已验收产物。日志见
+`checkpoint2026-11-06-main-build/ps-*.log`。
 
 ## 3. 原版界面操作
 
@@ -89,6 +90,6 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1 -Uninstall
 1. 1 条海路航线（MINDANAO→NORTH_BORNEO）保留 unavailable，38 条 partial 航线的一端没有当前
    港口接续；数量保留、几何标注未知。
 2. 设备丢失重建（A24 剩余项）需真实 GPU/显示设备变更，未在本次会话模拟。
-3. 官方 PowerShell 脚本（`build_tests.ps1`/`deploy.ps1`/`selftest.ps1`）因沙箱未执行，已用等价
-   入口复验；应在可用终端补跑并归档日志。
+3. 官方 `build.ps1` 未重跑（`build_tests.ps1`/`deploy.ps1`/`selftest.ps1` 已用官方脚本执行）；
+   构建产物由本地 `main` 的等价 `build.sh` 生成，避免替换已验收产物。
 4. 省份增删/拆并、其他地图变体、逐像素多相机矩阵与 A01–A27 的其余 PARTIAL 项仍需样本验证。
