@@ -1,6 +1,7 @@
 """Regression checks for the real spline decoder, including corrupt inputs."""
 import unittest
 import struct
+import hashlib
 from pathlib import Path
 from gen_splines import decode
 
@@ -42,12 +43,15 @@ class DecoderTests(unittest.TestCase):
                    'game/gfx/map/spline_network/spline_network.splnet').read_bytes()
 
     def test_installed_schema(self):
+        # Exact shipped 1.15.0 source; changed resources require a fresh fixture.
+        self.assertEqual(hashlib.sha256(self.raw).hexdigest(),
+                         '3fb78a7447457d734cbc3f89638b0cdb77da83093d92045c81baa59f9b3797e7')
         points, strips, links = decode(self.raw)
-        self.assertEqual(len(points), 33780)
-        self.assertEqual(len(strips), 4273)
+        self.assertEqual(len(points), 33765)
+        self.assertEqual(len(strips), 4281)
         self.assertAlmostEqual(points[100][1], 3053.0359, places=3)
         self.assertTrue(any(sid & 255 == 3 for sid in strips))
-        self.assertEqual(len(links), 4271)
+        self.assertEqual(len(links), 4279)
         self.assertEqual(links[(903 << 35) | (900 << 6) | 1], [601089, 601345])
         self.assertEqual({sid for refs in links.values() for sid in refs}, strips.keys())
 
