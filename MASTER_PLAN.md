@@ -286,6 +286,20 @@ laidTrack = Σ 唯一、已建成铁路物理区段的长度
 
 ## 9. 当前版本发现、ABI 与能力门控
 
+### 1.15.0交付跟踪（2026-11-06，R219）
+
+- [x] EXE身份 `473186e8…`；双DLL 1.15.0构建（引导 `c8020412…`／主体 `2028e03b…`）部署，安装＝dist；沙箱未执行 `deploy.ps1`，以等价原子部署复验。
+- [x] 官方等价原生入口35/35、`verify_embedded`、原生GUI、flow GPU（含负对照）、引导隔离、默认debug与selftest回读（960×960／561,019亮像素）通过。
+- [x] 实机数据与UI：快照states=1157／goods=54，市场物流页与州本地价格页真实数值；hover／分类／显示隐藏／原版排序／右键菜单／商品详情／Heat·Single·Native／中英双语搜索／Freight账本。
+- [x] 改图矩阵：州geo 164→901、同key样条点X+10、目录Mod、ZIP Mod、省份归属（模板+0xC8 id/geo 139/154→140/155）、replace_path整目录替换（省略02差分）。
+- [x] 生命周期／缓存／性能：重载world2池恢复、缩放往返无旧帧；65秒零新增上传、20轮重开uploads=0／reused=185／池346；同构建三对P95 +0.593／+0.518／+0.671 ms（≤2 ms）、模拟最大降0.46%（≤5%）。
+- [x] 部署矩阵：主体缺失126／损坏193／整套卸载无loader／重装0／只读freight目录静默降级；安装＝dist、输入与content_load保持。
+- [ ] 设备丢失重建（A24）需真实GPU／显示设备变更；官方PowerShell包装脚本（`build_tests.ps1`／`deploy.ps1`／`selftest.ps1`）未在沙箱执行。
+- [ ] 1条unavailable海路（MINDANAO→NORTH_BORNEO）与38条partial航线的一端无当前港口接续，数量保留、几何标注未知。
+- [ ] A01–A27其余PARTIAL项（A06／A10／A12／A14／A17／A18／A24／A26／A27）及省份增删／拆并等更广地图变体。
+
+当前交付分支 `worktree-v115-adaptation` HEAD `1420e47`；主体 `2028e03b…`／50,025,206 B、引导 `c8020412…`／779,879 B。勾选项只覆盖 `docs/transport/ACCEPTANCE.md` 写明的范围；官方等价入口、隔离harness与未执行脚本不得互相冒充。
+
 ### 9.1 首先建立本机身份
 
 记录当前游戏安装路径、EXE SHA-256／PE 身份、模块基址、版本、图形后端、启用列表、DLL SHA-256、构建标识和地图／资源版本。仓库历史版本记录只作线索。

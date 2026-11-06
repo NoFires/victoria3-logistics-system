@@ -1,5 +1,10 @@
 # 当前状态
 
+### 2026-11-06 — R220：核对用户更新的AGENTS／MASTER_PLAN
+
+- 用户更新的主工作区两文件经比对属于另一条1.15迁移线（R195–R202、候选573b3716…、61 PASS、未部署、profile关闭），与本分支R219交付（2028e03b…／c8020412…、安装＝dist）是并行历史：R号重叠但内容不同，且主工作区改动未提交。
+- 本分支采纳其正确的`native/src`精确版本门控表述（原仍写1.13.11 ABI），在MASTER_PLAN新增1.15.0交付跟踪小节（完成项＋设备重建／官方PowerShell／海路未知端／A01–A27 PARTIAL），并把ACCEPTANCE矩阵头部从旧构建`64913eea…`更正为`2028e03b…`、补最终证据目录。未采用另一条线的R号、候选哈希与61 PASS结论。
+
 ### 2026-11-06 — R219：官方selftest等价回读复验
 
 - 以`IRONROAD_READBACK=1`运行真实D3D11 harness（`native/build/tests/harness.exe dist/version.dll`，等价`tools/selftest.ps1`）：exit 0、presented 262帧、日志`ImGui ready`、`present #1 hr=0x00000000`、`readback written: 960x960, 561019 bright pixels`；独立解析`readback.ppm`得到921600像素、561019亮像素（阈值5000）与日志一致。

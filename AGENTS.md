@@ -104,7 +104,7 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 | 路径 | 说明 |
 |---|---|
-| `native/src` | 原生实现；`game.cpp`/`offsets.h` 绑定已验证的 1.13.11 ABI |
+| `native/src` | 原生实现；`game.cpp`/`offsets.h` 使用精确版本门控；当前交付绑定 1.15.0（R200–R219） |
 | `native/test` | 回归测试；新增测试必须接入 `native/build_tests.ps1` |
 | `data/` | 五份派生地图数据，参与 DLL 资源打包，**不可删** |
 | `native/assets`、`native/third_party` | GUI/shader 片段与 ImGui/MinHook，**不可删** |
@@ -116,6 +116,8 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 ## 5. 当前状态与恢复入口
 
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
+
+截至R219：1.15.0交付范围为双DLL实载、官方等价入口35/35、改图/UI/生命周期/性能/部署矩阵（见 `docs/DELIVERY.md` 与 `docs/transport/ACCEPTANCE.md`）；剩余设备丢失重建与官方PowerShell脚本需在可用环境补跑，不把等价入口冒充官方脚本。
 
 截至R207：1.15.0适配继续。官方等价原生入口35/35 PASS；稳定视图65秒零新增上传、20轮重开全部`uploads=0 reused=185`、池恒346、`peak_frame_us=685`、`overrun_frames=0`；生命周期修复1.15图形身份偏移（`0x0592d5c8`→`0x05c080b8`），重载world2池恢复、缩放往返无旧帧。部署矩阵：主体缺失126／损坏193／整套卸载无loader／重装0，游戏均存活且安装＝dist、存档与content_load字节保持。改图身份：州geo 164→901与同key样条点X+10均被运行时绑定，正式物流页重建。海路端点：seaOnly缺港口端回退到原版海段链末端，两端均缺港口时按海段key作者方向判定源／终点，`unavailableSea 35→1`、`partialSea 4→38`、paths 185→187，页面数值不变；剩余1条unavailable（611→608 MINDANAO→NORTH_BORNEO）与38条partial的未知端口端保留。当前构建同构建三对性能：P95增加0.593／0.518／0.671 ms（≤2），模拟速度最大降幅0.46%（≤5%），窗口61.5–62.6秒。当前主体`2028e03b…`／50,025,206B、引导`c8020412…`／779,879B，安装＝dist（沙箱禁PowerShell，未走deploy.ps1，需在可用环境补跑）。改图矩阵：州geo→901、同key样条点+10、ZIP、省份归属（模板+0xC8 id/geo 139/154→140/155）、replace_path整目录替换（省略02差分）均通过；设备重建、三处海路末端像素复看与A01–A27未完成，详见STATUS R207–R211。
 
@@ -196,6 +198,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 **最新操作授权（2026-10-25）**：用户明确“我现在不在电脑旁边，请你自主验证”，允许自主启动及操作测试，覆盖此前手动操控限制；保留不强制结束可能有未保存进度会话的部署约束。
 
 ## 6. 进度日志（简要记录，最新在上）
+
+### 2026-11-06 — R220：核对用户更新的AGENTS／MASTER_PLAN并同步1.15交付跟踪
+
+用户更新主工作区两文件后核对发现：其内容属于另一条1.15迁移线（R195–R202，候选573b3716…，61 PASS，未部署、profile关闭），与本分支R219交付（2028e03b…／c8020412…，安装＝dist）是并行历史，R号重叠但内容不同，且主工作区改动未提交。采纳其中正确的`native/src`精确版本门控表述，修正本分支仍称绑定1.13.11的过时行；在MASTER_PLAN §9补1.15.0交付跟踪（完成项与剩余设备重建／官方PowerShell／海路未知端／A01–A27 PARTIAL），并修正ACCEPTANCE头部旧构建`64913eea…`为`2028e03b…`、补最终证据目录。不合并另一条线的R号、候选哈希或61 PASS结论。
 
 ### 2026-11-06 — R219：官方selftest等价回读复验
 
