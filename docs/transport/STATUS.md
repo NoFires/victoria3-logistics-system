@@ -1,5 +1,12 @@
 # 当前状态
 
+### 2026-11-06 — R222：贸易 getter 实验分支实机快照与物流页
+
+- 临时安装 `trade-getter-port` 构建 `e8bf966d…`／50,120,165B＋引导 `c8020412…`，最小化启动 pid27312（EXE `473186e8…`）。三次快照：states=1157 goods=54，`total=359/328/344 ms`；`native trade copied groups=66 destinations=4290 alternatives=5278 selected=4290 pairs=4463 straits=9`。交付基线同存档的 selected 为3792，本次498个多候选目的地全部由原版 `D039C0` getter 选中；无 WARN／ERROR／snapshot pending。
+- 恢复窗口后点击原版市场“物流”页：贸易量13982.47687／已铺铁路510.99MU与基线一致；`native session tick owner=10 gen=2 ready=1 frame=1 ribbons=201`（基线187），`DRAW PERF paths=201 uploads=201 visible=201 dropped=0 peak_frame_us=800 overrun_frames=0`，无 `err=`。
+- WM_CLOSE正常退出0；恢复未安装状态（移除 version.dll／freight/freight.dll），freight.ini `df06e5c0…`、旧备份 `0fc29b6f…` 逐字节不变；未写存档。证据：`checkpoint2026-11-06-trade-getter-live/{live-evidence.log,market-logistics.png}`。
+- 边界：快照总耗时328–359ms，明显高于交付构建的同期快照；在并入交付前必须跑同构建三对性能、20轮缓存/生命周期及完整A01–A27复验。ribbons 187→201 是 hub 更完整绑定的结果，需在最终矩阵确认不是虚假路线。实验分支未合并、未部署为正式交付。
+
 ### 2026-11-06 — R221：单写者协调预检与贸易 getter 实验分支
 
 - 新增 `docs/transport/COORDINATION.md` 与 `tools/agent_preflight.py`：claim 写在共享 `.git`，开工前检查分支/未提交改动/上游/他人 claim；分叉时先快照、三路比对，按“实机 > 同构建完整证据 > 官方等价 harness > 隔离机器码 > 静态”裁决，禁止整包覆盖。

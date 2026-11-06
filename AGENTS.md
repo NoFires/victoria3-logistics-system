@@ -203,6 +203,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-06 — R222：贸易 getter 实验分支实机快照与物流页验证
+
+`trade-getter-port` 构建 `e8bf966d…`／50,120,165B（引导 `c8020412…`）临时安装后最小化启动 pid27312：`native trade copied world=1 ... destinations=4290 alternatives=5278 selected=4290 pairs=4463`（交付基线 `selected=3792`，498 个多候选全部选中）；快照 `total=328–359ms`、states=1157 goods=54、无 WARN／ERROR。恢复窗口打开原版市场物流页：贸易量13982.47687／铁路510.99MU与基线一致，`owner=10 gen=2 ribbons=201`（基线187），`DRAW PERF uploads=201 visible=201 dropped=0 peak_frame_us=800 overrun_frames=0`。正常WM_CLOSE退出；已恢复未安装状态（version.dll／freight.dll 移除，freight.ini `df06e5c0…`与备份`0fc29b6f…`不变）。边界：快照耗时较基线明显增加（并入交付前须跑同构建性能／生命周期门槛）；201 vs 187 的增量绑定需在最终矩阵确认；本实验尚未并入交付分支。证据：`E:\Code\v3-analysis\checkpoints\2026-11-06-trade-getter-live`（live-evidence.log、market-logistics.png）。
+
 ### 2026-11-06 — R221：单写者协调预检与贸易 getter 实验分支
 
 新增 `docs/transport/COORDINATION.md` 与 `tools/agent_preflight.py`：共享 `.git` claim、开工/收工预检、三路比对与证据裁决顺序，防止主工作区与 worktree 再次各自维护 R 号。实验分支 `trade-getter-port` 按“取对方更好的选择器/hub、保留我方表语义”移植：`SelectTradePath` 指向完整 `D039C0` getter，新增 `WorldMarketHub`（`DA2500`），按州 hub 解码并通过快照/overlay 接线；未引入对方的 `detailed==grouped` 校验与 0x8C0 表偏移。目标 EXE 上 hub harness 12 cases、selector harness 24 cases PASS；`native_world_trade_tests`/`native_snapshot_tests` PASS；完整等价入口 35/35、零失败。构建 `e8bf966d…`／50,120,165B；未部署、未并入交付分支，实机快照待验。
