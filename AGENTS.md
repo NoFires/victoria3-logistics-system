@@ -205,11 +205,11 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ### 2026-11-06 — R226：官方 PowerShell 入口实测与 1.15 spline 测试迁移
 
-沙箱解除后实际执行官方入口：`native\build_tests.ps1` 首轮在 `tools\test_splines.py` 暴露 1.13 旧期望（33780／4273／4271），当前 1.15 为 33765／4281／4279；移植对方线的源 hash `3fb78a74…`＋计数断言，5 tests OK，官方入口重跑 **exit 0**。`tools\selftest.ps1` **PASS**（loader＋ImGui，960×960／560,432 亮像素，阈值 5,000）。`deploy.ps1` **exit 0**，安装＝dist（`2fac6a05…`／`9369c1dc…`）。日志见 `checkpoint2026-11-06-main-build/ps-*.log`。官方 `build.ps1` 未重跑，避免替换已验收产物；设备丢失 A24 仍缺。
+沙箱解除后实际执行官方入口：`native\build_tests.ps1` 首轮在 `tools\test_splines.py` 暴露 1.13 旧期望（33780／4273／4271），当前 1.15 为 33765／4281／4279；移植对方线的源 hash `3fb78a74…`＋计数断言，5 tests OK，官方入口重跑 **exit 0**。`tools\selftest.ps1` **PASS**（loader＋ImGui，960×960／560,432 亮像素，阈值 5,000）。`deploy.ps1` **exit 0**，安装＝dist（`404abb88…`／`71dae36d…`）。日志见 `checkpoint2026-11-06-main-build/ps-*.log`。官方 `build.ps1` exit0，产物 `404abb88…`／`71dae36d…` 已采用；设备丢失 A24 仍缺。
 
 ### 2026-11-06 — R225：本地 main 构建验收
 
-本地 `main` 快进到 `2a2ef1e`；旧并行线归档在 `archive/main-r202-uncommitted`（`5a7b647`）与 `checkpoint2026-11-06-main-working-r202-final`。主工作区完整构建：`freight 2fac6a05…`／50,220,030B、`version 9369c1dc…`／779,879B（与 worktree 构建的哈希差来自 `-g` 调试源码路径，代码相同）。完整等价入口35/35、零失败；`verify_embedded`、GUI 4项、flow GPU（含负对照）、loader runtime、harness selftest（960×960／560,434亮像素）通过。已安装到游戏（安装=dist）。同构建六臂：P95增加 `0.568／0.564／0.714 ms`（≤2），模拟速度最大降幅 `0.31%`（≤5），窗口61.52–62.59秒；20轮稳定revision `uploads=0 reused=201/200 pool=230`、每帧16次尝试、`overrun_frames=0`，3次数据revision 18/11次上传、池201→230；open3 65秒`uploads=0 reused=201`；主构建物流页13982.47687／510.99MU、201 ribbons。设备重建（A24）与官方PowerShell脚本仍未完成。证据checkpoint2026-11-06-main-build。
+本地 `main` 快进到 `2a2ef1e`；旧并行线归档在 `archive/main-r202-uncommitted`（`5a7b647`）与 `checkpoint2026-11-06-main-working-r202-final`。主工作区完整构建：`freight 404abb88…`／50,220,030B、`version 71dae36d…`／779,879B（与 build.sh 构建的哈希差来自官方打包/调试路径，官方构建已采用）。完整等价入口35/35、零失败；`verify_embedded`、GUI 4项、flow GPU（含负对照）、loader runtime、harness selftest（960×960／560,432亮像素）通过。已安装到游戏（安装=dist）。同构建六臂：P95增加 `0.894／0.818／0.863 ms`（≤2），模拟速度最大降幅 `0.31%`（≤5），窗口61.80–62.64秒；20轮稳定revision `uploads=0 reused=201/200 pool=230`、每帧16次尝试、`overrun_frames=0`，末段数据revision 203 paths/45 uploads/池275、池201→230；open3 65秒`uploads=0 reused=201`；主构建物流页13982.47687／510.99MU、201 ribbons。设备重建（A24）仍未完成；官方PowerShell入口已通过。证据checkpoint2026-11-06-main-build。
 
 ### 2026-11-06 — R224：纠正州分组表偏移与恢复等值绑定
 

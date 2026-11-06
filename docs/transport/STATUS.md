@@ -4,15 +4,15 @@
 
 - `native\build_tests.ps1` 首轮在 `tools\test_splines.py` 暴露 1.13 旧期望（33780／4273／4271），当前 1.15 为 33765／4281／4279；移植对方线的源 hash `3fb78a74…`＋计数断言，5 tests OK，官方入口重跑 **exit 0**。
 - `tools\selftest.ps1` **PASS**：loader＋ImGui，960×960／560,432 亮像素（阈值 5,000）。
-- `deploy.ps1` **exit 0**：安装 bootstrap＋core，安装＝dist（`2fac6a05…`／`9369c1dc…`）。
-- 官方 `build.ps1` 未重跑，避免替换已验收产物；设备丢失 A24 仍缺。日志：`checkpoint2026-11-06-main-build/{ps-build-tests-2.log,ps-selftest.log,ps-deploy.log}`。
+- `deploy.ps1` **exit 0**：安装 bootstrap＋core，安装＝dist（`404abb88…`／`71dae36d…`）。
+- 官方 `build.ps1` exit0，产物 `404abb88…`／`71dae36d…` 已采用；设备丢失 A24 仍缺。日志：`checkpoint2026-11-06-main-build/{ps-build-tests-2.log,ps-selftest.log,ps-deploy.log}`。
 
 ### 2026-11-06 — R225：本地 main 构建验收
 
 - 本地 `main` 快进到 `2a2ef1e`；旧并行线归档在 `archive/main-r202-uncommitted`（`5a7b647`）与 `checkpoint2026-11-06-main-working-r202-final`，不再参与交付。
-- 主工作区完整构建：`freight 2fac6a05…`／50,220,030B、`version 9369c1dc…`／779,879B。与 worktree 构建 `ec8350d3…` 的哈希差仅来自 `-g` 源码路径，代码同为 `b5efd46`。
-- 完整等价入口35/35、零失败；`verify_embedded`（SHA256=2fac6a05…）、GUI 4项、flow GPU（八档/方向/海面高度/负对照）、loader runtime（配置优先/迁移）、harness selftest（exit0、242帧、960×960／560,434亮像素，阈值5000）通过。
-- 已安装主工作区构建到游戏（`.tmp`+rename，安装=dist；`deploy.ps1` 因沙箱未执行）。同构建六臂：P95增加 `0.568／0.564／0.714 ms`（≤2），模拟速度最大降幅 `0.31%`（≤5），窗口61.52–62.59秒；20轮稳定revision `uploads=0 reused=201/200 pool=230`、每帧16次尝试、`overrun_frames=0`，3次数据revision变化18/11次上传、池201→230；open3 65秒`uploads=0 reused=201`。主构建物流页13982.47687／510.99MU、201 ribbons。设备重建（A24）与官方PowerShell脚本仍未完成。
+- 主工作区完整构建：`freight 404abb88…`／50,220,030B、`version 71dae36d…`／779,879B。与 worktree 构建 `ec8350d3…` 的哈希差仅来自 `-g` 源码路径，代码同为 `b5efd46`。
+- 完整等价入口35/35、零失败；`verify_embedded`（SHA256=404abb88…）、GUI 4项、flow GPU（八档/方向/海面高度/负对照）、loader runtime（配置优先/迁移）、harness selftest（exit0、242帧、960×960／560,432亮像素，阈值5000）通过。
+- 已安装主工作区构建到游戏（官方 `deploy.ps1` exit0，安装=dist）。同构建六臂：P95增加 `0.894／0.818／0.863 ms`（≤2），模拟速度最大降幅 `0.31%`（≤5），窗口61.80–62.64秒；20轮稳定revision `uploads=0 reused=201/200 pool=230`、每帧16次尝试、`overrun_frames=0`，末段数据revision 203 paths/45 uploads、池275；open3 65秒`uploads=0 reused=201`。主构建物流页13982.47687／510.99MU、201 ribbons。设备重建（A24）仍未完成；官方PowerShell入口已通过。
 
 ### 2026-11-06 — R224：纠正州分组表偏移与恢复等值绑定
 

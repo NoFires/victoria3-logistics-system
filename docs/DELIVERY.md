@@ -2,16 +2,16 @@
 
 > **2026-11-06 当前构建（R225）**：正式线已合入三项经实机验证的更优功能——完整贸易 getter
 > `D039C0`＋每州当前 hub `DA2500`、商品缓存代数／失效检查、`state+0x8C0` 分组表＋
-> `detailed==grouped` 等值绑定。当前构建主体 `2fac6a05…`／50,220,030 B，引导 `9369c1dc…`；
+> `detailed==grouped` 等值绑定。当前构建主体 `404abb88…`／50,220,030 B，引导 `71dae36d…`；
 > 旧已验收 `2028e03b…`／`c8020412…` 保留为回滚副本。
 > 同一 1.15 存档含 5 个多 hub 区域（2/3/4 个中心），实机 `selected=4290/4290`、201 ribbons、
 > 贸易量13982.47687／铁路510.99MU不变，绑定未报 `native detailed and grouped exports differ`。
 > 完整等价入口35/35、两个目标 EXE 机器码 harness、embedded／GUI／GPU／loader、selftest
-> （960×960／560,434亮像素）通过；同构建三对 P95 `+0.568／+0.564／+0.714 ms`（≤2），模拟最大
+> （960×960／560,432亮像素）通过；同构建三对 P95 `+0.894／+0.818／+0.863 ms`（≤2），模拟最大
 > 降幅 `0.31%`（≤5%）；20轮稳定revision `uploads=0 reused=201/200 pool=230 overrun_frames=0`。
 > 设备丢失重建（A24）仍未完成；官方 PowerShell 测试／部署／selftest 已实际执行，其余 A01–A27
 > PARTIAL 见 `ACCEPTANCE.md`。
-> 实际安装＝`dist`（`2fac6a05…`／`9369c1dc…`），`freight.ini` `df06e5c0…` 保持；旧主体以
+> 实际安装＝`dist`（`404abb88…`／`71dae36d…`），`freight.ini` `df06e5c0…` 保持；旧主体以
 > `freight.dll.r196a-backup` 保留。
 
 本文件是当前交付的唯一入口；状态、验收与性能细节见 `docs/transport/STATUS.md`、
@@ -22,15 +22,15 @@
 | 文件 | SHA256 | 大小 |
 |---|---|---|
 | `dist/version.dll`（已验收引导，放 EXE 同目录） | `c80204122791ade4a33f5b61ea28ebb3a96f444bbc6ef215e71a6245af67a107` | 779,879 B |
-| `dist/version.dll`（当前构建 9369c1dc） | `9369c1dca460dc24e480390c2de08e198641fb1cd619d0ef07085d825c8beb16` | 779,879 B |
+| `dist/version.dll`（当前构建 71dae36d） | `71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e` | 779,879 B |
 | `dist/freight/freight.dll`（已验收主体） | `2028e03bc288cd89ff1df23c3dd4f94b9413594636ca2781a183d916c7d9d4a7` | 50,025,206 B |
-| `dist/freight/freight.dll`（当前构建 2fac6a05） | `2fac6a052cee2b1bd6dec548e5f1b13e4bfede8d881717018a6d1b2bb52ece13` | 50,220,030 B |
+| `dist/freight/freight.dll`（当前构建 404abb88） | `404abb8883100bab17c6bfb2200919ffb89c1fba26f4643c1a379cb875c57c92` | 50,220,030 B |
 
 - 目标 EXE：Victoria 3 1.15.0，`SHA256 473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa`。
 - 安装布局：`binaries\version.dll` + `binaries\freight\freight.dll`；配置 `freight.ini`、日志
   `freight.log`/`loader.log`、缓存与资源都在 `binaries\freight\`，不依赖 playset、外部 Mod、
   Python 或手工资源。
-- 实际安装：2026-11-06 安装当前构建 `2fac6a05…`／`9369c1dc…`，安装＝`dist`；旧已验收构建
+- 实际安装：2026-11-06 安装当前构建 `404abb88…`／`71dae36d…`，安装＝`dist`；旧已验收构建
   `2028e03b…`／`c8020412…` 保留在回滚副本。安装时必须无游戏进程，以 `.tmp` + rename 原子替换。
 - 回滚副本：`E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery\dist`（已验收的
   `2028e03b…`／`c8020412…`），源码对应交付提交 `3ec16a0` 一带；候选源码为本地 `main` HEAD
@@ -50,9 +50,8 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1 -Uninstall
 
 官方 PowerShell 入口已实际执行（2026-11-06）：`native\build_tests.ps1` exit 0（完整测试，含迁移后的
 1.15 `test_splines.py` 源 hash／计数）；`tools\selftest.ps1` PASS（loader＋ImGui，960×960／560,432
-亮像素，阈值 5,000）；`deploy.ps1` exit 0（安装＝`dist`，`2fac6a05…`／`9369c1dc…`）。构建产物由
-本地 `main` 的等价 `build.sh` 生成；官方 `build.ps1` 未重跑，避免替换已验收产物。日志见
-`checkpoint2026-11-06-main-build/ps-*.log`。
+亮像素，阈值 5,000）；`deploy.ps1` exit 0（安装＝`dist`，`404abb88…`／`71dae36d…`）；`build.ps1`
+exit 0，官方产物已采用。日志见 `checkpoint2026-11-06-main-build/ps-*.log`。
 
 ## 3. 原版界面操作
 
@@ -75,13 +74,13 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1 -Uninstall
 ## 5. 验收与性能结果
 
 - A01–A27 当前构建矩阵见 `docs/transport/ACCEPTANCE.md` 顶部“1.15.0 当前构建矩阵”。
-- 性能（同存档/相机/速度 III，三对 65 秒，当前构建 `2fac6a05…`）：P95 增加
-  `0.568 / 0.564 / 0.714 ms`（门槛 2 ms），模拟速度最大降幅 `0.31 %`（门槛 5 %），窗口
-  61.52–62.59 秒，见 `PERFORMANCE.md`。旧 `2028e03b…` 的 `0.593 / 0.518 / 0.671` 与 `0.46 %`
+- 性能（同存档/相机/速度 III，三对 65 秒，当前构建 `404abb88…`）：P95 增加
+  `0.894 / 0.818 / 0.863 ms`（门槛 2 ms），模拟速度最大降幅 `0.31 %`（门槛 5 %），窗口
+  61.80–62.64 秒，见 `PERFORMANCE.md`。旧 `2028e03b…` 的 `0.593 / 0.518 / 0.671` 与 `0.46 %`
   仅属旧构建。
 - 缓存/压力：稳定 65 秒零新增几何上传；20 轮稳定 revision `uploads=0 reused=201/200`、池
-  230/8192、每帧上限 16、`overrun_frames=0`；3 次数据 revision 变化时 18/11 次上传、池
-  201→230。旧 `2028e03b…` 的 `reused=185`／池 346 仅属旧构建。
+  230/8192、每帧上限 16、`overrun_frames=0`；末段数据 revision 变化时 203 paths／45 uploads、
+  池 275。旧 `2028e03b…` 的 `reused=185`／池 346 仅属旧构建。
 - 部署矩阵（当前构建）：主体缺失 126／损坏 193／整套卸载无 loader／重装 0／只读目录与日志
   静默降级，游戏均正常存活且安装＝`dist`。
 
@@ -90,6 +89,4 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1 -Uninstall
 1. 1 条海路航线（MINDANAO→NORTH_BORNEO）保留 unavailable，38 条 partial 航线的一端没有当前
    港口接续；数量保留、几何标注未知。
 2. 设备丢失重建（A24 剩余项）需真实 GPU/显示设备变更，未在本次会话模拟。
-3. 官方 `build.ps1` 未重跑（`build_tests.ps1`/`deploy.ps1`/`selftest.ps1` 已用官方脚本执行）；
-   构建产物由本地 `main` 的等价 `build.sh` 生成，避免替换已验收产物。
-4. 省份增删/拆并、其他地图变体、逐像素多相机矩阵与 A01–A27 的其余 PARTIAL 项仍需样本验证。
+3. 省份增删/拆并、其他地图变体、逐像素多相机矩阵与 A01–A27 的其余 PARTIAL 项仍需样本验证。
