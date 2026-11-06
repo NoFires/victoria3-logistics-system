@@ -9,7 +9,7 @@
 1. `MASTER_PLAN.md`（总任务书，含第 2.4 节按主题重读要求）
 2. `00_START_HERE.md`、`01_IMPLEMENTATION_PROMPT.md`、`02_NATIVE_DISCOVERY.md`、`03_TESTING_AND_TROUBLESHOOTING.md`（**完整读**）
 3. 本文件
-4. `docs/transport/STATUS.md` → `TASKS.md` → `BLOCKERS.md` → `DECISIONS.md` → `WORKLOG.md`
+4. `docs/transport/COORDINATION.md` → `STATUS.md` → `TASKS.md` → `BLOCKERS.md` → `DECISIONS.md` → `WORKLOG.md`
 5. 按当前主题读 `FREIGHT_MODEL.md`、`NATIVE_GUI_PLAN.md`、`TEST_PROCEDURE.md`、`IMPLEMENTATION_REPORT.md`、`native/PROFILE.md`
 
 裁决：用户最新要求 > MASTER_PLAN > 原始四文档；当前代码/二进制/实测 > 旧报告。事实、推测、决策分开写。
@@ -56,6 +56,7 @@
 - **禁止反馈**：过滤、悬停、换色、显示/隐藏只改视图，不得修改价格、MAPI、订单、建筑、人口需求、分配结果或市场分母。
 - **线程与所有权**：渲染回调不扫描州/建筑数据库、不跑分配/Dijkstra、不等模拟锁、不执行 GUI 脚本效果。worker 不持 engine 指针。异步结果必须带 `world`/`revision`/generation，过期丢弃。
 - **原生安全**：未验证 ABI/生命周期保持 disabled；不跨构建复用地址、不按“第一个候选”取值、不全局改共享 vtable、不重构造已注册对象。
+- **单写者与分支协调**：同一迁移任务同一时间只允许一个活动工作区／分支。开工前运行 `python tools\agent_preflight.py`，用 `--claim "任务" --owner <会话ID> --round R2xx` 登记共享 claim；收工 `--release`。发现第二个工作区已有未提交迁移改动时停止，按 [docs/transport/COORDINATION.md](docs/transport/COORDINATION.md) 快照、三路比对、按功能取优；禁止两套实现并行推进到交付，禁止直接合并两套 R 号或候选哈希。
 - **不破坏用户工作**：仓库已使用 Git，用户要求完成更新后提交并推送现有远程；核对测试与范围，不改写远程历史。改源码前备份到 `E:\Code\v3-analysis\checkpoints\<日期>-<主题>`，不盲目恢复旧 `dist`。
 - **证据层级**：静态候选 → helper/模型测试 → native harness → DLL 加载 → 原生提交 → 实机可见 → 全交互/生命周期/性能。前一层不证明后一层。
 - **不越权操作**：游戏运行且文件被锁时不强替 DLL，不自动结束可能含未保存进度的游戏；部署/卸载只按 `deploy.ps1`。
@@ -64,6 +65,7 @@
 ## 3. 构建、测试、部署
 
 ```powershell
+python tools\agent_preflight.py                                    # 开工前预检；收工 --release
 powershell -ExecutionPolicy Bypass -File native\build.ps1          # dist\version.dll + dist\freight\freight.dll
 powershell -ExecutionPolicy Bypass -File native\build_tests.ps1    # native\build\tests
 python -B tools\verify_embedded.py
@@ -116,6 +118,8 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 ## 5. 当前状态与恢复入口
 
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
+
+当前活动线遵守 [docs/transport/COORDINATION.md](docs/transport/COORDINATION.md)：正式交付分支为 `worktree-v115-adaptation`；`trade-getter-port` 是从交付分支切出的贸易选择器／每州 hub 实验分支，未部署、未改变交付结论。
 
 截至R219：1.15.0交付范围为双DLL实载、官方等价入口35/35、改图/UI/生命周期/性能/部署矩阵（见 `docs/DELIVERY.md` 与 `docs/transport/ACCEPTANCE.md`）；剩余设备丢失重建与官方PowerShell脚本需在可用环境补跑，不把等价入口冒充官方脚本。
 
@@ -198,6 +202,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 **最新操作授权（2026-10-25）**：用户明确“我现在不在电脑旁边，请你自主验证”，允许自主启动及操作测试，覆盖此前手动操控限制；保留不强制结束可能有未保存进度会话的部署约束。
 
 ## 6. 进度日志（简要记录，最新在上）
+
+### 2026-11-06 — R221：单写者协调预检与贸易 getter 实验分支
+
+新增 `docs/transport/COORDINATION.md` 与 `tools/agent_preflight.py`：共享 `.git` claim、开工/收工预检、三路比对与证据裁决顺序，防止主工作区与 worktree 再次各自维护 R 号。实验分支 `trade-getter-port` 按“取对方更好的选择器/hub、保留我方表语义”移植：`SelectTradePath` 指向完整 `D039C0` getter，新增 `WorldMarketHub`（`DA2500`），按州 hub 解码并通过快照/overlay 接线；未引入对方的 `detailed==grouped` 校验与 0x8C0 表偏移。目标 EXE 上 hub harness 12 cases、selector harness 24 cases PASS；`native_world_trade_tests`/`native_snapshot_tests` PASS；完整等价入口 35/35、零失败。构建 `e8bf966d…`／50,120,165B；未部署、未并入交付分支，实机快照待验。
 
 ### 2026-11-06 — R220：核对用户更新的AGENTS／MASTER_PLAN并同步1.15交付跟踪
 

@@ -1,5 +1,12 @@
 # 当前状态
 
+### 2026-11-06 — R221：单写者协调预检与贸易 getter 实验分支
+
+- 新增 `docs/transport/COORDINATION.md` 与 `tools/agent_preflight.py`：claim 写在共享 `.git`，开工前检查分支/未提交改动/上游/他人 claim；分叉时先快照、三路比对，按“实机 > 同构建完整证据 > 官方等价 harness > 隔离机器码 > 静态”裁决，禁止整包覆盖。
+- 实验分支 `trade-getter-port`（切自交付 `5648cd6`）移植对方更完整的选择器/hub：`SelectTradePath=0x00D039C0`（world/source/destination 完整 getter）、`WorldMarketHub=0x00DA2500`（每州当前 hub，含 active 列表、F48/B7C 缓存与原生 fallback），快照与 overlay 传入两个回调；保留我方 detailed-only 表绑定与 0x870/0x898 语义，未采纳对方的 `detailed==grouped` 或 0x8C0。
+- 证据：Ghidra 独立反汇编确认两个 ABI；`tools/test_native_world_hub.py` 12 cases、`tools/test_native_trade_selector.py` 24 cases PASS（目标 EXE `473186e8…`）；`native_world_trade_tests`/`native_snapshot_tests` PASS；等价完整入口 35/35、零失败。新主体 `e8bf966d…`／50,120,165B，未部署。
+- 边界：实机快照尚待验证；`selected` 基线为 3792/4290（498 个多候选未选中），预期移植后接近 4290；hub 可能改变绑定，必须实机确认后才能讨论并入交付。
+
 ### 2026-11-06 — R220：核对用户更新的AGENTS／MASTER_PLAN
 
 - 用户更新的主工作区两文件经比对属于另一条1.15迁移线（R195–R202、候选573b3716…、61 PASS、未部署、profile关闭），与本分支R219交付（2028e03b…／c8020412…、安装＝dist）是并行历史：R号重叠但内容不同，且主工作区改动未提交。
