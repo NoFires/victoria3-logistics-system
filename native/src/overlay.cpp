@@ -2719,10 +2719,12 @@ void Overlay::CopyAtNativeScopeEnd(uint64_t caller) {
   const uint64_t revision=++m_economyRevision;
   auto copy=CopyNativeSnapshot(memory,base,tls,caller,*request,revision,[&]{
     return m_snapshotMailbox.Current(request) && request->world==m_economyWorld.load();
-  },&why);
-  // 1.15.0 changed the original trade-path selector to (candidate vector, hash);
-  // the old (market, source, destination) binding is not reused. Multi-candidate
-  // destinations stay unselected until that ABI is separately verified.
+  },&why,[](uint64_t worldMarket,uint32_t source,uint32_t destination){
+    return Game::Instance().SelectTradePath(worldMarket,source,destination);
+  },{},nullptr,[](uint64_t state){return Game::Instance().WorldMarketHub(state);});
+  // 1.15.0: the original full getter takes (world object, source, destination);
+  // the previous descriptor-level entry is not used. The per-state hub getter
+  // supplies the current center instead of a stale group representative.
   if(!copy){
     m_snapshotMailbox.Fail(request,revision,why);
     static std::string lastError;

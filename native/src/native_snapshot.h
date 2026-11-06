@@ -168,7 +168,8 @@ inline std::shared_ptr<const NativeCaptureResult> CopyNativeSnapshot(
     const NativeCaptureRequest& request,uint64_t revision,const std::function<bool()>& current,std::string* error=nullptr,
     const std::function<uint64_t(uint64_t,uint32_t,uint32_t)>& select={},
     const std::function<std::optional<bool>(uint64_t,uint64_t)>& selectAccess={},
-    const NativeLaneAccessInput* laneAccess=nullptr) {
+    const NativeLaneAccessInput* laneAccess=nullptr,
+    const std::function<std::optional<uint32_t>(uint64_t)>& selectHub={}) {
   auto fail=[&](const std::string& why)->std::shared_ptr<const NativeCaptureResult>{if(error)*error=why;return {};};
   if(!current || !current() || !request.world || !request.revision || revision<request.revision)
     return fail("missing current snapshot request");
@@ -188,7 +189,7 @@ inline std::shared_ptr<const NativeCaptureResult> CopyNativeSnapshot(
   if(!states)return fail(why);
   auto snapshot=std::make_shared<EconomySnapshot>();snapshot->world=request.world;snapshot->revision=revision;
   if(!PopulateSnapshotGoods(*snapshot,catalog,&why))return fail(why);
-  auto trade=DecodeNativeWorldTrade(read,module,*states,uint32_t(catalog.goods.size()),current,select,&why);
+  auto trade=DecodeNativeWorldTrade(read,module,*states,uint32_t(catalog.goods.size()),current,select,&why,selectHub);
   if(!trade)return fail(why);
   auto geometry=DecodeNativeSplineNetwork(read,module,current,&why);
   if(!geometry)return fail(why);

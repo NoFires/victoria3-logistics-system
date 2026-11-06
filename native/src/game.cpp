@@ -52,6 +52,7 @@ using FnOne = void(__fastcall*)(void*);
 using FnSubmit = void(__fastcall*)(void*, void*);
 using FnAlloc = void*(__fastcall*)(void*, size_t, size_t);
 using FnSelectTradePath = uint64_t(__fastcall*)(uint64_t,uint32_t,uint32_t);
+using FnWorldMarketHub = uint32_t*(__fastcall*)(uint64_t,uint32_t*);
 
 }  // namespace
 
@@ -116,6 +117,13 @@ bool Game::Initialize(const std::wstring& exePath, std::string* error) {
 uint64_t Game::SelectTradePath(uint64_t worldMarket,uint32_t source,uint32_t destination) const {
   if (!m_ready || !worldMarket || source==UINT32_MAX || destination==UINT32_MAX) return 0;
   return Fn<FnSelectTradePath>(kRvaSelectTradePath)(worldMarket,source,destination);
+}
+
+std::optional<uint32_t> Game::WorldMarketHub(uint64_t state) const {
+  if (!m_ready || !state) return {};
+  uint32_t hub=UINT32_MAX;
+  if (Fn<FnWorldMarketHub>(kRvaWorldMarketHub)(state,&hub)!=&hub) return {};
+  return hub;
 }
 
 void* Game::ResolveArrowType(const char* name, std::string* error) {

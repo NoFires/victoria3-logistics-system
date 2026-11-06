@@ -11,7 +11,8 @@ struct Fixture {
     groups=0x110000,members=0x120000,destinations=0x130000,paths=0x140000,ranges=0x150000,
     straitList=0x160000,straitDb=0x170000,straitEntries=0x180000,strait=0x190000,
     definition=0x1a0000,pairs=0x1b0000,values=0x1c0000,areaDb=0x1d0000,
-    areaEntries=0x1e0000,firstArea=0x1f0000,lastArea=0x200000,groupLookup=0x210000;
+    areaEntries=0x1e0000,firstArea=0x1f0000,lastArea=0x200000,groupLookup=0x210000,
+    hubDb=0x220000,hubEntries=0x230000,hubLists=0x240000;
   static constexpr uint32_t lastId=0xab000801,straitId=0x7f000000;
   std::map<uint64_t,uint8_t> bytes;uint64_t mutate=0;int reads=0;bool current=true;
   std::vector<v3::NativeStateEconomy> states{{0,7,0},{lastId,8,1},{3,7,0}};
@@ -27,12 +28,23 @@ struct Fixture {
     for(auto [a,id]:{std::pair{first,uint32_t(0)},std::pair{last,lastId},std::pair{third,uint32_t(3)}}){
       Put(a,module+0x046bad90);Put(a+8,id);Zero(a+0x870,0x90);
       Put(a+0xb48,uint32_t(id==lastId?1:0));
+      const uint32_t area=id==lastId?1u:0u;
+      Put(a+0xb78,area);
+      Put(a+0xf48,id==lastId?lastId:uint32_t(id==3?3:0));
+      Put(a+0xb7c,id==lastId?lastId:uint32_t(id==3?3:0));
     }
     Put(module+0x05964ea0,areaDb);Put(areaDb+0x20,areaEntries);Put(areaDb+0x2c,uint32_t(2));
     Put(areaEntries+8,firstArea);Put(areaEntries+24,lastArea);
     for(auto [a,id,center]:{std::tuple{firstArea,uint32_t(0),uint32_t(0)},std::tuple{lastArea,uint32_t(1),lastId}}){
       Put(a,module+0x04430cd8);Put(a+8,id);Put(a+0x48,center);
     }
+    Put(module+0x05c44e00,hubDb);Put(hubDb+0x20,hubEntries);Put(hubDb+0x2c,uint32_t(2));
+    Zero(hubEntries,32);Put(hubEntries+8,firstArea);Put(hubEntries+24,lastArea);
+    for(auto [a,id]:{std::pair{firstArea,uint32_t(0)},std::pair{lastArea,uint32_t(1)}}){
+      Put(a,module+0x04677060);Put(a+8,id);
+      Zero(a+0x48,0x30);Put(a+0x60,hubLists+id*0x40);Put(a+0x68,uint32_t(2));Put(a+0x6c,uint32_t(id==0?2:1));
+    }
+    Zero(hubLists,0x80);Put(hubLists,uint32_t(0));Put(hubLists+4,uint32_t(3));Put(hubLists+0x40,lastId);
     Put(module+0x05c43138,straitDb);Put(straitDb,module+0x0471cc78);Put(straitDb+0x20,straitEntries);
     Put(straitDb+0x2c,uint32_t(1));Put(straitDb+0x3c,uint32_t(1));Zero(straitEntries,16);Put(straitEntries+8,strait);
     Zero(strait,0x130);Put(strait,module+0x046c9758);Put(strait+8,straitId);Put(strait+0x120,definition);Put(strait+0x12d,uint8_t(3));
@@ -65,8 +77,9 @@ struct Fixture {
     for(size_t i=0;i<n;++i){auto f=bytes.find(a+i);if(f==bytes.end())return false;((uint8_t*)out)[i]=f->second;}
     if(a==mutate && ++reads==1)bytes[a]^=1;return true;
   }
-  auto Decode(uint32_t goodCount=2){return v3::DecodeNativeWorldTrade([&](auto a,auto p,auto n){return Read(a,p,n);},
-      module,states,goodCount,[&]{return current;},{},&error);}
+  auto Decode(uint32_t goodCount=2,const std::function<std::optional<uint32_t>(uint64_t)>& selectHub={}){
+    return v3::DecodeNativeWorldTrade([&](auto a,auto p,auto n){return Read(a,p,n);},
+      module,states,goodCount,[&]{return current;},{},&error,selectHub);}
 };
 int main(){
   Fixture f;const auto original=f.bytes;auto result=f.Decode();
@@ -105,7 +118,9 @@ int main(){
   f.bytes=original;
   int selections=0;
   auto selected=v3::DecodeNativeWorldTrade([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,f.states,2,
-      []{return true;},[&](uint64_t vector,uint32_t,uint32_t){++selections;Check(vector==Fixture::destinations+0x10,"native selector receives original live vector");
+      []{return true;},[&](uint64_t market,uint32_t source,uint32_t destination){++selections;
+        Check(market==Fixture::world+0x4e0 && source==0 && destination==Fixture::lastId,
+            "native getter receives current world market and full endpoint handles");
         return Fixture::paths+0x38;});
   Check(selected && selected->groups[0].destinations[0].selected==1 && selections==1,
       "verified selector chooses second candidate and only an owned index escapes");
@@ -142,6 +157,34 @@ int main(){
       "original grouped export table copied independently, not as reverse imports");
   Check(result->centers.at(0)==0 && result->centers.at(3)==0 && result->centers.at(Fixture::lastId)==Fixture::lastId,
       "current area center handles copied independently of cached membership");
+  {
+    Fixture h;
+    unsigned calls=0;
+    auto provider=[&](uint64_t object)->std::optional<uint32_t>{
+      ++calls;
+      Check(object==Fixture::first || object==Fixture::last || object==Fixture::third,
+          "hub getter receives only validated state objects");
+      return object==Fixture::last?Fixture::lastId:(object==Fixture::third?3u:0u);
+    };
+    auto hubs=h.Decode(2,provider);
+    Check(hubs && calls==3 && hubs->centers.at(0)==0 && hubs->centers.at(3)==3 &&
+        hubs->centers.at(Fixture::lastId)==Fixture::lastId,
+        "per-state current hubs replace stale group anchors and keep multi-hub areas distinct");
+    Check(!h.Decode(2,[](uint64_t)->std::optional<uint32_t>{return {};}),
+        "missing original hub result is unavailable");
+    Check(!h.Decode(2,[&](uint64_t object)->std::optional<uint32_t>{
+        return object==Fixture::last?Fixture::lastId:4u;}),
+        "inactive original hub result cannot become a current hub");
+    h.Put(Fixture::third+0xf48,uint32_t(0));
+    Check(!h.Decode(2,provider),"original getter must agree with a still-valid selected cache branch");
+    h.Put(Fixture::third+0xf48,uint32_t(3));
+    h.Put(Fixture::third+0xb78,UINT32_MAX);
+    Check(!h.Decode(2,[&](uint64_t)->std::optional<uint32_t>{return 0u;}),
+        "state without a trade area cannot acquire a hub");
+    h.Put(Fixture::third+0xb78,uint32_t(0));
+    h.Put(Fixture::hubLists+4,uint32_t(0));
+    Check(!h.Decode(2,provider),"duplicate native active hub identity rejected");
+  }
   f.Map(Fixture::last+0x898,Fixture::pairs+0x200);f.Zero(Fixture::pairs+0x200,2*0x60);
   f.Put(Fixture::pairs+0x204,uint8_t(1));f.Put(Fixture::pairs+0x208,uint32_t(0));
   f.Put(Fixture::pairs+0x210,Fixture::module+0x0465cb70);f.Put(Fixture::pairs+0x218,Fixture::values+0x100);

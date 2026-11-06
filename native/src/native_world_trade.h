@@ -1,6 +1,7 @@
 #pragma once
 #include "native_economy.h"
 #include "native_shipping.h"
+#include <algorithm>
 #include <map>
 #include <set>
 
@@ -90,18 +91,20 @@ struct NativeWorldTradeSnapshot {
   std::shared_ptr<const NativeDomesticSources> domestic;
 };
 
-// Exact 1.13.11 cached world-market paths and detailed state trade records.
+// Exact 1.15.0 cached world-market paths and detailed state trade records.
 // Caller owns the verified native access scope. No allocation solver or
-// geometry inference runs here. An optional adapter-only callback
-// invokes the verified native selector while the caller still owns the scope;
-// its retained pointer is range-checked and converted to an owned index.
-// Without it, multiple alternatives remain explicitly unselected.
+// geometry inference runs here. Optional adapter-only callbacks invoke the
+// verified original full path getter and per-state hub getter while the caller
+// still owns the scope; their results are range-checked before publication.
+// Without them, multiple alternatives remain explicitly unselected and trade
+// centers fall back to the copied group roster.
 template<class Reader,class Current>
 std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& reader,uint64_t module,
     const std::vector<NativeStateEconomy>& states,uint32_t goodCount,const Current& current,
-    const std::function<uint64_t(uint64_t,uint32_t,uint32_t)>& select={},std::string* error=nullptr) {
+    const std::function<uint64_t(uint64_t,uint32_t,uint32_t)>& select={},std::string* error=nullptr,
+    const std::function<std::optional<uint32_t>(uint64_t)>& selectHub={}) {
   auto fail=[&](const char* why)->std::optional<NativeWorldTradeSnapshot>{if(error)*error=why;return {};};
-  if(!current() || !module || module>UINT64_MAX-0x05c43140 || states.empty() ||
+  if(!current() || !module || module>UINT64_MAX-0x05c44e00 || states.empty() ||
      states.size()>65536 || !goodCount || goodCount>128)return fail("missing current world trade identity");
   EconomyReadWindow window(reader);
   GoodsMemoryReader read=[&](uint64_t a,void* p,size_t n){return window.Read(a,p,n);};
@@ -116,9 +119,60 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
   }
   NativeWorldTradeSnapshot result;
   result.states=states;
-  // 1.15.0 replaced the market-area center field with nested vectors. The
-  // trade group anchor is the same representative state the old center pointed
-  // at, so centers are derived from the copied group roster below.
+  if(selectHub){
+    // Original per-state current world-market hub, not the market area's old
+    // scalar center. DA2500 checks the area's active hub list first, then the
+    // state's selected and nearest cache entries, then its native fallback.
+    uint64_t areaDb=0,areaEntries=0;uint32_t areaSlots=0;
+    if(!field(module,0x05c44e00,areaDb) || !field(areaDb,0x20,areaEntries) ||
+       !field(areaDb,0x2c,areaSlots) || areaSlots>65536)return fail("invalid current trade area database");
+    std::map<uint32_t,std::vector<uint32_t>> areaHubs;
+    for(const auto& state:states){
+      uint32_t areaId=UINT32_MAX,center=UINT32_MAX;
+      if(!field(objects.at(state.id),0xb78,areaId))return fail("unreadable current state trade area");
+      if(areaId!=UINT32_MAX){
+        auto found=areaHubs.find(areaId);
+        if(found==areaHubs.end()){
+          uint64_t area=0,type=0;uint32_t id=UINT32_MAX,generation=0;
+          if((areaId&0xffffff)>=areaSlots || !field(areaEntries,uint64_t(areaId&0xffffff)*16+8,area) ||
+             !field(areaEntries,uint64_t(areaId&0xffffff)*16+4,generation) || generation!=(areaId&0xff000000) ||
+             !field(area,0,type) || type!=module+0x04677060 || !field(area,8,id) || id!=areaId ||
+             area>UINT64_MAX-0x78)return fail("invalid current trade area identity");
+          std::array<uint8_t,0x18> header{};
+          if(!read(area+0x60,header.data(),header.size()) || u32(header,12)>u32(header,8) || u32(header,8)>65536)
+            return fail("invalid current active world hub bounds");
+          std::vector<uint32_t> hubs(u32(header,12));std::set<uint32_t> unique;
+          if(!hubs.empty() && !read(u64(header,0),hubs.data(),hubs.size()*4))return fail("unreadable current active world hubs");
+          for(uint32_t hub:hubs)if(!objects.count(hub) || !unique.insert(hub).second)
+            return fail("invalid current active world hub handle");
+          found=areaHubs.emplace(areaId,std::move(hubs)).first;
+        }
+        const auto& hubs=found->second;
+        auto active=[&](uint32_t hub){return std::find(hubs.begin(),hubs.end(),hub)!=hubs.end();};
+        uint32_t selected=UINT32_MAX,nearest=UINT32_MAX,cached=UINT32_MAX;
+        if(!hubs.empty()){
+          if(!field(objects.at(state.id),0xf48,selected) || !field(objects.at(state.id),0xb7c,nearest))
+            return fail("unreadable current per-state world hubs");
+          if(active(selected))cached=selected;
+          else if(active(nearest))cached=nearest;
+        }
+        if(!current())return fail("retired world hub selection");
+        const auto chosen=selectHub(objects.at(state.id));
+        if(!chosen)return fail("original current world hub unavailable");
+        center=*chosen;
+        if(cached!=UINT32_MAX && center!=cached)return fail("original world hub differs from current cache branch");
+        if((center==UINT32_MAX)!=hubs.empty() || (center!=UINT32_MAX && !active(center)))
+          return fail("selected world hub is not currently active");
+      }else{
+        if(!current())return fail("retired world hub selection");
+        const auto chosen=selectHub(objects.at(state.id));
+        if(!chosen || *chosen!=UINT32_MAX)return fail("world hub without a current trade area");
+      }
+      result.centers.emplace(state.id,center);
+    }
+  }
+  // Without the hub getter the trade group anchor is the representative state
+  // the old center pointed at; the copied roster remains the diagnostic source.
   uint64_t db=0,type=0,entries=0;uint32_t slots=0,active=0;
   if(!field(module,0x05c43138,db) || !field(db,0,type) || type!=module+0x0471cc78 ||
      !field(db,0x20,entries) || !field(db,0x2c,slots) || !field(db,0x3c,active) ||
@@ -233,10 +287,10 @@ std::optional<NativeWorldTradeSnapshot> DecodeNativeWorldTrade(const Reader& rea
       if(count==1)dest.selected=0;
       else if(count && select){
         if(!current())return fail("retired before native path selection");
-        // 1.15.0 original selector takes the live candidate-vector descriptor
-        // plus a derived hash; the adapter receives (descriptor, anchor, state).
+        // Original full getter: (current world object, source anchor, destination).
+        // It performs the current group/candidate lookup and original cost rules.
         const uint64_t begin=u64(rows,j+0x10);
-        const uint64_t chosen=select(table+j+0x10,result.groups[i].anchor,dest.state);
+        const uint64_t chosen=select(world+0x4e0,result.groups[i].anchor,dest.state);
         if(chosen<begin || (chosen-begin)%0x38 || (chosen-begin)/0x38>=count)
           return fail("native selector returned a path outside its current alternatives");
         dest.selected=uint32_t((chosen-begin)/0x38);

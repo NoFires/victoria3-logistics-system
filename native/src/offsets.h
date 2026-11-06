@@ -41,9 +41,14 @@ constexpr uint32_t kRvaCommandScopeReturn = 0x01078EA6;
 // Native world aggregate destructor; machine+120 owns this exact object.
 // Called before any contained manager (including state DB at world+1C10).
 constexpr uint32_t kRvaDestroyNativeWorld = 0x014A3360;
-// Original current world-market candidate selection. Read-only borrowed input;
-// call only inside CopyNativeSnapshot's completed-command access scope.
-constexpr uint32_t kRvaSelectTradePath     = 0x00CFBA00;
+// Original full world-market path getter: (current world object, source state,
+// destination state). It resolves the current trade group, ranks every retained
+// candidate with the original cost/strait rules and returns the chosen path.
+// Call only inside CopyNativeSnapshot's completed-command access scope.
+constexpr uint32_t kRvaSelectTradePath     = 0x00D039C0;
+// Original per-state current world-market hub, including its selected/nearest
+// cache checks and native fallback. Read-only; no engine lock is taken.
+constexpr uint32_t kRvaWorldMarketHub      = 0x00DA2500;
 constexpr uint32_t kRvaTradePathCost       = 0x00CFB440;
 constexpr uint32_t kRvaTradeStraitCost     = 0x00CFB310;
 constexpr uint32_t kRvaTradeStraitLookup   = 0x00B04970;
@@ -92,7 +97,8 @@ constexpr uint32_t kOffTotalLength        = 0xA8;
 // First bytes of each entry point, verified against the running image.
 struct Sig { uint32_t rva; uint8_t bytes[8]; const char* name; };
 constexpr Sig kSigs[] = {
-    {kRvaSelectTradePath,   {0x40,0x56,0x41,0x55,0x41,0x57,0x48,0x83}, "select-trade-path"},
+    {kRvaWorldMarketHub,    {0x48,0x89,0x5C,0x24,0x10,0x48,0x89,0x6C}, "world-market-hub"},
+    {kRvaSelectTradePath,   {0x48,0x89,0x5C,0x24,0x08,0x44,0x89,0x44}, "select-trade-path"},
     {kRvaTradePathCost,     {0x48,0x89,0x5C,0x24,0x10,0x48,0x89,0x6C}, "trade-path-cost"},
     {kRvaTradeStraitCost,   {0x40,0x53,0x55,0x57,0x48,0x83,0xEC,0x20}, "trade-strait-cost"},
     {kRvaTradeStraitLookup, {0x48,0x83,0xEC,0x58,0x48,0x8B,0x05,0xBD}, "trade-strait-lookup"},

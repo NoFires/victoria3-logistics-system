@@ -1,7 +1,8 @@
 """Exercise exact-build native selection bytes in an isolated synthetic world.
 
-Does not load/launch/attach to Victoria 3. Only the three read-only functions and
-their valid-handle lookup are executable; unrelated reserved pages stay absent.
+Does not load/launch/attach to Victoria 3. The current route getter, cost and seeded-choice functions
+and valid-handle lookup execute unchanged. Province/owner services use explicit
+fixture stubs; this does not prove a game access lease. Other unrelated reserved pages stay absent.
 """
 import argparse
 import ctypes as c
@@ -49,38 +50,78 @@ def run(exe):
         c.memmove(address, raw, len(raw))
 
     try:
-        for rva, start, size in [(0xcf6000, 0xcf6b70, 0xa8), (0x13bd000, 0x13bd840, 0x42a)]:
+        for rva, start, size in [(0xb04000, 0xb04970, 0xb2), (0xcfb000, 0xcfb310, 0x8fb),
+                                 (0xd03000, 0xd039c0, 0x2a8)]:
             commit(rva, 0x1000)
             c.memmove(base + start, code(start, size), size)
             previous = c.c_uint32()
             assert kernel.VirtualProtect(base + rva, 0x1000, 0x20, c.byref(previous))
             assert kernel.FlushInstructionCache(kernel.GetCurrentProcess(), base + rva, 0x1000)
-        for rva in [0x58ff000, 0x5966000]:
+        # Fixture services return the passed province token and a valid owner.
+        for rva, stub in [(0xc80000, bytes.fromhex('4889c8c3')),
+                          (0xf1e000, bytes.fromhex('c701000000004889c8c3'))]:
             commit(rva, 0x1000)
-        constants = {0x58ffb68: 100000000, 0x58ffbb0: 25000, 0x58ffb70: 5000,
-                     0x58ff580: 0, 0x58ff5b0: 5000, 0x58ff5a8: 10000, 0x58ff5a0: 20000}
+            target = rva + (0xcc0 if rva == 0xc80000 else 0x630)
+            c.memmove(base + target, stub, len(stub))
+            previous = c.c_uint32()
+            assert kernel.VirtualProtect(base + rva, 0x1000, 0x20, c.byref(previous))
+            assert kernel.FlushInstructionCache(kernel.GetCurrentProcess(), base + rva, 0x1000)
+        for rva in [0x5bd7000, 0x5bdc000, 0x5c43000]:
+            commit(rva, 0x1000)
+        constants = {0x5bdc788: 100000000, 0x5bdc7b0: 25000, 0x5bdc780: 5000,
+                     0x5bdc7a0: 0, 0x5bd7910: 0, 0x5bd7920: 5000,
+                     0x5bd7938: 10000, 0x5bd7940: 20000}
         for rva, value in constants.items():
             put(base + rva, 'q', value)
         database = c.create_string_buffer(0x40)
         entries = c.create_string_buffer(32)
-        objects = [c.create_string_buffer(0xb0) for _ in range(2)]
-        put(base + 0x59667f8, 'Q', c.addressof(database))
+        objects = [c.create_string_buffer(0x130) for _ in range(2)]
+        put(base + 0x5c43138, 'Q', c.addressof(database))
         put(c.addressof(database) + 0x20, 'Q', c.addressof(entries))
         put(c.addressof(database) + 0x2c, 'I', 2)
         ids = [0, 0x7f000001]
         for i, obj in enumerate(objects):
             put(c.addressof(entries) + i * 16 + 8, 'Q', c.addressof(obj))
             put(c.addressof(obj) + 8, 'I', ids[i])
-        select = c.WINFUNCTYPE(c.c_void_p, c.c_void_p)(base + 0x13bdbe0)
+            put(c.addressof(entries) + i * 16 + 4, 'I', ids[i] & 0xff000000)
+        definitions = [c.create_string_buffer(0x60) for _ in objects]
+        for obj, definition in zip(objects, definitions):
+            put(c.addressof(obj) + 0x120, 'Q', c.addressof(definition))
+            put(c.addressof(definition) + 0x40, 'HH', 1, 2)
+        select = c.WINFUNCTYPE(c.c_void_p, c.c_void_p, c.c_uint32, c.c_uint32)(base + 0xd039c0)
+
+        def hash_id(value):
+            result = 0x811c9dc5
+            for byte in struct.pack('<I', value):
+                result = ((result ^ byte) * 0x1000193) & 0xffffffff
+            return result
+
         cases = 0
 
-        def exercise(distances, passages, modes, expected_index):
+        def exercise(distances, passages, modes, expected_index, endpoints=(0, 0xab000801), jitter=0):
             nonlocal cases
             paths = c.create_string_buffer(len(distances) * 0x38)
             vector = c.create_string_buffer(0x18)
+            put(base + 0x5bdc7a0, 'q', jitter)
+            market = c.create_string_buffer(0x320)
+            groups = c.create_string_buffer(4 * 0x18)
+            group = c.create_string_buffer(0x48)
+            destinations = c.create_string_buffer(4 * 0x28)
+            source, destination = endpoints
+            put(c.addressof(market) + 0x300, 'Q', c.addressof(groups))
+            put(c.addressof(market) + 0x30c, 'I', 1)
+            at = c.addressof(groups) + (hash_id(source) & 1) * 0x18
+            put(at + 4, 'B', 1)
+            put(at + 8, 'I', source)
+            put(at + 0x10, 'Q', c.addressof(group))
+            put(c.addressof(group) + 0x28, 'Q', c.addressof(destinations))
+            put(c.addressof(group) + 0x34, 'I', 1)
+            at = c.addressof(destinations) + (hash_id(destination) & 1) * 0x28
+            put(at + 4, 'B', 1)
+            put(at + 8, 'I', destination)
             lists = []
             for obj, tariff in zip(objects, modes):
-                put(c.addressof(obj) + 0xac, 'BB', *tariff)
+                put(c.addressof(obj) + 0x12c, 'BB', *tariff)
             for i, (distance, route) in enumerate(zip(distances, passages)):
                 item = c.addressof(paths) + i * 0x38
                 put(item + 0x30, 'q', distance)
@@ -89,10 +130,11 @@ def run(exe):
                     lists.append(handles)
                     put(item + 0x18, 'QII', c.addressof(handles), len(route), len(route))
             put(c.addressof(vector), 'QII', c.addressof(paths), len(distances), len(distances))
-            watched = [database, entries, *objects, paths, vector, *lists]
+            put(at + 0x10, 'QII', c.addressof(paths), len(distances), len(distances))
+            watched = [database, entries, *objects, *definitions, market, groups, group, destinations, paths, vector, *lists]
             before = [bytes(value) for value in watched]
             constant_before = [c.string_at(base + rva, 8) for rva in constants]
-            chosen = select(c.addressof(vector))
+            chosen = select(c.addressof(market), source, destination)
             assert chosen == c.addressof(paths) + expected_index * 0x38, (distances, passages, modes, expected_index)
             assert [bytes(value) for value in watched] == before, 'selector modified borrowed input'
             assert [c.string_at(base + rva, 8) for rva in constants] == constant_before, 'selector modified costs'
@@ -115,7 +157,21 @@ def run(exe):
         # Changing the same current strait can reverse the selected native path.
         exercise([100000000, 400000000], [[1], []], [(0, 0), (0, 0)], 0)
         exercise([100000000, 400000000], [[1], []], [(0, 0), (3, 3)], 1)
-        print(f'PASS: native selector ABI, {cases} cases, current tariffs, full handles, stable ties and read-only inputs; sha256={expected}')
+        # Independent oracle for the newly added endpoint-seeded tie jitter.
+        for source, destination in [(0, 1), (0xab000801, 0x12000002), (1, 0)]:
+            a, b = hash_id(source), hash_id(destination)
+            seed = a ^ ((b + 0x9e3779b9 + (a << 6) + (a >> 2)) & 0xffffffff)
+            routes = [[0], [1], []]
+            factors = []
+            for route in routes:
+                value = seed
+                for index in route:
+                    a, b = hash_id(value), hash_id(ids[index])
+                    value = a ^ ((b + 0x9e3779b9 + (a << 6) + (a >> 2)) & 0xffffffff)
+                factors.append(100000 + (value % 1001) * 200 - 100000)
+            exercise([100000000] * 3, routes, [(0, 0)] * 2,
+                     min(range(3), key=lambda i: factors[i]), (source, destination), 100000)
+        print(f'PASS: native selector ABI, {cases} cases, current tariffs, full endpoint handles, seeded choice and read-only inputs (province/owner fixture services); sha256={expected}')
     finally:
         kernel.VirtualFree(base, 0, 0x8000)
 

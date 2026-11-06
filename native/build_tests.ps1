@@ -93,6 +93,8 @@ if ($LASTEXITCODE -ne 0) { throw 'native port tests build failed' }
 if ($LASTEXITCODE -ne 0) { throw 'native port tests failed' }
 & $gpuPython (Join-Path $root 'tools\test_native_trade_selector.py')
 if ($LASTEXITCODE -ne 0) { throw 'exact-build native trade selector harness failed' }
+& $gpuPython (Join-Path $root 'tools\test_native_world_hub.py')
+if ($LASTEXITCODE -ne 0) { throw 'exact-build native world hub getter harness failed' }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
   -o (Join-Path $testBuild 'native_economy_tests.exe') (Join-Path $here 'test\native_economy_tests.cpp')
 if ($LASTEXITCODE -ne 0) { throw 'native economy tests build failed' }
