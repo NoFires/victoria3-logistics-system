@@ -1,11 +1,11 @@
 # 当前状态
 
-### 2026-11-06 — R225：本地 main 构建验收（进行中）
+### 2026-11-06 — R225：本地 main 构建验收
 
 - 本地 `main` 快进到 `2a2ef1e`；旧并行线归档在 `archive/main-r202-uncommitted`（`5a7b647`）与 `checkpoint2026-11-06-main-working-r202-final`，不再参与交付。
 - 主工作区完整构建：`freight 2fac6a05…`／50,220,030B、`version 9369c1dc…`／779,879B。与 worktree 构建 `ec8350d3…` 的哈希差仅来自 `-g` 源码路径，代码同为 `b5efd46`。
 - 完整等价入口35/35、零失败；`verify_embedded`（SHA256=2fac6a05…）、GUI 4项、flow GPU（八档/方向/海面高度/负对照）、loader runtime（配置优先/迁移）、harness selftest（exit0、242帧、960×960／560,434亮像素，阈值5000）通过。
-- 已安装主工作区构建到游戏（`.tmp`+rename，安装=dist；`deploy.ps1` 因沙箱未执行）。同构建六臂性能与20轮缓存／生命周期进行中；结果随后更新。
+- 已安装主工作区构建到游戏（`.tmp`+rename，安装=dist；`deploy.ps1` 因沙箱未执行）。同构建六臂：P95增加 `0.568／0.564／0.714 ms`（≤2），模拟速度最大降幅 `0.31%`（≤5），窗口61.52–62.59秒；20轮稳定revision `uploads=0 reused=201/200 pool=230`、每帧16次尝试、`overrun_frames=0`，3次数据revision变化18/11次上传、池201→230；open3 65秒`uploads=0 reused=201`。主构建物流页13982.47687／510.99MU、201 ribbons。设备重建（A24）与官方PowerShell脚本仍未完成。
 
 ### 2026-11-06 — R224：纠正州分组表偏移与恢复等值绑定
 

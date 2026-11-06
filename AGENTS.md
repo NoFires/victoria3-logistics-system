@@ -203,9 +203,9 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
-### 2026-11-06 — R225：本地 main 构建验收（进行中）
+### 2026-11-06 — R225：本地 main 构建验收
 
-本地 `main` 快进到 `2a2ef1e`；旧并行线归档在 `archive/main-r202-uncommitted`（`5a7b647`）与 `checkpoint2026-11-06-main-working-r202-final`。主工作区完整构建：`freight 2fac6a05…`／50,220,030B、`version 9369c1dc…`／779,879B（与 worktree 构建的哈希差来自 `-g` 调试源码路径，代码相同）。完整等价入口35/35、零失败；`verify_embedded`、GUI 4项、flow GPU（含负对照）、loader runtime、harness selftest（960×960／560,434亮像素）通过。已安装到游戏（安装=dist）。同构建六臂性能与20轮缓存／生命周期进行中；结果随后更新。
+本地 `main` 快进到 `2a2ef1e`；旧并行线归档在 `archive/main-r202-uncommitted`（`5a7b647`）与 `checkpoint2026-11-06-main-working-r202-final`。主工作区完整构建：`freight 2fac6a05…`／50,220,030B、`version 9369c1dc…`／779,879B（与 worktree 构建的哈希差来自 `-g` 调试源码路径，代码相同）。完整等价入口35/35、零失败；`verify_embedded`、GUI 4项、flow GPU（含负对照）、loader runtime、harness selftest（960×960／560,434亮像素）通过。已安装到游戏（安装=dist）。同构建六臂：P95增加 `0.568／0.564／0.714 ms`（≤2），模拟速度最大降幅 `0.31%`（≤5），窗口61.52–62.59秒；20轮稳定revision `uploads=0 reused=201/200 pool=230`、每帧16次尝试、`overrun_frames=0`，3次数据revision 18/11次上传、池201→230；open3 65秒`uploads=0 reused=201`；主构建物流页13982.47687／510.99MU、201 ribbons。设备重建（A24）与官方PowerShell脚本仍未完成。证据checkpoint2026-11-06-main-build。
 
 ### 2026-11-06 — R224：纠正州分组表偏移与恢复等值绑定
 

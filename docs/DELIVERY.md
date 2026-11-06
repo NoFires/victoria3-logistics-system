@@ -1,16 +1,17 @@
 # 交付说明（Victoria 3 1.15.0）
 
-> **2026-11-06 候选更新（R224）**：正式分支已合入三项经实机验证的更优功能——完整贸易 getter
+> **2026-11-06 当前构建（R225）**：正式线已合入三项经实机验证的更优功能——完整贸易 getter
 > `D039C0`＋每州当前 hub `DA2500`、商品缓存代数／失效检查、`state+0x8C0` 分组表＋
-> `detailed==grouped` 等值绑定。候选主体 `2fac6a05…`／50,220,030 B，引导 `9369c1dc…`
-> （旧已验收引导仍 `c8020412…`）。
+> `detailed==grouped` 等值绑定。当前构建主体 `2fac6a05…`／50,220,030 B，引导 `9369c1dc…`；
+> 旧已验收 `2028e03b…`／`c8020412…` 保留为回滚副本。
 > 同一 1.15 存档含 5 个多 hub 区域（2/3/4 个中心），实机 `selected=4290/4290`、201 ribbons、
 > 贸易量13982.47687／铁路510.99MU不变，绑定未报 `native detailed and grouped exports differ`。
-> 候选完整等价入口35/35（纠正后重跑）与两个目标 EXE 机器码 harness 通过，但**尚未重跑同构建性能／
-> 生命周期与完整 A01–A27**；旧 `2028e03b…` 的 A24／A25 结果不得自动套到候选。旧构建仍是
-> 已验收回滚构建。实际安装当前为**未安装**（2026-11-06 核对：`binaries\version.dll` 与
-> `binaries\freight\freight.dll` 均不存在，`freight.ini` `df06e5c0…`；旧主体以
-> `freight.dll.r196a-backup` 保留）。安装候选前需先重跑门槛并更新本文件。
+> 完整等价入口35/35、两个目标 EXE 机器码 harness、embedded／GUI／GPU／loader、selftest
+> （960×960／560,434亮像素）通过；同构建三对 P95 `+0.568／+0.564／+0.714 ms`（≤2），模拟最大
+> 降幅 `0.31%`（≤5%）；20轮稳定revision `uploads=0 reused=201/200 pool=230 overrun_frames=0`。
+> 设备丢失重建（A24）与官方 PowerShell 脚本仍未完成，其余 A01–A27 PARTIAL 见 `ACCEPTANCE.md`。
+> 实际安装＝`dist`（`2fac6a05…`／`9369c1dc…`），`freight.ini` `df06e5c0…` 保持；旧主体以
+> `freight.dll.r196a-backup` 保留。
 
 本文件是当前交付的唯一入口；状态、验收与性能细节见 `docs/transport/STATUS.md`、
 `ACCEPTANCE.md`、`PERFORMANCE.md`，工作日志见 `AGENTS.md` 第 6 节。
@@ -20,17 +21,16 @@
 | 文件 | SHA256 | 大小 |
 |---|---|---|
 | `dist/version.dll`（已验收引导，放 EXE 同目录） | `c80204122791ade4a33f5b61ea28ebb3a96f444bbc6ef215e71a6245af67a107` | 779,879 B |
-| `dist/version.dll`（候选 9369c1dc，与主体同构建） | `9369c1dca460dc24e480390c2de08e198641fb1cd619d0ef07085d825c8beb16` | 779,879 B |
+| `dist/version.dll`（当前构建 9369c1dc） | `9369c1dca460dc24e480390c2de08e198641fb1cd619d0ef07085d825c8beb16` | 779,879 B |
 | `dist/freight/freight.dll`（已验收主体） | `2028e03bc288cd89ff1df23c3dd4f94b9413594636ca2781a183d916c7d9d4a7` | 50,025,206 B |
-| `dist/freight/freight.dll`（候选 2fac6a05，门槛待重跑） | `2fac6a052cee2b1bd6dec548e5f1b13e4bfede8d881717018a6d1b2bb52ece13` | 50,220,030 B |
+| `dist/freight/freight.dll`（当前构建 2fac6a05） | `2fac6a052cee2b1bd6dec548e5f1b13e4bfede8d881717018a6d1b2bb52ece13` | 50,220,030 B |
 
 - 目标 EXE：Victoria 3 1.15.0，`SHA256 473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa`。
 - 安装布局：`binaries\version.dll` + `binaries\freight\freight.dll`；配置 `freight.ini`、日志
   `freight.log`/`loader.log`、缓存与资源都在 `binaries\freight\`，不依赖 playset、外部 Mod、
   Python 或手工资源。
-- 实际安装：2026-11-06 核对为**未安装**（两份 DLL 均不存在）；`dist` 当前为候选
-  `2fac6a05…`（50,220,030 B），旧已验收构建 `2028e03b…` 保留在回滚副本。安装时必须无游戏进程，
-  以 `.tmp` + rename 原子替换。
+- 实际安装：2026-11-06 安装当前构建 `2fac6a05…`／`9369c1dc…`，安装＝`dist`；旧已验收构建
+  `2028e03b…`／`c8020412…` 保留在回滚副本。安装时必须无游戏进程，以 `.tmp` + rename 原子替换。
 - 回滚副本：`E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery\dist`（已验收的
   `2028e03b…`／`c8020412…`），源码对应交付提交 `3ec16a0` 一带；候选源码为本地 `main` HEAD
   （`2a2ef1e`，代码提交 `b5efd46`）。
@@ -74,13 +74,15 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1 -Uninstall
 ## 5. 验收与性能结果
 
 - A01–A27 当前构建矩阵见 `docs/transport/ACCEPTANCE.md` 顶部“1.15.0 当前构建矩阵”。
-- 性能（同存档/相机/速度 III，三对 65 秒）：P95 增加 `0.593 / 0.518 / 0.671 ms`（门槛 2 ms），
-  模拟速度最大降幅 `0.46 %`（门槛 5 %），窗口 61.5–62.6 秒，见 `PERFORMANCE.md`。这些数值属于已验收
-  `2028e03b…`；候选 `2fac6a05…` 尚未重跑，不得沿用。
-- 缓存/压力：稳定 65 秒零新增几何上传；20 轮关闭/重开 `uploads=0 reused=185`、池 346/8192、
-  每帧上限 16、超 2 ms 帧 0。
-- 部署矩阵：主体缺失 126／损坏 193／整套卸载无 loader／重装 0／目录与日志不可写静默降级，
-  游戏均正常存活且安装＝dist。
+- 性能（同存档/相机/速度 III，三对 65 秒，当前构建 `2fac6a05…`）：P95 增加
+  `0.568 / 0.564 / 0.714 ms`（门槛 2 ms），模拟速度最大降幅 `0.31 %`（门槛 5 %），窗口
+  61.52–62.59 秒，见 `PERFORMANCE.md`。旧 `2028e03b…` 的 `0.593 / 0.518 / 0.671` 与 `0.46 %`
+  仅属旧构建。
+- 缓存/压力：稳定 65 秒零新增几何上传；20 轮稳定 revision `uploads=0 reused=201/200`、池
+  230/8192、每帧上限 16、`overrun_frames=0`；3 次数据 revision 变化时 18/11 次上传、池
+  201→230。旧 `2028e03b…` 的 `reused=185`／池 346 仅属旧构建。
+- 部署矩阵（当前构建）：主体缺失 126／损坏 193／整套卸载无 loader／重装 0／只读目录与日志
+  静默降级，游戏均正常存活且安装＝`dist`。
 
 ## 6. 已知限制（不冒充通过）
 
