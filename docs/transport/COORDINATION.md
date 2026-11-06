@@ -6,8 +6,8 @@
 
 | 项 | 值 |
 |---|---|
-| 正式交付分支 | 本地 `main`（2026-11-06 快进到交付线 `b5efd46`）；远程 `origin/main` 暂不推送 |
-| 推送镜像 | `origin/worktree-v115-adaptation`（`b5efd46`）；`trade-getter-port` 已合并 |
+| 正式交付分支 | 本地 `main`（代码 `b5efd46`；文档 HEAD 以 `git log -1` 为准）；远程 `origin/main` 暂不推送 |
+| 推送镜像 | `origin/worktree-v115-adaptation`（与本地 `main` 同步）；`trade-getter-port` 已合并 |
 | 旧 worktree | `.claude/worktrees/v115-adaptation` 只读备份，不再更新、不再部署 |
 | 实验分支 | 必须从本地 `main` 切出，命名 `exp/<主题>` 这类明确主题；实验分支不得部署、不得改写交付结论 |
 | 交付安装 | 只有本地 `main` 的构建可以安装；实验 DLL 只做临时快照，测试后恢复安装前状态 |

@@ -119,7 +119,7 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
 
-截至R224：正式分支候选 `ec8350d3…`（完整贸易 getter／每州 hub＋商品缓存代数＋`state+0x8C0` 等值绑定），完整等价入口 35/35、实机多 hub 物流页通过；同构建性能／生命周期门槛待重跑，不得套用旧 `2028e03b…` 的 A24／A25 结果。实际安装为未安装，旧构建仍为回滚副本。当前活动线遵守 [docs/transport/COORDINATION.md](docs/transport/COORDINATION.md)：正式交付分支为本地 `main`（已快进到 `b5efd46`）；远程 `origin/main` 暂不推送，`origin/worktree-v115-adaptation` 为推送镜像；旧 worktree 与 `trade-getter-port` 均已合并，只保留只读备份，不再作为并行线维护。
+截至R224：正式分支候选 `ec8350d3…`（完整贸易 getter／每州 hub＋商品缓存代数＋`state+0x8C0` 等值绑定），完整等价入口 35/35、实机多 hub 物流页通过；同构建性能／生命周期门槛待重跑，不得套用旧 `2028e03b…` 的 A24／A25 结果。实际安装为未安装，旧构建仍为回滚副本。当前活动线遵守 [docs/transport/COORDINATION.md](docs/transport/COORDINATION.md)：正式交付分支为本地 `main`（代码 `b5efd46`；文档 HEAD 以 `git log -1` 为准）；远程 `origin/main` 暂不推送，`origin/worktree-v115-adaptation` 为推送镜像；旧 worktree 与 `trade-getter-port` 均已合并，只保留只读备份，不再作为并行线维护。
 
 截至R219：1.15.0交付范围为双DLL实载、官方等价入口35/35、改图/UI/生命周期/性能/部署矩阵（见 `docs/DELIVERY.md` 与 `docs/transport/ACCEPTANCE.md`）；剩余设备丢失重建与官方PowerShell脚本需在可用环境补跑，不把等价入口冒充官方脚本。
 
