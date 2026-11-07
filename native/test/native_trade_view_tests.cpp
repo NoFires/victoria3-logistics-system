@@ -43,6 +43,68 @@ std::shared_ptr<const LogisticsDocument> Await(LogisticsSession& session){
 }
 int main(){
   {
+    EconomySnapshot input;input.world=1;input.revision=1;input.goods={{1,"grain","staple",1,false}};
+    auto trade=std::make_shared<NativeWorldTradeSnapshot>();trade->states={{10,UINT32_MAX,7},{20,UINT32_MAX,7}};
+    auto network=std::make_shared<NativeSplineNetwork>();network->width=8192;network->height=3616;
+    network->points={{100,{1,1}},{200,{6,1}}};
+    auto sea=std::make_shared<NativeSeaGeography>();sea->states={{10,{1,1}},{20,{2,2}}};
+    auto sources=std::make_shared<NativeDomesticSources>();sources->landHubs={{10,100},{20,200}};
+    sources->orders={{10,UINT32_MAX,7,1,1000,0},{20,UINT32_MAX,7,1,0,1000}};
+    constexpr uint64_t first=kNativeAnonymousLandNode|7,second=kNativeAnonymousLandNode|8;
+    NativeDirectLandLeg start{{100,first},{{{100000,100000},{300000,100000}}},200000},
+        finish{{first,200},{{{300000,100000},{600000,100000}}},300000};
+    sources->localLand={{1,10,10,2,UINT64_MAX,true,start}};
+    sources->land={{2,10,20,2,UINT64_MAX,true,finish}};
+    trade->domestic=sources;trade->geometry=network;trade->seaGeography=sea;input.nativeTrade=trade;
+    for(unsigned reverse=0;reverse<2;++reverse){
+      auto facts=BuildNativeTradeFacts(input);FreightFilter filter;filter.market=7;
+      auto view=facts?BuildNativeTradeView(input,*facts,filter):std::nullopt;
+      auto ribbons=view?BuildNativeTradeRibbons(*facts,*view):std::nullopt;
+      Check(view && view->selectionQuantity==100000 && view->segments.size()==2 && ribbons && ribbons->size()==2,
+          "copied original keyless land legs reach formal quantities and ribbons in both directions");
+      const auto& model=*facts->domestic;const auto& shipment=model.allocation.shipments[0];
+      Check(shipment.source==(reverse?20u:10u) && shipment.route.size()==2 && std::abs(shipment.distance-5)<.00001 &&
+          model.seaEdges==std::vector<bool>{false,false},"keyless original distances and land transport identity are retained");
+      float previous=reverse?6:1;
+      for(const auto& edge:shipment.route){
+        const auto& strip=model.edges[edge.id].strips[0];
+        const auto& points=model.portPaths.at(strip.id);
+        Check((strip.id&(uint64_t(1)<<62)) && points[edge.forward?0:1].x==previous,
+            "anonymous native waypoint joins exact original directed leg endpoints");
+        previous=points[edge.forward?1:0].x;
+      }
+      Check(previous==(reverse?1:6),"keyless route reaches its actual final endpoint");
+      std::swap(sources->orders[0].production,sources->orders[0].consumption);
+      std::swap(sources->orders[1].production,sources->orders[1].consumption);
+    }
+    auto changed=std::make_shared<NativeWorldTradeSnapshot>(*trade);
+    auto changedSources=std::make_shared<NativeDomesticSources>(*sources);changed->domestic=changedSources;
+    changedSources->land[0].direct->distanceFixed++;
+    Check(!NativeTradeEquivalent(*trade,*changed),"same-revision keyless native distance invalidates allocation identity");
+    sources->land[0].direct->anchors[0]=second;
+    auto missing=BuildNativeDomesticModel(input);
+    Check(missing && missing->allocation.shipments.empty(),"distinct anonymous nodes at the same position cannot impersonate a shared sentinel");
+    NativeDirectLandLeg link{{first,second},{{{300000,100000},{300000,100000}}},0};
+    sources->localLand.push_back({3,10,10,2,UINT64_MAX,true,link});
+    auto restored=BuildNativeDomesticModel(input);
+    Check(restored && restored->allocation.shipments.size()==1 && restored->allocation.shipments[0].route.size()==3 &&
+          restored->portPaths.size()==2,"only an actual zero-length native connector can join the separate anonymous nodes");
+    sources->localLand.pop_back();sources->land[0].direct->anchors[0]=first;
+    sources->land[0].direct->positions[0][0]++;
+    Check(!BuildNativeDomesticModel(input),"one anonymous runtime node cannot have conflicting copied positions");
+    sources->land[0].direct->positions[0][0]--;
+    sources->localLand[0].direct->positions[1][0]=INT64_MAX;
+    sources->land[0].direct->positions[0][0]=INT64_MAX;
+    Check(!BuildNativeDomesticModel(input),"unbounded anonymous coordinates cannot enter native ribbons");
+    sources->localLand[0].direct->positions[1]={100000,100000};sources->land[0].direct->positions[0]={100000,100000};
+    sources->localLand[0].direct->distanceFixed=0;
+    auto zero=BuildNativeDomesticModel(input);
+    Check(zero && zero->allocation.shipments.size()==1 && std::abs(zero->allocation.shipments[0].distance-3)<.00001 &&
+          zero->portPaths.size()==1,"valid zero-distance ground leg retains the final shipment without a fake line");
+    sources->land[0].type=4;
+    Check(!BuildNativeDomesticModel(input),"a keyless road cannot masquerade as a built railway");
+  }
+  {
     auto input=Snapshot();auto trade=std::make_shared<NativeWorldTradeSnapshot>(*input.nativeTrade);
     trade->states={{100,1,7},{200,1,7},{400,5,7}};trade->statePairs.clear();
     auto geo=std::make_shared<NativeSeaGeography>(*trade->seaGeography);

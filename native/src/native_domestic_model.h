@@ -120,8 +120,39 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     }
     return true;
   };
+  std::map<uint64_t,std::array<int64_t,2>> anonymousPositions;
   auto addLand=[&](const NativeLandConnection& connection){
     if(connection.type!=2 && connection.type!=3 && connection.type!=4)return false;
+    if(connection.direct){
+      const auto& leg=*connection.direct;
+      if(connection.spline!=UINT64_MAX || connection.type==4 || !connection.forward || leg.distanceFixed<0)return false;
+      std::vector<NativeSplinePoint> points;
+      for(size_t side=0;side<2;++side){
+        const auto anchor=leg.anchors[side];NativeSplinePoint p{};
+        if((anchor&~uint64_t(UINT32_MAX))==kNativeAnonymousLandNode){
+          const auto [where,inserted]=anonymousPositions.emplace(anchor,leg.positions[side]);
+          if(!inserted && where->second!=leg.positions[side])return false;
+          p={float(double(leg.positions[side][0])/100000),float(double(leg.positions[side][1])/100000)};
+          if(!network.width || !network.height || p.x<-float(network.width) || p.x>2.0f*network.width ||
+             p.z<0 || p.z>network.height)return false;
+        }else{
+          if(anchor>=0x1fffffff)return false;
+          const auto point=network.points.find(uint32_t(anchor));
+          if(point==network.points.end() || double(leg.positions[side][0])!=std::floor(double(point->second.x))*100000 ||
+             double(leg.positions[side][1])!=std::floor(double(point->second.z))*100000)return false;
+          p=point->second;
+        }
+        if(!std::isfinite(p.x) || !std::isfinite(p.z))return false;
+        points.push_back(p);
+      }
+      NativeTradeGeometry shape;
+      if(points[0].x!=points[1].x || points[0].z!=points[1].z){
+        const uint64_t strip=(uint64_t(3)<<62)|(uint64_t(connection.id)<<6);
+        if(!result.portPaths.emplace(strip,std::move(points)).second)return false;
+        shape.strips.push_back({strip,true});
+      }else shape.complete=leg.distanceFixed==0;
+      return add(connection.source,connection.destination,0,std::move(shape),double(leg.distanceFixed)/100000,leg.anchors);
+    }
     const auto binding=network.connections.find(connection.spline);
     if(binding==network.connections.end() || binding->second.empty() || (connection.spline&63)>1)return false;
     NativeTradeGeometry shape;uint32_t anchor=uint32_t(connection.spline>>6)&0x1fffffff;

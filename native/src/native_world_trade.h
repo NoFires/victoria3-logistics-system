@@ -43,10 +43,18 @@ struct NativeTradeStrait {
 };
 struct NativeSplineNetwork;
 struct NativeSeaGeography;
+inline constexpr uint64_t kNativeAnonymousLandNode=uint64_t(1)<<32;
+struct NativeDirectLandLeg {
+  std::array<uint64_t,2> anchors{}; // authored control or tagged current land-node index
+  std::array<std::array<int64_t,2>,2> positions{}; // original definition, fixed1e5
+  int64_t distanceFixed=0;
+  bool operator==(const NativeDirectLandLeg&)const=default;
+};
 struct NativeLandConnection {
   uint32_t id=0,source=0,destination=0,type=0;
   uint64_t spline=0; // current definition's full native connection key
   bool forward=true; // definition origin follows the native connection key
+  std::optional<NativeDirectLandLeg> direct; // original keyless leg with current corridor references
   bool operator==(const NativeLandConnection&)const=default;
 };
 struct NativePortTransfer {

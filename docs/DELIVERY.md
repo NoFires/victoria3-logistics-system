@@ -1,5 +1,7 @@
 # 交付说明（Victoria 3 1.15.0）
 
+> **2026-11-07 R229 当前测试安装**：主体 `716fd6892523eab6bc14fc17dfe4d2f78556815febf6e0e0ae43b8929ebaf1d8`（50,835,433B）＋引导 `71dae36d…`，源码/构建/安装对齐。完整统一60条PASS、embedded、selftest560412亮像素、默认隐藏通过；47保留文件与5输入保持。仅接有当前原版中转引用的无key地面段，无引用起终区连接/海峡/完整实机矩阵仍待。以下旧构建结果不能外推，完整目标未完成。
+
 > **2026-11-07 R228 当前构建**：源码与 dist 主体 `bbee96cb61931355b9c8dfb6d82b91cb883cc0dc84c7a8214dd894b4cc93d3ae`（50,651,488B），引导 `71dae36d…`。完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560442亮像素）／默认debug零顶点均通过；经 deploy.ps1 安装 exit0，安装＝dist（bbee96cb…／71dae36d…），47个保留文件与5项受保护输入逐字节保持；真实游戏加载未验收。新增有效重合港内段的绘图处理；下方 R227/R226 数字仅作历史，不替代本构建实机/性能验收，完整目标仍 ACTIVE。
 
 > **2026-11-07 R227 候选，未部署**：源码及 `dist/freight/freight.dll` 已更新为 `21a82419e8c8fbf843cc8fb75ea81bedf9860abbac689e7485da9ff0d53eb9a2`（50,650,464 B），引导仍为 `71dae36d…`。修复主城直线接港及无见证端点的海路猜向，改用当前 kind6 实际港内连接。完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560390亮像素）／默认debug零顶点均通过；实际安装仍 R226 `404abb88…`／`71dae36d…`，与当前 dist 不同。下方旧构建实机和性能结果不能用于本候选；状态与恢复入口见 STATUS R227。
@@ -27,7 +29,8 @@
 |---|---|---|
 | 历史回滚引导（c8020412） | `c80204122791ade4a33f5b61ea28ebb3a96f444bbc6ef215e71a6245af67a107` | 779,879 B |
 | 历史 R227 未部署候选（checkpoint归档） | `21a82419e8c8fbf843cc8fb75ea81bedf9860abbac689e7485da9ff0d53eb9a2` | 50,650,464 B |
-| `dist/freight/freight.dll`（当前R228测试安装） | `bbee96cb61931355b9c8dfb6d82b91cb883cc0dc84c7a8214dd894b4cc93d3ae` | 50,651,488 B |
+| 历史 R228 测试安装（本轮installed-before归档） | `bbee96cb61931355b9c8dfb6d82b91cb883cc0dc84c7a8214dd894b4cc93d3ae` | 50,651,488 B |
+| `dist/freight/freight.dll`（当前R229测试安装） | `716fd6892523eab6bc14fc17dfe4d2f78556815febf6e0e0ae43b8929ebaf1d8` | 50,835,433 B |
 | `dist/version.dll`（当前构建 71dae36d） | `71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e` | 779,879 B |
 | 历史回滚主体（2028e03b） | `2028e03bc288cd89ff1df23c3dd4f94b9413594636ca2781a183d916c7d9d4a7` | 50,025,206 B |
 | 历史 R226 安装主体（installed-before归档） | `404abb8883100bab17c6bfb2200919ffb89c1fba26f4643c1a379cb875c57c92` | 50,220,030 B |

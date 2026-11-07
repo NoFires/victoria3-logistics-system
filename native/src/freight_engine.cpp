@@ -85,6 +85,11 @@ uint64_t HashNativeTrade(uint64_t hash, const NativeWorldTradeSnapshot& trade) {
   value(bool(trade.geometry));
   value(bool(trade.domestic));
   if(trade.domestic){
+    auto directLeg=[&](const NativeLandConnection& link){
+      value(bool(link.direct));if(!link.direct)return;
+      value(link.direct->distanceFixed);for(auto anchor:link.direct->anchors)value(anchor);
+      for(const auto& point:link.direct->positions)for(auto coordinate:point)value(coordinate);
+    };
     value(trade.domestic->orders.size());
     for(const auto* order:ordered(trade.domestic->orders,[](const auto& o){return std::pair{o.state,o.good};})){
       value(order->state);value(order->region);value(order->market);value(order->good);value(order->production);value(order->consumption);
@@ -92,10 +97,12 @@ uint64_t HashNativeTrade(uint64_t hash, const NativeWorldTradeSnapshot& trade) {
     value(trade.domestic->land.size());
     for(const auto* link:ordered(trade.domestic->land,[](const auto& c){return c.id;})){
       value(link->id);value(link->source);value(link->destination);value(link->type);value(link->spline);value(link->forward);
+      directLeg(*link);
     }
     value(trade.domestic->localLand.size());
     for(const auto* link:ordered(trade.domestic->localLand,[](const auto& c){return c.id;})){
       value(link->id);value(link->source);value(link->destination);value(link->type);value(link->spline);value(link->forward);
+      directLeg(*link);
     }
     value(trade.domestic->portTransfers.size());
     for(const auto* transfer:ordered(trade.domestic->portTransfers,[](const auto& c){return c.id;})){
@@ -113,6 +120,7 @@ uint64_t HashNativeTrade(uint64_t hash, const NativeWorldTradeSnapshot& trade) {
     value(trade.domestic->builtRails.size());
     for(const auto* link:ordered(trade.domestic->builtRails,[](const auto& c){return c.id;})){
       value(link->id);value(link->source);value(link->destination);value(link->type);value(link->spline);value(link->forward);
+      directLeg(*link);
     }
     for(const auto* lane:ordered(trade.domestic->shipping.lanes,[](const auto& l){return l.id;})){
       value(lane->id);value(lane->country);value(lane->kind);value(lane->treaty);value(lane->fromState);value(lane->toState);

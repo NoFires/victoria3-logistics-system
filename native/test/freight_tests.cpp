@@ -73,6 +73,14 @@ int main() {
         colocated.shipments[0].route.empty() && colocated.shipments[0].distance==0,
         "different runtime states at one witnessed physical hub retain known zero-distance flow without a fake line");
   }
+  {
+    SplineGraph zero;zero.nodes={{100,0,0},{200,0,0}};zero.edges={{0,0,1,0,0,0,0}};
+    auto input=Snapshot();input.orders={{10,UINT32_MAX,7,1,1000,0},{20,UINT32_MAX,7,1,0,1000}};
+    auto flow=AllocateFreight(input,zero,{}, {},{{10,{0}},{20,{1}}});
+    Require(flow.complete && flow.shipments.size()==1 && flow.shipments[0].quantity==1000 &&
+        flow.shipments[0].distance==0,"a copied physical zero-length ground leg retains known flow");
+    Require(!AllocateFreight(input,zero,{}).complete,"zero-length ground is not admitted without physical access identities");
+  }
   auto graph=Graph();auto s=Snapshot();FreightPolicy policy;
   auto result=AllocateFreight(s,graph,policy);
   Require(result.complete,result.error.c_str());Require(result.shipments.size()==2,"two final allocations");

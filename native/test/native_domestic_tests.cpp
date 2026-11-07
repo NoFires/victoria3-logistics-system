@@ -82,6 +82,39 @@ int main(){
   Check(copy && copy->landHubs==std::map<uint32_t,uint32_t>{{first,100}},
       "primary land hub uses the current node role bit and exact control");
   {
+    auto direct=good;
+    direct.Put<uint64_t>(cdef+0x20,UINT64_MAX);direct.Put<int64_t>(cdef+0x18,700000);
+    direct.Put<uint32_t>(crow,0);direct.Put<uint8_t>(crow+4,2);
+    direct.Put<uint64_t>(crow+0x28,0x4c0000);direct.Put<uint32_t>(crow+0x30,1);
+    direct.Put<uint32_t>(crow+0x34,1);direct.Put<uint32_t>(0x4c0000,9);
+    direct.Put<uint32_t>(world+0x5028+0x1c,2);
+    direct.Put<uint32_t>(ndefB,1);direct.Put<uint32_t>(ndefB+8,0x1fffffff);
+    direct.Put<std::array<int64_t,2>>(ndefA+0x10,{200000,300000});
+    direct.Put<std::array<int64_t,2>>(ndefB+0x10,{500000,600000});
+    direct.Put<uint16_t>(landNodes+6,1);direct.Put<uint64_t>(landNodes+8,ndefA);
+    direct.Put<uint32_t>(landNodes+0x30,1);direct.Put<uint16_t>(landNodes+0x36,2);
+    direct.Put<uint64_t>(landNodes+0x38,ndefB);
+    direct.Put<uint64_t>(crow+0x10,landNodes);direct.Put<uint64_t>(crow+0x18,landNodes+0x30);
+    auto owned=run(direct);
+    Check(owned && owned->land.size()==1 && owned->land[0].spline==UINT64_MAX,
+        "original keyless ground connection remains part of current domestic connectivity");
+    Check(owned->land[0].direct && owned->land[0].direct->anchors==std::array<uint64_t,2>{100,kNativeAnonymousLandNode|1} &&
+        owned->land[0].direct->distanceFixed==700000 &&
+        owned->land[0].direct->positions[1]==std::array<int64_t,2>{500000,600000},
+        "anonymous waypoint keeps its current node identity and exact original position/distance");
+    auto unreferenced=direct;unreferenced.Put<uint32_t>(crow+0x34,0);
+    auto restricted=run(unreferenced);
+    Check(restricted && restricted->land.empty(),"endpoint-area-only native connection cannot grant unrestricted transit");
+    auto bad=[&](auto change){auto value=direct;change(value);return !run(value);};
+    Check(bad([&](auto& m){m.template Put<uint32_t>(crow+0x30,0);}),"corridor reference bounds rejected");
+    Check(bad([&](auto& m){m.template Put<uint64_t>(crow+0x28,0);}),"missing corridor reference buffer rejected");
+    Check(bad([&](auto& m){m.template Put<uint64_t>(crow+0x18,landNodes);}),"anonymous node must match its current runtime array slot");
+    Check(bad([&](auto& m){m.template Put<int64_t>(cdef+0x18,-1);}),"negative original ground distance rejected");
+    Check(bad([&](auto& m){m.template Put<uint32_t>(ndefA+8,0x1fffffff);}),"anonymous primary hub cannot substitute for a witnessed control");
+    auto strait=direct;strait.Put<uint8_t>(cdef+4,8);auto excluded=run(strait);
+    Check(excluded && excluded->land.empty(),"a registered keyless strait is not an unrestricted ground road");
+  }
+  {
     auto access=good;
     constexpr uint64_t navalNode=0x4a0000,accessDef=0x4b0000;
     access.Put<uint32_t>(world+0x5028+0x1c,2);

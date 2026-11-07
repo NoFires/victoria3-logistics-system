@@ -72,8 +72,8 @@ std::optional<std::map<uint32_t,std::vector<uint32_t>>> DecodeDomesticStraitAcce
 // verified completed-command scope and combined observation window.
 // 1.15.0 layout: NTravelNetwork keeps separate land and naval node/connection
 // containers at world+0x5028. Land roads and built rail still reference the
-// current spline connection by key; keyless generated waypoints carry no
-// authored geometry and are not admitted.
+// current spline connection by key. Keyless ground legs need current original
+// corridor references; their geometry is copied from the original definition.
 template<class Reader,class Current>
 std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& reader,uint64_t module,
     const std::vector<NativeStateEconomy>& states,uint32_t goodCount,const NativeSplineNetwork& network,
@@ -185,6 +185,15 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     if(copy.anchor==UINT32_MAX || copy.province==UINT16_MAX)return false;
     nodeDefs.emplace(address,copy);out=copy;return true;
   };
+  auto runtimeNode=[&](uint64_t definition,uint64_t runtime,NodeDef& n){
+    if(!nodeDef(definition,n))return false;
+    uint64_t data=0;uint32_t cap=0,count=0;
+    if(!array(manager+((n.flags&0x380)?0x40:0x10),data,cap,count) || n.id>=count ||
+       uint64_t(n.id)*0x30>UINT64_MAX-data || runtime!=data+uint64_t(n.id)*0x30)return false;
+    std::array<uint8_t,0x10> row{};
+    return read(runtime,row.data(),row.size()) && u32(row,0)==n.id &&
+        u16(row,6)==n.province && u64(row,8)==definition;
+  };
   std::map<uint32_t,uint32_t> hubs;
   auto hub=[&](uint32_t state,uint32_t anchor){
     const auto [where,inserted]=hubs.emplace(state,anchor);
@@ -202,7 +211,37 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     if(!read(pu64(row,8),def.data(),def.size()))return fail("unreadable domestic land definition");
     const uint32_t kind=def[4];
     const uint64_t key=u64(def,0x20);
-    if(key==UINT64_MAX)continue; // generated/keyless waypoint: no authored geometry
+    if(key==UINT64_MAX){
+      if(kind!=1 || (row[4]!=2 && row[4]!=3))continue;
+      // CA8990 allows general transit only with current corridor references.
+      // Unreferenced legs need the original query's source/destination areas;
+      // they cannot be inserted into this context-free model graph.
+      const uint32_t capacity=pu32(row,0x30),references=pu32(row,0x34);
+      if(references>capacity || capacity>200000)return fail("invalid keyless land corridor references");
+      if(!references)continue;
+      std::vector<uint32_t> owners(references);
+      if(!read(pu64(row,0x28),owners.data(),owners.size()*4))return fail("unreadable keyless land corridor references");
+      NodeDef a{},b{};
+      if(id!=i || u32(def,0)!=id || !runtimeNode(u64(def,8),pu64(row,0x10),a) ||
+         !runtimeNode(u64(def,0x10),pu64(row,0x18),b) || (a.flags&0x380) || (b.flags&0x380))
+        return fail("invalid current keyless land endpoints");
+      const auto source=provinceState(a.province),destination=provinceState(b.province);
+      if(!source || !destination || a.anchor>0x1fffffff || b.anchor>0x1fffffff)
+        return fail("invalid keyless land owner or control");
+      NativeDirectLandLeg leg;leg.positions={a.position,b.position};
+      std::memcpy(&leg.distanceFixed,def.data()+0x18,8);
+      if(leg.distanceFixed<0)return fail("negative original keyless land distance");
+      for(size_t side=0;side<2;++side){
+        const auto& n=side?b:a;
+        leg.anchors[side]=n.anchor==0x1fffffff?kNativeAnonymousLandNode|n.id:n.anchor;
+        if((n.flags&1) && (n.anchor==0x1fffffff || !hub(side?*destination:*source,n.anchor)))
+          return fail("invalid current keyless primary land hub");
+      }
+      NativeLandConnection copy{id,*source,*destination,row[4],key,true,leg};
+      if(*source==*destination)result.localLand.push_back(copy);
+      else if(markets.at(*source)==markets.at(*destination))result.land.push_back(copy);
+      continue;
+    }
     if(kind==1){if((key&63)!=0)continue;}
     else if(kind==2){if((key&63)!=1 || rowFlags!=4)continue;} // only current built rail
     else continue;
@@ -242,14 +281,7 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
       std::array<NodeDef,2> nodes;
       for(size_t side=0;side<2;++side){
         const uint64_t definition=u64(def,8+side*8);
-        if(!nodeDef(definition,nodes[side]))return fail("invalid current port access definition");
-        const auto& n=nodes[side];uint64_t data=0;uint32_t cap=0,count=0;
-        if(!array(manager+((n.flags&0x380)?0x40:0x10),data,cap,count) || n.id>=count ||
-           uint64_t(n.id)*0x30>UINT64_MAX-data || pu64(row,0x10+side*8)!=data+uint64_t(n.id)*0x30)
-          return fail("port access endpoint outside current node array");
-        std::array<uint8_t,0x10> runtime{};
-        if(!read(data+uint64_t(n.id)*0x30,runtime.data(),runtime.size()) ||
-           u32(runtime,0)!=n.id || u16(runtime,6)!=n.province || u64(runtime,8)!=definition)
+        if(!runtimeNode(definition,pu64(row,0x10+side*8),nodes[side]))
           return fail("port access endpoint identity differs");
       }
       const bool firstLand=(nodes[0].flags&0x7f)==2 && !(nodes[0].flags&0x380);

@@ -1,4 +1,10 @@
-# Native profile — Victoria 3 1.13.11
+# Native profile — Victoria 3 1.15.0（旧版本记录按轮次保留）
+
+### 2026-11-07 — R229：当前共享无key地面段
+
+EXE仍473186e8…，静态目标image140000000；原始机器码与Ghidra目标均绑定R195冻结的精确1.15文件。CA90C0读取CConnection的当前端点，其定义+18为距离、node定义+10/+18为位置；CA7D40在spline key=-1时发出该原始段。CA8990检验connection+34非零或本次起终area，随后还有虚判定；CA0C50表明+28为4B引用数组、+30容量、+34计数，CA2690在网络重建时清零计数。当前复制只接受有原版中转引用的kind1/dev2或3，不移植原生函数ABI、不新增游戏调用，不声称完整国家/运河许可。
+
+实际节点按world+5028当前land数组验证runtime地址/ID/province/definition，匿名control=0x1fffffff不合并；原版当前node index仅作自有数据身份，非固定ID→key表。对象原指针不出读取作用域，原作用域/联合复读/世界代数未放宽。新候选已安装不等于真实数据读取成功，实机仍NOT_RUN；详见STATUS R229和私有checkpoint机器码。
 
 ### 2026-11-07 — R227：1.15 原版跨网络港内段
 

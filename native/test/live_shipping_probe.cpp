@@ -154,6 +154,13 @@ int main(int argc,char** argv){
           trade->domestic->orders.size(),trade->domestic->shipping.lanes.size(),trade->domestic->land.size(),types[2],types[3],types[4]);
       std::printf("owned current port splines=%zu cross-network-access=%zu\n",
           trade->domestic->portTransfers.size(),trade->domestic->portAccess.size());
+      for(const auto* links:{&trade->domestic->land,&trade->domestic->localLand})
+        for(const auto& link:*links)if(link.direct){
+          const auto& leg=*link.direct;
+          std::printf("shared_keyless_land id=%u from=%u to=%u anchors=%llu>%llu distanceFixed=%lld\n",
+              link.id,link.source,link.destination,(unsigned long long)leg.anchors[0],
+              (unsigned long long)leg.anchors[1],(long long)leg.distanceFixed);
+        }
       for(const auto& access:trade->domestic->portAccess)
         std::printf("port_access id=%u state=%u controls=%u>%u positions=%lld/%lld>%lld/%lld distanceFixed=%lld\n",
             access.id,access.state,access.anchors[0],access.anchors[1],

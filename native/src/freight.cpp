@@ -111,9 +111,10 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
     };
     for (uint32_t i=0;i<graph.edges.size();++i) {
       const auto& e=graph.edges[i];
+      // Copied physical access may contain genuine zero-length ground/port legs.
       if (e.from >= graph.nodes.size() || e.to >= graph.nodes.size() || e.from == e.to ||
           !std::isfinite(e.length) || e.length < 0 || (e.length==0 &&
-          ((snapshot.stateTerminals.empty() && access.empty()) || (e.type!=2 && (access.empty() || e.type!=4)))) ||
+          ((snapshot.stateTerminals.empty() && access.empty()) || (e.type!=2 && (access.empty() || (e.type!=4 && e.type!=0))))) ||
           e.type > 4 || !edgeIndex.emplace(e.id,i).second)
         throw std::runtime_error("invalid transport edge");
       if (e.type == 1 && snapshot.builtRailEdges.count(e.id)) result.builtRailLength += e.length;
