@@ -102,6 +102,15 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 注意：`g++` 在工具链不在 `PATH` 时会以退出码 1 且**无任何诊断输出**的方式失败，先设置 `PATH`。
 
+R228 只读港内核对（游戏由用户手动进入新档并暂停；实际商品数须与当前目录一致）：
+
+```powershell
+# 与普通 live_shipping_probe 相同编译依赖；程序不 attach、不写、不调用原版 getter。
+native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <当前商品数> --port-access
+```
+
+完整编译命令和证据见本轮检查点；此探针不是完整快照原子性或正式绘制验收。
+
 ## 4. 目录边界
 
 | 路径 | 说明 |
@@ -117,7 +126,7 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 ## 5. 当前状态与恢复入口
 
-R227 当前源码与 dist 为未部署候选21a82419…／71dae36d…；实际安装仍R226 404abb88…／71dae36d…。当前事实优先读STATUS R227；下方各轮历史安装描述不能当作现在的部署状态。
+R228 当前源码与 dist 为bbee96cb…／71dae36d…；经 deploy.ps1 安装 exit0，安装＝dist（bbee96cb…／71dae36d…），47个保留文件与5项受保护输入逐字节保持；真实游戏加载未验收。当前事实优先读STATUS R228；下方各轮历史安装描述不能当作现在的部署状态。
 
 
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
@@ -205,6 +214,11 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 **最新操作授权（2026-10-25）**：用户明确“我现在不在电脑旁边，请你自主验证”，允许自主启动及操作测试，覆盖此前手动操控限制；保留不强制结束可能有未保存进度会话的部署约束。
 
 ## 6. 进度日志（简要记录，最新在上）
+
+### 2026-11-07 — R228：重合港内端点与只读核对
+
+复现有效 kind6 重合端点产生退化 ribbon 的整批失败，再保留通路/原版距离并跳过不可绘段；零距离完整、正距离无跨度标为部分几何，数量/满足不变。现有七段正式视图测试已覆盖，1.15 只读探针同步当前字段并可输出实际端点；编译/非法参数拒绝通过。完整构建bbee96cb…／71dae36d…；完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560442亮像素）／默认debug零顶点均通过。经 deploy.ps1 安装 exit0，安装＝dist（bbee96cb…／71dae36d…），47个保留文件与5项受保护输入逐字节保持；真实游戏加载未验收。未启动/操控游戏，真实新档读取与最终矩阵仍待，goal ACTIVE，详见STATUS。
+
 
 ### 2026-11-07 — R227：海路方向与真实港内连接
 

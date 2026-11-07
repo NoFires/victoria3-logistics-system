@@ -289,6 +289,24 @@ int main(){
       std::swap(sources->orders[0].production,sources->orders[0].consumption);
       std::swap(sources->orders[1].production,sources->orders[1].consumption);
     }
+    const auto originalPort=network->points.at(na);
+    network->points[na]=network->points.at(pa);
+    sources->portAccess[0].positions[1]=sources->portAccess[0].positions[0];
+    for(int64_t distance:{0LL,500000LL}){
+      sources->portAccess[0].distanceFixed=distance;
+      auto facts=BuildNativeTradeFacts(input);FreightFilter filter;filter.market=7;
+      auto view=facts?BuildNativeTradeView(input,*facts,filter):std::nullopt;
+      auto ribbons=view?BuildNativeTradeRibbons(*facts,*view):std::nullopt;
+      Check(view && view->selectionQuantity==100000 && view->domesticAllocated==1000 &&
+          view->segments.size()==6 && ribbons && ribbons->size()==6,
+          "coincident native access keeps connectivity/quantity without submitting a degenerate ribbon");
+      const auto& model=*facts->domestic;
+      Check(model.edges[5].strips.empty() && model.edges[5].complete==(distance==0) &&
+          std::abs(model.allocation.shipments[0].distance-(27+double(distance)/100000))<.00001,
+          "zero-distance native terminal is complete; positive native distance with no visible span remains partial");
+    }
+    network->points[na]=originalPort;sources->portAccess[0].positions[1]={400000,100000};
+    sources->portAccess[0].distanceFixed=500000;
     sources->localLand.erase(sources->localLand.begin());
     missing=BuildNativeDomesticModel(input);
     Check(missing && missing->allocation.shipments.empty(),"a missing real hub-to-port road stays disconnected even with valid port access");

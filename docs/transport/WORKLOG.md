@@ -1,5 +1,16 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-07 — R228：重合港内端点与 1.15 只读探针
+
+- 延续 R227 同一港内连接主题，原始 00–03 内容未变，继续适用 §2.4 已重读的路线真实性/分层验证约束；开工预检、共享 claim 和只读备份 worktree 内部状态均核对。修改前源码/文档及实际安装 R226 双DLL/INI 已冻结到本轮 before／installed-before。
+- 新反例先失败：有效 kind6 两端坐标重合时，模型仍添加退化 ribbon，导致正式整批绘图构建失败。现保留实际图连接及原版距离，重合点不生成线段；距离为零视为合法零长度终端，原版距离为正但没有可见跨度则标记该段几何不完整。数量和满足量不改成零/未知，费用与距离不从绘图推算。
+- 已在现有统一 native_trade_view_tests 的七段 fixture 中覆盖零/正距离两种重合点，数量1000／公共精度100000保持，其他六段继续绘制，正反向/断路回归保留。未新增引擎调用或修改访问窗口。
+- 只读 live_shipping_probe 的 root/state DB 与 TLS context 偏移已对齐当前生产头，移除已废弃的 DecodeNativePortHubs 诊断调用，改用正式 type5 来源。增加实际 kind6 端点/位置/距离输出；未知 port-capable 项不再 map.at 抛异常，运输分类用生产 seaEdges，避免把自有路径 ID 的低位当方式。
+- 新 `--port-access` 只输出当前自有港内副本，在关闭 PROCESS_VM_READ 句柄后返回，不调用原版 hub/path getter、不宣称已完成国际绑定/分配；该模式仍读取并验证本窗口线程的当前商品目录和联合复读。探针编译与无参数拒绝退出2通过；真实游戏读取 NOT_RUN。
+- 完整 build.ps1 exit0；候选主体 `bbee96cb61931355b9c8dfb6d82b91cb883cc0dc84c7a8214dd894b4cc93d3ae`／50,651,488B，引导 `71dae36d…`／779,879B。完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560442亮像素）／默认debug零顶点均通过。经 deploy.ps1 安装 exit0，安装＝dist（bbee96cb…／71dae36d…），47个保留文件与5项受保护输入逐字节保持；真实游戏加载未验收。本轮未启动或操控游戏，完整实机/性能/设备矩阵不能继承旧构建。全目标 ACTIVE。
+
+证据：`E:/Code/v3-analysis/checkpoints/2026-11-07-r228-coincident-port`；真实新档只读核对等待用户手动进入存档，不以临时进程或旧档代替。
+
 ### 2026-11-07 — R227：修复无端点方向推断与主城直线接港
 
 - 在当前统一 main／b8f098a 上继续，未恢复旧迁移线。预检的唯一未跟踪项是已登记且内部干净的只读嵌套 worktree；仅在本机 `.git/info/exclude` 排除该目录后取得共享 R227 claim，未改旧 worktree。

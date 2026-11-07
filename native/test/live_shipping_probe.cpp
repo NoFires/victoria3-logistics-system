@@ -27,9 +27,9 @@ struct Identity {
   bool operator==(const Identity&)const=default;
 };
 bool Observe(uint64_t module,Identity& id){
-  return Read(module+0x0592d128,&id.root,8) && Read(id.root+0x588,&id.phase,4) && id.phase==4 &&
+  return Read(module+0x05c07c68,&id.root,8) && Read(id.root+0x588,&id.phase,4) && id.phase==4 &&
       Read(id.root+0x608,&id.machine,8) && id.machine && Read(id.machine+0x120,&id.world,8) && id.world &&
-      Read(module+0x05964ef0,&id.states,8) && id.states;
+      Read(module+0x05bd69c8,&id.states,8) && id.states;
 }
 struct Window {DWORD pid=0,thread=0;unsigned count=0;};
 BOOL CALLBACK FindWindow(HWND window,LPARAM parameter){
@@ -53,14 +53,15 @@ bool ObserveContext(HANDLE thread,QueryThread query,DWORD pid,ThreadContext& res
      query(thread,0,&info,sizeof(info),nullptr)<0 || info.processId!=pid || !info.teb)return false;
   result.teb=(uint64_t)info.teb;
   return result.teb<=UINT64_MAX-0x60 && Read(result.teb+0x58,&result.array,8) &&
-      Read(result.array,&result.storage,8) && result.storage<=UINT64_MAX-0x8650 &&
-      Read(result.storage+0x8600,&initialized,4) && (initialized&1) &&
-      Read(result.storage+0x8648,&result.token,8) && uint32_t(result.token)<16;
+      Read(result.array,&result.storage,8) && result.storage<=UINT64_MAX-0x86c0 &&
+      Read(result.storage+0x8670,&initialized,4) && (initialized&1) &&
+      Read(result.storage+0x86b8,&result.token,8) && uint32_t(result.token)<16;
 }
 }
 int main(int argc,char** argv){
-  if((argc!=2 && argc!=4 && argc!=5) || (argc==5 && std::string(argv[4])!="--sea-geography")){
-    std::puts("usage: live_shipping_probe <Victoria3 PID> [--world-trade <verified goods count> [--sea-geography]]; verify exact EXE hash first");return 2;
+  const bool portsOnly=argc==5 && std::string(argv[4])=="--port-access";
+  if((argc!=2 && argc!=4 && argc!=5) || (argc==5 && !portsOnly && std::string(argv[4])!="--sea-geography")){
+    std::puts("usage: live_shipping_probe <Victoria3 PID> [--world-trade <verified goods count> [--sea-geography|--port-access]]; verify exact EXE hash first");return 2;
   }
   DWORD pid=0;uint32_t goodCount=0;
   try{const std::string arg=argv[1];size_t used=0;const auto value=std::stoull(arg,&used);
@@ -121,12 +122,11 @@ int main(int argc,char** argv){
         }else trade.reset();
       }else trade.reset();
     }
-    if(trade && thread){
+    if(trade && thread && !portsOnly){
       auto sea=v3::DecodeNativeSeaGeography(read,module,context.array,states,*trade,current,&error);
       if(sea){
-        auto hubs=v3::DecodeNativePortHubs(read,module,sea->states,current,&error);
-        if(hubs){sea->stateHubs=std::move(*hubs);trade->seaGeography=std::make_shared<const v3::NativeSeaGeography>(std::move(*sea));}
-        else trade.reset();
+        for(const auto& transfer:trade->domestic->portTransfers)sea->stateHubs[transfer.state]=true;
+        trade->seaGeography=std::make_shared<const v3::NativeSeaGeography>(std::move(*sea));
       }else trade.reset();
     }
     if(trade && (!window.Unchanged() || !current())){trade.reset();error="combined world trade source changed";}
@@ -152,6 +152,17 @@ int main(int argc,char** argv){
       for(const auto& link:trade->domestic->land)++types[link.type];
       std::printf("PASS current domestic sources local_orders=%zu country_port_lanes=%zu land=%zu category2=%zu category3=%zu category4=%zu\n",
           trade->domestic->orders.size(),trade->domestic->shipping.lanes.size(),trade->domestic->land.size(),types[2],types[3],types[4]);
+      std::printf("owned current port splines=%zu cross-network-access=%zu\n",
+          trade->domestic->portTransfers.size(),trade->domestic->portAccess.size());
+      for(const auto& access:trade->domestic->portAccess)
+        std::printf("port_access id=%u state=%u controls=%u>%u positions=%lld/%lld>%lld/%lld distanceFixed=%lld\n",
+            access.id,access.state,access.anchors[0],access.anchors[1],
+            (long long)access.positions[0][0],(long long)access.positions[0][1],
+            (long long)access.positions[1][0],(long long)access.positions[1][1],(long long)access.distanceFixed);
+      if(portsOnly){
+        std::puts("port-access copy only: no native hub/path getter or trade binding/allocation acceptance");
+        return 0;
+      }
       if(copiedCatalog.ok && trade->seaGeography){
         v3::EconomySnapshot snapshot;snapshot.world=1;snapshot.revision=1;
         if(!v3::PopulateSnapshotGoods(snapshot,copiedCatalog,&error)){std::printf("FAIL domestic catalog: %s\n",error.c_str());return 10;}
@@ -178,15 +189,14 @@ int main(int argc,char** argv){
             auto links=v3::SelectNativeRouteConnections(*trade,sea,lane.fromState,destination);
             std::printf("domestic lane full geometry unavailable id=%u from=%u to=%u reason=%s geo=%u/%u hubs=%d/%d ports=%d/%d\n",
                 lane.id,lane.fromState,lane.toState,why.c_str(),sea.states.at(lane.fromState).geo,sea.states.at(lane.toState).geo,
-                int(sea.stateHubs.at(lane.fromState)),int(sea.stateHubs.at(lane.toState)),int(links && links->ports[0]),int(links && links->ports[1]));
+                int(sea.stateHubs.count(lane.fromState) && sea.stateHubs.at(lane.fromState)),
+                int(sea.stateHubs.count(lane.toState) && sea.stateHubs.at(lane.toState)),int(links && links->ports[0]),int(links && links->ports[1]));
           }
         }
         size_t landShipments=0,seaShipments=0;int64_t marketQuantity=0;
         for(const auto& shipment:model->allocation.shipments){
           bool sea=false,land=false;
-          for(const auto& edge:shipment.route)for(const auto& strip:model->edges.at(edge.id).strips){
-            sea|=(strip.id&63)==2 || (strip.id&63)==3;land|=(strip.id&63)<=1;
-          }
+          for(const auto& edge:shipment.route){sea|=model->seaEdges.at(edge.id);land|=!model->seaEdges.at(edge.id);}
           landShipments+=land;seaShipments+=sea;
           if(shipment.market==0)marketQuantity+=shipment.quantity;
         }

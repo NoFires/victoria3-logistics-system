@@ -1,5 +1,9 @@
 # 验收矩阵 A01–A27
 
+## R228 当前候选（2026-11-07）
+
+主体 `bbee96cb…`／引导 `71dae36d…`；完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560442亮像素）／默认debug零顶点均通过。经 deploy.ps1 安装 exit0，安装＝dist（bbee96cb…／71dae36d…），47个保留文件与5项受保护输入逐字节保持；真实游戏加载未验收。新增重合港内段的模型/视图/ribbon 反例通过；真实新档采集、UI、生命周期/性能仍 NOT_RUN。下面旧构建矩阵不能扩为 R228 同构建验收。
+
 ## R227 未部署候选（2026-11-07）
 
 主体 `21a82419…`／引导 `71dae36d…`；完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560390亮像素）／默认debug零顶点均通过。新增方向/断路/实际港内七段路径与视图/ribbon 回归只证明离线行为；真实 kind6 采集、加载、UI、生命周期及性能仍 NOT_RUN。下面 R200–R226 矩阵绑定旧安装 `404abb88…`，不外推为 R227 当前源码验收。

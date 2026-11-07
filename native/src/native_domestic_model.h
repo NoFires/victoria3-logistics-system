@@ -272,9 +272,12 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
         return fail("native port access differs from current controls");
       points.push_back(point->second);
     }
-    const uint64_t strip=(uint64_t(1)<<63)|(uint64_t(access.id)<<6);
-    if(!result.portPaths.emplace(strip,std::move(points)).second)return fail("duplicate native port access handle");
-    NativeTradeGeometry shape;shape.strips.push_back({strip,true});
+    NativeTradeGeometry shape;
+    if(points[0].x!=points[1].x || points[0].z!=points[1].z){
+      const uint64_t strip=(uint64_t(1)<<63)|(uint64_t(access.id)<<6);
+      if(!result.portPaths.emplace(strip,std::move(points)).second)return fail("duplicate native port access handle");
+      shape.strips.push_back({strip,true});
+    }else shape.complete=access.distanceFixed==0;
     if(!add(access.state,access.state,4,std::move(shape),double(access.distanceFixed)/100000,
         std::array<uint64_t,2>{access.anchors[0],access.anchors[1]}))
       return fail("invalid native port access scope or distance");
