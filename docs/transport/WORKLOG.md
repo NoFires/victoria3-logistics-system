@@ -1,5 +1,9 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-08 — R237–R239：部署矩阵／生命周期／改图兼容在 26b70987 复绑
+
+R237（checkpoint2026-11-08-r237-deploy-matrix）：四例部署矩阵逐例准备、官方 deploy.ps1 卸载/重装；缺失 126、损坏 193、卸载无条目、重装 0，全部存活≥60s、WM_CLOSE 退出0；安装＝dist、五输入逐字节不变。R238（…r238-lifecycle）：重载 world2 池恢复＋冷重建 206 ribbons、缩放往返与最小化/恢复零退休、退出0 五输入不变；跨国家新游戏分支不重复（R119/R201 同代码路径）。R239（…r239-map-compat）：探针当前源码重编译，geo/样条/ZIP 三夹具探针精确绑定（geo=901、X+10 delta=0、states=1156 与无 Mod 基线一致），页面 206 ribbons 冷建、content_load 恢复；失败历史：2048×1152 窗口点击断言拦截与 HWND_TOP 常量错误各一次，修复后重跑。三轮输入全 PostMessage、指针零移动。不 push，完整目标 ACTIVE；A24（真实设备变化）、海路 1 unavailable＋38 partial、跨国家分支与逐像素矩阵仍明示未完成。
+
 ### 2026-11-07 — R236完成：最终构建/官方清单与切州自动重排实机
 
 本会话经用户明确授权接管 codex-root-20261107 的 R236 claim（原 claim 未过期、进程仍在），未改动其证据。最终源码按官方入口重跑：build.ps1 exit0；build_tests.ps1 exit0（71 PASS/零FAIL，含 native logistics sorting values 与 64+4 sort ABI）；verify_embedded PASS（26b70987…）；selftest.ps1 PASS 560,386（首跑560,419）；test_debug_default.ps1 PASS 零 UI 顶点；deploy.ps1 exit0，安装＝dist。主体 26b70987…／51,840,048 B，引导 71dae36d…／779,879 B。

@@ -216,6 +216,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-08 — R237–R239完成：当前构建部署/生命周期/改图证据补齐
+
+26b70987…构建补齐当前证据：R237 部署矩阵缺失126/损坏193/卸载无条目/重装0（四例存活≥60s、退出0、安装＝dist、五输入不变）；R238 重载 world2 池恢复 slots=206＋冷重建 206 ribbons、缩放往返与最小化恢复零退休、退出0；R239 geo/样条/ZIP 三夹具探针精确绑定（geo=901、delta=0、states=1156 与基线一致）、页面 206 ribbons 冷建、content_load 恢复，探针由当前源码重编译。连同 R236（71 PASS、切州自动重排实机、A25 三对 P95≤+0.57ms/模拟≤0.66%＋20 轮 uploads=0 reused=206），当前构建具备构建部署/实机启动/数据身份/改图/UI 闭环/生命周期/性能证据。仍明示：A24 需真实设备变化、海路 1 unavailable＋38 partial、跨国家分支与逐像素矩阵未重复；不push，完整目标ACTIVE。详见STATUS。
+
 ### 2026-11-07 — R236完成：物流列排序/居中/缩写与切州自动重排
 
 本会话接管后按官方入口重建：主体26b70987…／51,840,048B、引导71dae36d…；build.ps1／build_tests.ps1（71 PASS）／verify_embedded／selftest 560,386（首跑560,419）／默认debug全通过，deploy.ps1 exit0且安装＝dist。实机隐藏桌面45112/暂停59883360：州434升降序通过；切州5后未点表头，freight.log自动`kind=1 id=5 ready=1 rows=40 descending=1`，行序为上一轮手动升序的精确逆序（保持原降序方向），截图物流列518.26→89.97；WM_CLOSE exit0、五输入逐字节不变、输入桌面全程Default。测试时空闲10.46GiB，脚本副本门槛12→8GiB（仅测试）。A25同构建三对/20轮无人值守PASS：P95 +0.456/0.421/0.563ms≤2、模拟最大降0.66%≤5%；20轮uploads=0 reused=206 pool=206、repeats_skipped=1…20。输入全PostMessage指针零移动、焦点守卫；三次失败尝试与一次夺焦作废保留于A25-ATTEMPTS.md。详见STATUS/PERFORMANCE，不push，完整目标ACTIVE。

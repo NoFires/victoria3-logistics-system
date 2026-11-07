@@ -1,5 +1,15 @@
 # 当前状态
 
+### 2026-11-08 — R237–R239：当前构建部署矩阵／生命周期／改图兼容复绑
+
+构建 freight 26b70987…／引导 71dae36d…（安装＝dist）补齐当前构建证据：
+
+- R237 部署矩阵（deploy.ps1 官方入口逐例）：主体缺失 error=126、损坏 error=193、整套卸载无 loader 新条目、重装 error=0；四例游戏均存活≥60秒并 WM_CLOSE 退出0；收尾安装＝dist、五输入逐字节不变。证据 checkpoint2026-11-08-r237-deploy-matrix（deploy_matrix.py、live/audit.json）。
+- R238 生命周期：菜单→重载同存档 world1→world2，`native pool recovered world=2 slots=206; old requests cleared`＋冷重建 206 ribbons（无旧帧提交）；客户区 2560×1440→1920×1080→2560×1440 与 SW_MINIMIZE/SW_RESTORE 往返均零池退休；WM_CLOSE 退出0、五输入不变。证据 checkpoint2026-11-08-r238-lifecycle（RESULT.md、lifecycle-steps.json）。跨国家新游戏分支沿用 R119/R201 同代码路径结论，本单元未重复。
+- R239 改图兼容三夹具（探针由当前源码重编译；输入全 PostMessage＋焦点守卫＋外部 resize）：geo id 164→901（probe geo=901 valid=1）、样条点 X+10（delta=0.000000，计数 33765/4281/4279 不变）、ZIP 同 geo 变更——三例 owner selected＋206 ribbons 冷建、content_load 逐字节恢复；无 Mod 基线 states=1156 与夹具后一致（R208 的 1157 为当日存档差异）。失败历史（2048×1152 点击断言拦截、HWND_TOP 常量）保留。证据 checkpoint2026-11-08-r239-map-compat（RESULT.md、r239_*.json）。
+
+连同 R236 的官方清单 71 PASS／实机排序切州自动重排／同构建 A25 三对＋20 轮 PASS，当前构建已具备：构建部署（A02/A03/A26 矩阵）、实机启动（A04–A05）、数据身份（R230–R236 链）、改图兼容（本单元）、正式 UI 闭环、生命周期（重载/缩放/最小化）与性能（A25 指定协议）。仍明示未完成：A24 设备丢失重建需真实 GPU/显示设备变化；1 条 unavailable＋38 条 partial 海路缺当前港口接续；跨国家新游戏分支与逐像素多相机矩阵未在本构建重复；不 push。
+
 ### 2026-11-07 — R236：物流列居中/缩写及原版排序接线（完成）
 
 新增“优先复用原版函数”约束已写入 AGENTS/MASTER。市场/物流与州/本地价格的数量、占比居中；显示统一 k/M 缩写（底层 1e5 整数与卡片精确值不变）；表头接入原版 CGuiSort 的 `Market.Sort`/`StatesPanel.Sort('ironroad_work'/'ironroad_share')`。排序只注册自有键，复用原版 balance 比较器、方向记录、稳定排序与函数对象 clone/释放；不重写搜索/分类/排序，不改经济或原版排序键。

@@ -28,7 +28,7 @@ cfd8f632…／71dae36d…已完整构建/统一69条PASS/资源/自检560375/默
 
 主体 `21a82419…`／引导 `71dae36d…`；完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560390亮像素）／默认debug零顶点均通过。新增方向/断路/实际港内七段路径与视图/ribbon 回归只证明离线行为；真实 kind6 采集、加载、UI、生命周期及性能仍 NOT_RUN。下面 R200–R226 矩阵绑定旧安装 `404abb88…`，不外推为 R227 当前源码验收。
 
-2026-11-08 R236 当前构建 `26b70987…`／`71dae36d…`（51,840,048B）：官方 build.ps1/build_tests.ps1（71 PASS）/verify_embedded/selftest（560,386）/默认debug/deploy 全通过，安装＝dist；市场/州物流列排序/居中/k-M 与切州自动重排实机通过；同构建三对性能（P95 +0.456/0.421/0.563ms≤2、模拟最大降0.66%≤5%）与 20 轮缓存（uploads=0 reused=206 pool=206、repeats_skipped=1…20）无人值守会话 PASS（PERFORMANCE R236、checkpoint2026-11-07-r236-perf）。下面的矩阵行仍绑定 `404abb88…`（R225）或旧构建；A25 对 R236 的指定三对/20轮/稳定零上传子项 PASS，完整矩阵（其他存档/速度/设备）仍不外推。
+2026-11-08 R239 当前构建 `26b70987…`／`71dae36d…`（51,840,048B）当前构建证据矩阵：A02 构建（官方 build/build_tests 71 PASS/embedded/selftest/默认debug）；A03/A26 部署矩阵缺失126/损坏193/卸载无条目/重装0（R237，四例存活、退出0、五输入不变）；A04–A05 实机启动与原版入口（R236–R239 各会话实载）；数据身份与快照窗口（R230–R236 链实机）；A15 改图 geo/样条/ZIP 探针精确绑定＋页面冷建（R239；省份交换/replace_path/omit 为 R208–R211 同夹具历史）；A16–A19 正式 UI 闭环含原版排序/居中/搜索分类/hover/显示隐藏（R205/R206/R213–R218＋R236 排序实机）；A22/A23 生命周期重载池恢复 slots=206、缩放往返与最小化恢复零退休（R238）；A25 三对 P95 +0.456/0.421/0.563 ms ≤2、模拟最大降 0.66% ≤5%、20 轮 uploads=0 reused=206 pool=206 repeats_skipped=1…20、peak_frame_us=477（R236 PERF-ARMS）。仍明示 PARTIAL：A24 设备丢失重建（需真实 GPU/显示设备变化，本机无法安全模拟）；海路 1 unavailable＋38 partial 缺当前港口接续；跨国家新游戏分支（R119/R201 同代码路径，本构建未重复）；逐像素多相机矩阵与更多地图变体；省份交换/replace_path/omit 未在本构建重跑。下面的矩阵行仍绑定 `404abb88…`（R225）或更旧构建，仅作历史，不外推为当前构建结论。
 
 ## 1.15.0 当前构建矩阵（freight `404abb88…` / version `71dae36d…`，2026-11-06，R200–R226）
 
