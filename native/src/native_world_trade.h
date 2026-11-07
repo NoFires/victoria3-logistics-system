@@ -59,6 +59,13 @@ struct NativePortTransfer {
   bool forward=true;
   bool operator==(const NativePortTransfer&)const=default;
 };
+struct NativePortAccess {
+  uint32_t id=0,state=0;
+  std::array<uint32_t,2> anchors{}; // actual land port -> naval port, not the primary hub
+  std::array<std::array<int64_t,2>,2> positions{}; // original definition, fixed1e5
+  int64_t distanceFixed=0;
+  bool operator==(const NativePortAccess&)const=default;
+};
 struct NativeDomesticSources {
   std::vector<StateOrders> orders; // copied local counters, milli-orders; region unused
   NativeShippingSnapshot shipping;
@@ -66,6 +73,7 @@ struct NativeDomesticSources {
   std::vector<NativeLandConnection> localLand; // current usable intra-state links, not self shipments
   std::map<uint32_t,uint32_t> landHubs; // full owning state -> current primary land control
   std::vector<NativePortTransfer> portTransfers; // current original port-access splines
+  std::vector<NativePortAccess> portAccess; // current original keyless kind6 cross-network legs
   std::vector<NativeLandConnection> builtRails; // current built rail rows (1.15 row flag 4)
   // Optional owned original per-country passage results, using full handles.
   // No engine pointers escape the capture window.

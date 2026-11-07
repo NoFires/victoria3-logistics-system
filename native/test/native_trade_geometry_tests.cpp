@@ -67,6 +67,31 @@ int main(){
   f=Fixture();f.sea.definitions.clear();
   Check(!f.Build(&error) && error=="native route geometry is not a unique endpoint chain",
       "negative control: raw induced adjacency creates a branch; no arbitrary shortest-path or first-branch choice");
+  {
+    Fixture value;value.route.selected=1;
+    value.trade.straits={{0x7f000001,{10,11},{0,0},0}};
+    auto domestic=std::make_shared<NativeDomesticSources>();
+    domestic->portTransfers={{9,999,{1000,2000},3,true}};
+    value.trade.domestic=domestic;
+    value.trade.geometry=std::make_shared<const NativeSplineNetwork>(value.network);
+    value.trade.seaGeography=std::make_shared<const NativeSeaGeography>(value.sea);
+    auto build=[&](uint32_t from,uint32_t to){auto route=value.route;route.state=to;
+      return BuildNativeTradeGeometry(value.trade,from,route,&error,{},true,true);};
+    Check(!build(100,200) && !build(200,100),
+        "sea keys without either witnessed endpoint cannot establish either travel direction");
+    domestic->portTransfers.push_back({10,100,{value.from,value.a},value.sourceKey,true});
+    auto forward=build(100,200),backward=build(200,100);
+    Check(forward && backward && !forward->complete && !backward->complete &&
+        forward->startAnchor==backward->endAnchor && forward->endAnchor==backward->startAnchor &&
+        forward->strips==std::vector<NativeDirectedStrip>{{value.shortCut,true}} &&
+        backward->strips==std::vector<NativeDirectedStrip>{{value.shortCut,false}},
+        "one witnessed sea endpoint orients partial geometry in both travel directions");
+    domestic->portTransfers.push_back({11,200,{value.to,value.b},value.destKey,true});
+    forward=build(100,200);backward=build(200,100);
+    Check(forward && backward && forward->complete && backward->complete &&
+        backward->strips==std::vector<NativeDirectedStrip>{{value.shortCut,false}},
+        "two witnessed sea endpoints retain complete geometry and reverse direction");
+  }
   auto bad=[](auto change,const char* why){Fixture value;change(value);Check(!value.Build(),why);};
   bad([](auto& v){v.route.selected.reset();},"unknown native selection does not default to first");
   bad([](auto& v){v.route.candidates.clear();v.route.selected.reset();},"no native candidate cannot fabricate a port route");

@@ -1,6 +1,8 @@
 # 交付说明（Victoria 3 1.15.0）
 
-> **2026-11-06 当前构建（R225）**：正式线已合入三项经实机验证的更优功能——完整贸易 getter
+> **2026-11-07 R227 候选，未部署**：源码及 `dist/freight/freight.dll` 已更新为 `21a82419e8c8fbf843cc8fb75ea81bedf9860abbac689e7485da9ff0d53eb9a2`（50,650,464 B），引导仍为 `71dae36d…`。修复主城直线接港及无见证端点的海路猜向，改用当前 kind6 实际港内连接。完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560390亮像素）／默认debug零顶点均通过；实际安装仍 R226 `404abb88…`／`71dae36d…`，与当前 dist 不同。下方旧构建实机和性能结果不能用于本候选；状态与恢复入口见 STATUS R227。
+
+> **2026-11-06 历史已验收构建（R225）**：正式线已合入三项经实机验证的更优功能——完整贸易 getter
 > `D039C0`＋每州当前 hub `DA2500`、商品缓存代数／失效检查、`state+0x8C0` 分组表＋
 > `detailed==grouped` 等值绑定。当前构建主体 `404abb88…`／50,220,030 B，引导 `71dae36d…`；
 > 旧已验收 `2028e03b…`／`c8020412…` 保留为回滚副本。
@@ -11,7 +13,7 @@
 > 降幅 `0.31%`（≤5%）；20轮稳定revision `uploads=0 reused=201/200 pool=230 overrun_frames=0`。
 > 设备丢失重建（A24）仍未完成；官方 PowerShell 测试／部署／selftest 已实际执行，其余 A01–A27
 > PARTIAL 见 `ACCEPTANCE.md`。
-> 实际安装＝`dist`（`404abb88…`／`71dae36d…`），`freight.ini` `df06e5c0…` 保持；旧主体以
+> R225 验收当时安装＝`dist`（`404abb88…`／`71dae36d…`），`freight.ini` `df06e5c0…` 保持；旧主体以
 > `freight.dll.r196a-backup` 保留。
 
 本文件是当前交付的唯一入口；状态、验收与性能细节见 `docs/transport/STATUS.md`、
@@ -21,20 +23,21 @@
 
 | 文件 | SHA256 | 大小 |
 |---|---|---|
-| `dist/version.dll`（已验收引导，放 EXE 同目录） | `c80204122791ade4a33f5b61ea28ebb3a96f444bbc6ef215e71a6245af67a107` | 779,879 B |
+| 历史回滚引导（c8020412） | `c80204122791ade4a33f5b61ea28ebb3a96f444bbc6ef215e71a6245af67a107` | 779,879 B |
+| `dist/freight/freight.dll`（R227 未部署候选） | `21a82419e8c8fbf843cc8fb75ea81bedf9860abbac689e7485da9ff0d53eb9a2` | 50,650,464 B |
 | `dist/version.dll`（当前构建 71dae36d） | `71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e` | 779,879 B |
-| `dist/freight/freight.dll`（已验收主体） | `2028e03bc288cd89ff1df23c3dd4f94b9413594636ca2781a183d916c7d9d4a7` | 50,025,206 B |
-| `dist/freight/freight.dll`（当前构建 404abb88） | `404abb8883100bab17c6bfb2200919ffb89c1fba26f4643c1a379cb875c57c92` | 50,220,030 B |
+| 历史回滚主体（2028e03b） | `2028e03bc288cd89ff1df23c3dd4f94b9413594636ca2781a183d916c7d9d4a7` | 50,025,206 B |
+| 当前安装主体（R226，404abb88） | `404abb8883100bab17c6bfb2200919ffb89c1fba26f4643c1a379cb875c57c92` | 50,220,030 B |
 
 - 目标 EXE：Victoria 3 1.15.0，`SHA256 473186e8d8deba993651e0ae4cf02a003b02f5accb99b096a6a0a8bd9506cbaa`。
 - 安装布局：`binaries\version.dll` + `binaries\freight\freight.dll`；配置 `freight.ini`、日志
   `freight.log`/`loader.log`、缓存与资源都在 `binaries\freight\`，不依赖 playset、外部 Mod、
   Python 或手工资源。
-- 实际安装：2026-11-06 安装当前构建 `404abb88…`／`71dae36d…`，安装＝`dist`；旧已验收构建
+- 实际安装：2026-11-06 安装当前构建 `404abb88…`／`71dae36d…`，R227 之后安装与 `dist` 不同；旧已验收构建
   `2028e03b…`／`c8020412…` 保留在回滚副本。安装时必须无游戏进程，以 `.tmp` + rename 原子替换。
 - 回滚副本：`E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery\dist`（已验收的
   `2028e03b…`／`c8020412…`），源码对应交付提交 `3ec16a0` 一带；候选源码为本地 `main` HEAD
-  （`f306eab`，代码提交 `b5efd46`）。
+  （R227 修改前 HEAD `b8f098a`；R227 提交后以 `git log -1` 为准）。
 
 ## 2. 构建、测试、部署
 

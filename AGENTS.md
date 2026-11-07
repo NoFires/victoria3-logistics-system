@@ -117,6 +117,9 @@ native\build\tests\live_vfs_probe.exe <Victoria3进程ID>
 
 ## 5. 当前状态与恢复入口
 
+R227 当前源码与 dist 为未部署候选21a82419…／71dae36d…；实际安装仍R226 404abb88…／71dae36d…。当前事实优先读STATUS R227；下方各轮历史安装描述不能当作现在的部署状态。
+
+
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
 
 截至R224：正式分支候选 `ec8350d3…`（完整贸易 getter／每州 hub＋商品缓存代数＋`state+0x8C0` 等值绑定），完整等价入口 35/35、实机多 hub 物流页通过；同构建性能／生命周期门槛待重跑，不得套用旧 `2028e03b…` 的 A24／A25 结果。实际安装为未安装，旧构建仍为回滚副本。当前活动线遵守 [docs/transport/COORDINATION.md](docs/transport/COORDINATION.md)：正式交付分支为本地 `main`（代码 `b5efd46`；文档 HEAD 以 `git log -1` 为准）；远程 `origin/main` 暂不推送，`origin/worktree-v115-adaptation` 为推送镜像；旧 worktree 与 `trade-getter-port` 均已合并，只保留只读备份，不再作为并行线维护。
@@ -202,6 +205,11 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 **最新操作授权（2026-10-25）**：用户明确“我现在不在电脑旁边，请你自主验证”，允许自主启动及操作测试，覆盖此前手动操控限制；保留不强制结束可能有未保存进度会话的部署约束。
 
 ## 6. 进度日志（简要记录，最新在上）
+
+### 2026-11-07 — R227：海路方向与真实港内连接
+
+先复现两端无港口仍同向、主城后缀伪造完整直线两项缺陷，再接当前 1.15 kind6 实际跨网络港内段，保留 type5 样条真实端点；无方向见证不画猜测箭头。节点数组/定义/角色/距离校验与七段正反向货流、断路、缓存反例已接统一入口。完整构建21a82419…／71dae36d…，完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560390亮像素）／默认debug零顶点均通过。未部署或操控游戏，安装仍R226 404abb88…；实际采集／GUI／性能不能继承。完整目标ACTIVE，详见STATUS。
+
 
 ### 2026-11-06 — R226：官方 PowerShell 入口实测与 1.15 spline 测试迁移
 

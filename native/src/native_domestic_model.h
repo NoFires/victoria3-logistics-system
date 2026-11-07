@@ -220,10 +220,8 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     const auto binding=network.connections.find(transfer->spline);
     if(binding==network.connections.end() || binding->second.empty())
       return fail("current port transfer has no native geometry");
-    // Walk the current port spline in its authored direction from the key
-    // start to its key end. 1.15.0 ends this spline at the port-side land node
-    // (a naval-anchor control) which has no land connection of its own; the
-    // state's roads and trade access use the witnessed primary land hub.
+    // Keep the port spline's actual anchors. A matching primary-hub suffix
+    // cannot substitute for the separate current cross-network access leg.
     std::vector<uint32_t> controls;
     {
       uint32_t anchor=uint32_t(transfer->spline>>6)&0x1fffffff;const auto start=anchor;
@@ -244,50 +242,42 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
     if(distinct.size()<2 || transfer->anchors[0]!=distinct.front() && transfer->anchors[0]!=distinct.back())
       return fail("native port transfer land anchor not on spline");
     NativeTradeGeometry shape;
-    std::optional<std::vector<NativeSplinePoint>> synthetic;
-    uint64_t syntheticId=0;
-    uint32_t landAnchor=transfer->anchors[0];
-    if(const auto hubAnchor=trade.domestic->landHubs.find(transfer->state);
-       hubAnchor!=trade.domestic->landHubs.end() && (landAnchor&~0x800000u)==hubAnchor->second){
-      // The witnessed hub is the state's model access point, so the port edge
-      // must reach it. Keep the authored port spline and append/prepend the
-      // witnessed hub point as the last, straight model connector. This is the
-      // same substitution the graph edge already performs; it is not a newly
-      // invented road, and both endpoints remain witnessed current points.
-      const auto hubPoint=network.points.find(hubAnchor->second);
-      if(hubPoint==network.points.end())return fail("current domestic land hub has no point");
-      std::vector<NativeSplinePoint> path;path.reserve(distinct.size()+1);
-      for(uint32_t c:distinct){
-        const auto point=network.points.find(c);
-        if(point==network.points.end() || !std::isfinite(point->second.x) || !std::isfinite(point->second.z))
-          return fail("unavailable current port transfer control");
-        path.push_back(point->second);
-      }
-      const bool landIsStart=transfer->anchors[0]==distinct.front();
-      if(landIsStart)path.insert(path.begin(),hubPoint->second);else path.push_back(hubPoint->second);
-      landAnchor=hubAnchor->second;
-      syntheticId=(uint64_t(1)<<63)|transfer->id;
-      shape.strips.push_back({syntheticId,landIsStart});
-      synthetic=std::move(path);
-    }else{
-      uint32_t anchor=uint32_t(transfer->spline>>6)&0x1fffffff;
-      for(uint64_t strip:binding->second){
-        const auto found=network.strips.find(strip);
-        const auto& points=found->second;const bool along=points.front()==anchor;
-        shape.strips.push_back({strip,along});anchor=along?points.back():points.front();
-      }
+    uint32_t anchor=uint32_t(transfer->spline>>6)&0x1fffffff;
+    for(uint64_t strip:binding->second){
+      const auto found=network.strips.find(strip);
+      const auto& points=found->second;const bool along=points.front()==anchor;
+      shape.strips.push_back({strip,along});anchor=along?points.back():points.front();
+    }
+    if(transfer->anchors[0]!=distinct.front()){
+      std::reverse(shape.strips.begin(),shape.strips.end());
+      for(auto& strip:shape.strips)strip.forward=!strip.forward;
     }
     // 1.15.0 port access uses its own model fee1, not the sea tariff0.25.
-    double length=0;
-    if(synthetic){
-      for(size_t i=1;i<synthetic->size();++i)
-        length+=std::hypot(double((*synthetic)[i].x)-(*synthetic)[i-1].x,double((*synthetic)[i].z)-(*synthetic)[i-1].z);
-      result.portPaths.emplace(syntheticId,*synthetic);
-    }
-    if(!add(transfer->state,transfer->state,4,std::move(shape),
-        synthetic?std::optional<double>(length):std::nullopt,
-        std::array<uint64_t,2>{landAnchor,transfer->anchors[1]}))
+    if(!add(transfer->state,transfer->state,4,std::move(shape),{},
+        std::array<uint64_t,2>{transfer->anchors[0],transfer->anchors[1]}))
       return fail("invalid native port transfer scope or distance");
+  }
+  for(const auto* current:ordered(trade.domestic->portAccess)){
+    const auto& access=*current;
+    if(cancelled && cancelled())return fail("cancelled");
+    if(!areas.count(access.state) || access.id==UINT32_MAX || !portIds.insert(access.id).second ||
+       access.anchors[0]==access.anchors[1] || access.distanceFixed<0)
+      return fail("invalid owned native port access");
+    std::vector<NativeSplinePoint> points;
+    for(size_t side=0;side<2;++side){
+      const auto point=network.points.find(access.anchors[side]);
+      if(point==network.points.end() || !std::isfinite(point->second.x) || !std::isfinite(point->second.z) ||
+         double(access.positions[side][0])!=std::floor(double(point->second.x))*100000 ||
+         double(access.positions[side][1])!=std::floor(double(point->second.z))*100000)
+        return fail("native port access differs from current controls");
+      points.push_back(point->second);
+    }
+    const uint64_t strip=(uint64_t(1)<<63)|(uint64_t(access.id)<<6);
+    if(!result.portPaths.emplace(strip,std::move(points)).second)return fail("duplicate native port access handle");
+    NativeTradeGeometry shape;shape.strips.push_back({strip,true});
+    if(!add(access.state,access.state,4,std::move(shape),double(access.distanceFixed)/100000,
+        std::array<uint64_t,2>{access.anchors[0],access.anchors[1]}))
+      return fail("invalid native port access scope or distance");
   }
   std::map<Area,uint32_t> hubs;
   for(const auto& [state,control]:trade.domestic->landHubs){

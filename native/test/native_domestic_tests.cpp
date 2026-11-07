@@ -82,6 +82,47 @@ int main(){
   Check(copy && copy->landHubs==std::map<uint32_t,uint32_t>{{first,100}},
       "primary land hub uses the current node role bit and exact control");
   {
+    auto access=good;
+    constexpr uint64_t navalNode=0x4a0000,accessDef=0x4b0000;
+    access.Put<uint32_t>(world+0x5028+0x1c,2);
+    access.Put<uint64_t>(world+0x5028+0x40,navalNode);
+    access.Put<uint32_t>(world+0x5028+0x48,1);access.Put<uint32_t>(world+0x5028+0x4c,1);
+    access.Put<uint64_t>(world+0x5028+0x50,1);access.Put<uint32_t>(world+0x5028+0x60,2);
+    access.Put<uint32_t>(world+0x5028+0x64,2);
+    access.Zero(navalNode,0x30);access.Zero(ncrow+0x40,0x40);access.Zero(accessDef,0x28);
+    access.Put<uint32_t>(ndefB,1);access.Put<uint16_t>(ndefB+4,2);
+    access.Put<std::array<int64_t,2>>(ndefB+0x10,{500000,600000});
+    access.Put<std::array<int64_t,2>>(nndefA+0x10,{700000,800000});
+    access.Put<uint32_t>(landNodes+0x30,1);access.Put<uint16_t>(landNodes+0x36,2);
+    access.Put<uint64_t>(landNodes+0x38,ndefB);
+    access.Put<uint16_t>(navalNode+6,1);access.Put<uint64_t>(navalNode+8,nndefA);
+    access.Put<uint32_t>(accessDef,1);access.Put<uint8_t>(accessDef+4,6);
+    access.Put<uint64_t>(accessDef+8,ndefB);access.Put<uint64_t>(accessDef+0x10,nndefA);
+    access.Put<int64_t>(accessDef+0x18,700000);access.Put<uint64_t>(accessDef+0x20,UINT64_MAX);
+    access.Put<uint32_t>(ncrow+0x40,1);access.Put<uint8_t>(ncrow+0x44,5);
+    access.Put<uint64_t>(ncrow+0x48,accessDef);
+    access.Put<uint64_t>(ncrow+0x50,landNodes+0x30);access.Put<uint64_t>(ncrow+0x58,navalNode);
+    auto owned=run(access);
+    Check(owned && owned->portAccess.size()==1 && owned->portAccess[0].state==second &&
+        owned->portAccess[0].anchors==std::array<uint32_t,2>{200,0x800064} &&
+        owned->portAccess[0].positions[0]==std::array<int64_t,2>{500000,600000} &&
+        owned->portAccess[0].distanceFixed==700000,
+        "keyless access copies the actual physical port, naval endpoint and original distance");
+    auto bad=[&](auto change){auto value=access;change(value);return !run(value);};
+    Check(bad([&](auto& m){m.template Put<uint64_t>(ncrow+0x50,navalNode);}),
+        "access cannot substitute a node from the other current array");
+    Check(bad([&](auto& m){m.template Put<uint64_t>(landNodes+0x38,ndefA);}),
+        "access runtime definition must match its referenced definition");
+    Check(bad([&](auto& m){m.template Put<uint32_t>(ndefB,2);}),
+        "out-of-bounds current access node rejected");
+    Check(bad([&](auto& m){m.template Put<int64_t>(accessDef+0x18,-1);}),
+        "negative original access distance rejected");
+    Check(bad([&](auto& m){m.template Put<uint16_t>(ndefB+4,1);}),
+        "primary city cannot impersonate a physical port role");
+    Check(bad([&](auto& m){m.template Put<uint64_t>(accessDef+0x20,key);}),
+        "keyless access cannot silently replace an authored connection");
+  }
+  {
     auto rail=good;rail.Put<uint32_t>(cdef+4,2);rail.Put<uint64_t>(cdef+0x20,(uint64_t(200)<<35)|(uint64_t(100)<<6)|1);
     auto unbuilt=run(rail);Check(unbuilt && unbuilt->land.empty() && unbuilt->builtRails.empty(),
         "unbuilt rail row is not admitted as a road or built rail");

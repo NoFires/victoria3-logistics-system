@@ -172,7 +172,8 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     return field(address,0,data) && field(address,8,cap) && field(address,0xc,count) &&
         field(address,0x10,alloc) && count<=cap && cap<=200000 && (count==0 || data);
   };
-  struct NodeDef {uint16_t flags=0;uint32_t anchor=0;uint16_t province=0;uint16_t linked=0;};
+  struct NodeDef {uint16_t flags=0;uint32_t anchor=0;uint16_t province=0;uint16_t linked=0;
+    uint32_t id=0;std::array<int64_t,2> position{};};
   std::map<uint64_t,NodeDef> nodeDefs;
   auto nodeDef=[&](uint64_t address,NodeDef& out){
     if(auto found=nodeDefs.find(address);found!=nodeDefs.end()){out=found->second;return true;}
@@ -180,6 +181,7 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     if(!address || !read(address,row.data(),row.size()))return false;
     NodeDef copy;copy.flags=u16(row,4);copy.anchor=u32(row,8);
     copy.province=u16(row,0xc);copy.linked=u16(row,0xe);
+    copy.id=u32(row,0);std::memcpy(copy.position.data(),row.data()+0x10,16);
     if(copy.anchor==UINT32_MAX || copy.province==UINT16_MAX)return false;
     nodeDefs.emplace(address,copy);out=copy;return true;
   };
@@ -232,6 +234,38 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     const uint32_t id=pu32(row,0);
     std::array<uint8_t,0x28> def{};
     if(!read(pu64(row,8),def.data(),def.size()))return fail("unreadable domestic port transfer definition");
+    if(def[4]==6){
+      // CA8550 traverses this actual cross-network leg; CA7D40 emits its
+      // definition endpoints/distance unchanged when the spline key is absent.
+      if(id!=i || u32(def,0)!=id || row[4]!=5 || u64(def,0x20)!=UINT64_MAX)
+        return fail("invalid current keyless port access identity");
+      std::array<NodeDef,2> nodes;
+      for(size_t side=0;side<2;++side){
+        const uint64_t definition=u64(def,8+side*8);
+        if(!nodeDef(definition,nodes[side]))return fail("invalid current port access definition");
+        const auto& n=nodes[side];uint64_t data=0;uint32_t cap=0,count=0;
+        if(!array(manager+((n.flags&0x380)?0x40:0x10),data,cap,count) || n.id>=count ||
+           uint64_t(n.id)*0x30>UINT64_MAX-data || pu64(row,0x10+side*8)!=data+uint64_t(n.id)*0x30)
+          return fail("port access endpoint outside current node array");
+        std::array<uint8_t,0x10> runtime{};
+        if(!read(data+uint64_t(n.id)*0x30,runtime.data(),runtime.size()) ||
+           u32(runtime,0)!=n.id || u16(runtime,6)!=n.province || u64(runtime,8)!=definition)
+          return fail("port access endpoint identity differs");
+      }
+      const bool firstLand=(nodes[0].flags&0x7f)==2 && !(nodes[0].flags&0x380);
+      const bool secondLand=(nodes[1].flags&0x7f)==2 && !(nodes[1].flags&0x380);
+      if(!((firstLand && (nodes[1].flags&0x380)==0x200) ||
+           (secondLand && (nodes[0].flags&0x380)==0x200)))
+        return fail("unsupported current port access roles");
+      const auto& land=nodes[firstLand?0:1];const auto& sea=nodes[firstLand?1:0];
+      const auto state=provinceState(land.province);
+      int64_t distance=0;std::memcpy(&distance,def.data()+0x18,8);
+      if(!state || land.anchor>=0x1fffffff || sea.anchor>=0x1fffffff ||
+         land.anchor==sea.anchor || distance<0)
+        return fail("invalid current port access state, controls or distance");
+      result.portAccess.push_back({id,*state,{land.anchor,sea.anchor},{land.position,sea.position},distance});
+      continue;
+    }
     if(def[4]!=5)continue;
     const uint64_t key=u64(def,0x20);
     if(key==UINT64_MAX || (key&63)!=3)return fail("invalid current port transfer spline");
@@ -246,7 +280,7 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
       return fail("domestic port transfer anchors differ from spline");
     // The endpoint with the linked land province is the port side; the other is
     // the sea-side node used by the lane. Keep the raw spline anchors for the
-    // geometry chain; the model normalises the land side to the witnessed hub.
+    // geometry chain; the separate kind6 leg joins the actual land network.
     uint32_t landAnchor=first?a.anchor:b.anchor,seaAnchor=first?b.anchor:a.anchor;
     if(landAnchor==seaAnchor || !transferIds.insert(id).second)
       return fail("invalid owned native port transfer");

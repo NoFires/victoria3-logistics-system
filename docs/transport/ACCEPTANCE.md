@@ -1,5 +1,9 @@
 # 验收矩阵 A01–A27
 
+## R227 未部署候选（2026-11-07）
+
+主体 `21a82419…`／引导 `71dae36d…`；完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560390亮像素）／默认debug零顶点均通过。新增方向/断路/实际港内七段路径与视图/ribbon 回归只证明离线行为；真实 kind6 采集、加载、UI、生命周期及性能仍 NOT_RUN。下面 R200–R226 矩阵绑定旧安装 `404abb88…`，不外推为 R227 当前源码验收。
+
 ## 1.15.0 当前构建矩阵（freight `404abb88…` / version `71dae36d…`，2026-11-06，R200–R226）
 
 判定口径：**PASS 只覆盖该行写明的范围**；1.13 历史矩阵保留在下方，不自动扩展到 1.15。证据集中在 `E:\Code\v3-analysis\checkpoints\2026-11-05-r196-v115-adaptation`、`2026-11-05-r198...`、`2026-11-06-r199...`、`2026-11-06-r200-port-approach-1.15`、`2026-11-06-r201-lifecycle-graphics`、`2026-11-06-r207-partial-sea-ids`、`2026-11-06-final-delivery`、`2026-11-06-main-build`、`2026-11-06-multi-hub-equality-live`。

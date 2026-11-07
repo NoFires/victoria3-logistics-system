@@ -103,6 +103,12 @@ uint64_t HashNativeTrade(uint64_t hash, const NativeWorldTradeSnapshot& trade) {
       for(auto anchor:transfer->anchors)value(anchor);
       value(transfer->spline);value(transfer->forward);
     }
+    value(trade.domestic->portAccess.size());
+    for(const auto* access:ordered(trade.domestic->portAccess,[](const auto& c){return c.id;})){
+      value(access->id);value(access->state);value(access->distanceFixed);
+      for(auto anchor:access->anchors)value(anchor);
+      for(const auto& point:access->positions)for(auto coordinate:point)value(coordinate);
+    }
     value(trade.domestic->shipping.lanes.size());
     value(trade.domestic->builtRails.size());
     for(const auto* link:ordered(trade.domestic->builtRails,[](const auto& c){return c.id;})){
