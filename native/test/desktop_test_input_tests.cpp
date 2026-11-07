@@ -113,13 +113,14 @@ static void RunCase(const wchar_t* mode,bool hidden,const wchar_t* request){
   if(code || report!="PASS")throw std::runtime_error("desktop case failed: "+report);
   std::printf("PASS desktop test admission case: %ls\n",mode);
 }
-static void Runtime(const fs::path& dll){
+static void Runtime(const fs::path& dll,bool bgra=false){
   const auto input=InputName();const auto label=L"CodexFreightTest_"+std::to_wstring(GetCurrentProcessId())+L"_capture";
   HDESK desk=CreateDesktopW(label.c_str(),nullptr,nullptr,0,
       DESKTOP_CREATEWINDOW|DESKTOP_READOBJECTS|DESKTOP_WRITEOBJECTS|DESKTOP_ENUMERATE,nullptr);
   Check(desk,"runtime desktop failed");
   SetEnvironmentVariableW(kEnvironment,label.c_str());
   SetEnvironmentVariableW(L"IRONROAD_HARNESS_CAPTURE_PHASE",L"1");
+  SetEnvironmentVariableW(L"IRONROAD_HARNESS_BGRA",bgra?L"1":nullptr);
   for(const auto key:{L"IRONROAD_DEBUG_UI",L"IRONROAD_READBACK",L"IRONROAD_NO_IMGUI",L"IRONROAD_NO_RENDER",L"IRONROAD_EMPTY_UI",L"IRONROAD_CLEAR_TEST"})
     SetEnvironmentVariableW(key,nullptr);
   const fs::path ppm=dll.parent_path()/L"freight/readback.ppm";
@@ -142,13 +143,14 @@ static void Runtime(const fs::path& dll){
   image.seekg(std::streamoff((height/2*width+width/2)*3),std::ios::cur);unsigned char pixel[3]{};
   image.read((char*)pixel,3);
   Check(image.good() && pixel[0]>100 && pixel[1]<40 && pixel[2]<40,"capture is stale or includes an unexpected debug panel");
-  std::printf("PASS isolated runtime: late GPU frame %dx%d pixel=%u/%u/%u, default ImGui hidden\n",
-      width,height,pixel[0],pixel[1],pixel[2]);
+  std::printf("PASS isolated runtime %s: late GPU frame %dx%d pixel=%u/%u/%u, default ImGui hidden\n",
+      bgra?"BGRA":"RGBA",width,height,pixel[0],pixel[1],pixel[2]);
 }
 int wmain(int argc,wchar_t** argv){
   if(argc==4 && !wcscmp(argv[1],L"--child"))return Child(argv[2],argv[3]);
   try{
     if(argc==3 && !wcscmp(argv[1],L"--runtime")){Runtime(fs::absolute(argv[2]));return 0;}
+    if(argc==3 && !wcscmp(argv[1],L"--runtime-bgra")){Runtime(fs::absolute(argv[2]),true);return 0;}
     Check(argc==1,"unknown test arguments");
     RunCase(L"absent",false,nullptr);
     RunCase(L"input",false,L"Default");

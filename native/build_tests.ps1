@@ -30,6 +30,11 @@ if ($LASTEXITCODE -ne 0) { throw 'desktop input tests build failed' }
 & (Join-Path $testBuild 'desktop_test_input_tests.exe')
 if ($LASTEXITCODE -ne 0) { throw 'desktop input tests failed' }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
+  -o (Join-Path $testBuild 'readback_format_tests.exe') (Join-Path $here 'test/readback_format_tests.cpp')
+if ($LASTEXITCODE -ne 0) { throw 'readback format tests build failed' }
+& (Join-Path $testBuild 'readback_format_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'readback format tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
   -o (Join-Path $testBuild 'frame_timing_tests.exe') (Join-Path $here 'test\frame_timing_tests.cpp')
 if ($LASTEXITCODE -ne 0) { throw 'frame timing tests build failed' }
 & (Join-Path $testBuild 'frame_timing_tests.exe')
@@ -254,6 +259,8 @@ if ($LASTEXITCODE -ne 0) { throw "freight deployment tests failed" }
 if (Test-Path -LiteralPath (Join-Path $root "dist\freight\freight.dll")) {
   & (Join-Path $testBuild 'desktop_test_input_tests.exe') --runtime (Join-Path $root 'dist/version.dll')
   if ($LASTEXITCODE -ne 0) { throw 'isolated desktop GPU capture tests failed' }
+  & (Join-Path $testBuild 'desktop_test_input_tests.exe') --runtime-bgra (Join-Path $root 'dist/version.dll')
+  if ($LASTEXITCODE -ne 0) { throw 'isolated desktop BGRA capture tests failed' }
   & python (Join-Path $root "tools\test_freight_loader.py") --runtime
   if ($LASTEXITCODE -ne 0) { throw "freight runtime directory tests failed" }
   & powershell -ExecutionPolicy Bypass -File (Join-Path $root 'tools/test_native_gui_runtime.ps1')

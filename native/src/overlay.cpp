@@ -11,6 +11,7 @@
 #include "native_sea_cache.h"
 #include "frame_timing.h"
 #include "desktop_test_input.h"
+#include "readback_format.h"
 
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
@@ -2310,6 +2311,12 @@ void Overlay::DebugReadbackOnce() {
   if (FAILED(m_swap->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&bb)) || !bb) return;
   D3D11_TEXTURE2D_DESC td{};
   bb->GetDesc(&td);
+  const auto channels=ReadbackRgbChannels(td.Format);
+  if (!channels) {
+    V3_WARN("readback unsupported format=%u", unsigned(td.Format));
+    bb->Release();
+    return;
+  }
   td.Usage = D3D11_USAGE_STAGING;
   td.BindFlags = 0;
   td.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
@@ -2331,12 +2338,13 @@ void Overlay::DebugReadbackOnce() {
         const unsigned char* row = (const unsigned char*)mapped.pData + (size_t)y * mapped.RowPitch;
         for (UINT x = 0; x < td.Width; ++x) {
           if (row[x * 4] > 40 || row[x * 4 + 1] > 40 || row[x * 4 + 2] > 40) ++changed;
-          std::fwrite(row + x * 4, 1, 3, f);
+          const unsigned char rgb[3]={row[x*4+(*channels)[0]],row[x*4+(*channels)[1]],row[x*4+(*channels)[2]]};
+          std::fwrite(rgb, 1, 3, f);
         }
       }
       std::fclose(f);
-      V3_INFO("readback written: %ux%u, %u bright pixels -> %s", td.Width, td.Height, changed,
-              Narrow(path).c_str());
+      V3_INFO("readback written: %ux%u, %u bright pixels -> %s (format=%u)", td.Width, td.Height, changed,
+              Narrow(path).c_str(), unsigned(td.Format));
     }
     m_context->Unmap(staging, 0);
   }

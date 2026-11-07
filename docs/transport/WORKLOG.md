@@ -1,5 +1,21 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-07 — R235：BGRA截图修复与当前构建伦敦/地区实机核对
+
+继续R234同一读回主题，保持原版正式UI、默认关闭调试和严格原生门控；无游戏ABI/分配/地图几何修改。先以未修改67d8主体在真实D3D11 BGRA缓冲复现晚红帧读回13/10/140（预期140/10/13），负例FAIL留档。新增readback_format.h仅接受RGBA/BGRA的UNORM及sRGB四字节布局，按实际Format取RGB，保留编码值/RowPitch，拒绝未知、浮点、压缩和其他像素布局。软件反例及真实RGBA/BGRA延迟帧接入统一入口，不能用测试图代替真实游戏Format证明。
+
+完整官方build.ps1/统一build_tests.ps1均exit0（69条PASS/零FAIL），embedded、自检560375亮像素、默认debug零顶点通过。主体cfd8f6324ed973c42321ec4a4dbc9c61226a821372c683c3d0f66d760816a352／50,891,737B，引导71dae36d…／779,879B；deploy.ps1 exit0，安装=dist，部署时47保留文件/五输入保持。
+
+同构建自有隔离桌面新档PID47776、phase4/暂停/date59883660，实机GPU日志确认Format87（BGRA），正常颜色市场图已目视检查。原版地点查找器F/中文伦敦定位成功；伦敦远景/近景海路持续可见、港口与地面路线画面留档，不以单处画面证明所有接缝/方向正确。市场208ribbon；点击地图切伦敦周边概览立即撤旧市场帧，再切本地价格，当前生产解码器确认state5/local_goods、正式物流列显示。双向256→输入123→输出133→双向256→陆路62→海路194→全部256；七次state selection/scope/drawable固定462705862/462705862/396433222，过滤allocReuse=1、uploads0，零失败/丢弃；峰16次/帧、566us/帧、210us/单步，无软预算超时。19项定向事件/GPU截图及finally后Default/前台131628/真实指针605,230一致，无全局输入/桌面切换。
+
+使用旧native/build/tests/live_panel_probe.exe首次仅得到旧接口拒绝；重新编译当前源码至私有检查点后生产解码成功，保留旧失败输出，不将旧产物误判为产品故障。末次Escape未关闭州页（只消除当前UI上下文），探针明确仍stateOpen=1，文件命名已改panel-after-escape，不能称该项关闭通过。随后本轮自有WM_CLOSE正常退出0；退休事件先于原版world销毁，新liveness守卫实机首轮settings_restored=true，五输入当时逐字节恢复；没有再次手工补救。启动期一次interface identity unavailable拒绝后正常，不称全程零WARN。
+
+恢复任务后发现随后还有其他游戏会话，save/settings/content/continue已变化，INI与安装DLL未变、当前无游戏；保留当时after.json和后续post-interruption-inputs，日志按PID47776截至下一会话，禁止混算证据。用户随后明确不需要保留这些后续变化，后续测试按新1.15文件重记基线。本轮未推送。
+
+尚待：输入/输出海路方向须以当前原生端点逐段复核（可见性不证明方向）；州页关闭/切州/商品/hover完整交互，所有港口端点、改图、真实设备/生命周期及同构建三对前台P95/模拟速度、20轮/60秒缓存最终矩阵仍未完成。旧构建性能不继承，完整goal ACTIVE。
+
+证据：E:/Code/v3-analysis/checkpoints/2026-11-07-r235-readback-colour/{before,bgra-before.log,bgra-before-pixel.json,pipeline.json,audit.json,live/validation.json,live/london-wide.png,live/london-near.png,live/home-counties-*.png,live/private-ui.jsonl,live/private-cleanup.jsonl,live/panel-local.log,live/panel-after-escape.log,live/session-freight.log,live/after.json,post-interruption-inputs.json}。
+
 ### 2026-11-07 — R234：隔离虚拟指针与渲染线程截图，游戏交互通过
 
 按MASTER §2.4完整重读01/02/03，保留原版正式UI/双DLL裁决。新增desktop_test_input.h，仅显式IRONROAD_TEST_DESKTOP精确匹配CodexFreightTest_命名的当前窗口/线程桌面、PID属于本进程且该桌面不是输入桌面时启用。默认无环境变量不安装指针hook；测试模式只返回自有原子虚拟坐标，不调用物理Get/SetCursorPos，拒绝ClipCursor修改共享约束，窗口失效/身份不符返回拒绝。WndProc只复制WM_MOUSEMOVE与原子截图请求；注册消息须匹配cookie/空payload，渲染线程沿用实际D3D读回，不在UI回调调用绘图或游戏经济。无新游戏ABI/地址，无地图身份/分配算法修改，无玩家Python/第三DLL依赖。

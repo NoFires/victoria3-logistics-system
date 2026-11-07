@@ -83,7 +83,8 @@ int wmain(int argc, wchar_t** argv) {
   desc.BufferCount = 1;
   desc.BufferDesc.Width = cw;
   desc.BufferDesc.Height = ch;
-  desc.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+  desc.BufferDesc.Format = GetEnvironmentVariableW(L"IRONROAD_HARNESS_BGRA", nullptr, 0)
+      ? DXGI_FORMAT_B8G8R8A8_UNORM : DXGI_FORMAT_R8G8B8A8_UNORM;
   desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
   desc.OutputWindow = hwnd;
   desc.SampleDesc.Count = 1;

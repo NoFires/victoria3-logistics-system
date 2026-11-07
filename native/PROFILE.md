@@ -1,5 +1,9 @@
 # Native profile — Victoria 3 1.15.0（旧版本记录按轮次保留）
 
+### 2026-11-07 — R235：真实BGRA格式读回
+
+没有新增游戏ABI/RVA。读回仅支持DXGI RGBA/BGRA UNORM/sRGB四字节布局，未知布局拒绝；不改gamma/实际render target，按RowPitch读行。真实硬件RGBA/BGRA晚红帧均140/10/13，实机PID47776确认Format87；69条统一PASS。原生门控/地图身份/经济保持，见STATUS R235。
+
 ### 2026-11-07 — R234：仅隔离桌面的Win32开发测试入口
 
 没有新增游戏RVA/原生ABI。IRONROAD_TEST_DESKTOP须精确匹配以CodexFreightTest_开头的窗口/当前线程桌面，PID属于本进程且OpenInputDesktop不同；默认环境缺失/输入桌面/其他身份拒绝。通过当前user32导出动态定位GetCursorPos/SetCursorPos/ClipCursor；仅测试进程内安装，虚拟坐标原子复制，约束修改明确拒绝，失效不回退物理API。注册Ironroad.IsolatedDesktopTest.Capture.v1消息（WPARAM0x49525431/LPARAM0）只排队一发截图，渲染侧读实际backbuffer；无游戏脚本效果或经济写入。6组原生隔离用例与真实RGBA GPU延迟帧进入统一67条入口，同构建隐藏游戏已实际操作通过。Game profile仍精确1.15.0/473186e8…，scope/权限/地图门控不变；读回BGRA通道尚待验证修复，未知数据不作为颜色验收。
