@@ -24,7 +24,7 @@ struct NativeShippingLane {
 };
 struct NativeShippingSnapshot {std::vector<NativeShippingLane> lanes;};
 
-// Exact 1.13.11 typed database and CShippingLane layout. Call inside the
+// Exact 1.15.0 typed database and CShippingLane layout. Call inside the
 // verified game-access scope; stable rereads alone do not grant that scope.
 // Result owns numeric data only. No native getter, pathfinder or highlight call.
 template<class Reader,class Current>
@@ -57,7 +57,8 @@ std::optional<NativeShippingSnapshot> DecodeNativeShipping(const Reader& reader,
     std::array<uint8_t,0x68> row{};
     if(!seen.insert(object).second || !read(object,row.data(),row.size()) ||
        u64(row,0)!=module+0x04670978 || u64(row,0x10)!=module+0x04661088 ||
-       u32(row,8)==UINT32_MAX || (u32(row,8)&0xffffff)!=slot)
+       u32(row,8)==UINT32_MAX || (u32(row,8)&0xffffff)!=slot ||
+       uint32_t(roster[size_t(slot)*2]>>32)!=(u32(row,8)&0xff000000))
       return fail("invalid shipping lane type or full handle");
     NativeShippingLane lane;lane.id=u32(row,8);lane.country=u32(row,0x18);lane.kind=u32(row,0x1c);
     lane.fromState=u32(row,0x48);lane.toState=u32(row,0x4c);lane.extraProvince=u16(row,0x50);
@@ -68,10 +69,10 @@ std::optional<NativeShippingSnapshot> DecodeNativeShipping(const Reader& reader,
     // Native names distinguish port_connection (0) and goods_transfer (1).
     // Goods transfer refers to CTreaty, whose articles carry goods/amounts.
     if(lane.kind==1){
-      // 1.15.0 moved the treaty reference to +0x20; two live lanes of the same
-      // treaty share this handle. +0x28 is their article count, not the id.
-      lane.treaty=u32(row,0x20);
-      if(lane.treaty==UINT32_MAX)return fail("invalid goods transfer treaty reference");
+      // Original D5B4C0/D59D60 resolve the typed reference: +20 is its type,
+      // +28 its full treaty handle. The reference type is not a treaty ID.
+      if(u16(row,0x20)!=0x61 || u32(row,0x28)==UINT32_MAX)return fail("invalid goods transfer treaty reference");
+      lane.treaty=u32(row,0x28);
     }
     const uint32_t capacity=u32(row,0x38),count=u32(row,0x3c);
     if(count>capacity || capacity>65534)return fail("invalid shipping province set bounds");

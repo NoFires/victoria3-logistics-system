@@ -10,7 +10,7 @@ struct Memory {
   void Zero(uint64_t address,size_t count){for(size_t i=0;i<count;++i)bytes[address+i]=0;}
   bool Read(uint64_t address,void* out,size_t size){
     for(size_t i=0;i<size;++i){auto it=bytes.find(address+i);if(it==bytes.end())return false;((uint8_t*)out)[i]=it->second;}
-    if(address==mutate && ++reads==1)bytes[address]^=1;
+    if(mutate>=address && mutate-address<size && ++reads==1)bytes[mutate]^=1;
     return true;
   }
 };
@@ -20,10 +20,11 @@ int main(){
   good.Put<uint64_t>(db,base+0x0470cc00);good.Put<uint64_t>(db+0x20,entries);
   good.Put<uint32_t>(db+0x2c,2050);good.Put<uint32_t>(db+0x3c,1);good.Zero(entries,2050*16);
   good.Put<uint64_t>(entries+2049*16+8,lane);good.Zero(lane,0x68);
+  good.Put<uint32_t>(entries+2049*16+4,0xab000000);
   good.Put<uint64_t>(lane,base+0x04670978);good.Put<uint32_t>(lane+8,0xab000801);
   good.Put<uint64_t>(lane+0x10,base+0x04661088);good.Put<uint32_t>(lane+0x18,0);
-  good.Put<uint32_t>(lane+0x1c,1);good.Put<uint32_t>(lane+0x20,0xcd000000);
-  good.Put<uint32_t>(lane+0x28,2);good.Put<uint64_t>(lane+0x30,ranges);
+  good.Put<uint32_t>(lane+0x1c,1);good.Put<uint16_t>(lane+0x20,0x61);
+  good.Put<uint32_t>(lane+0x28,0xcd000000);good.Put<uint64_t>(lane+0x30,ranges);
   good.Put<uint32_t>(lane+0x38,2);good.Put<uint32_t>(lane+0x3c,2);
   good.Put<uint32_t>(lane+0x48,0x11000000);good.Put<uint32_t>(lane+0x4c,0x22000001);
   good.Put<uint16_t>(lane+0x50,0xffff);good.Put<int64_t>(lane+0x58,1234567);
@@ -45,11 +46,17 @@ int main(){
   test([&](auto& m){m.template Put<uint32_t>(db+0x3c,0);},"missing active lane rejected");
   test([&](auto& m){m.template Put<uint64_t>(entries+8,lane);},"duplicate object or wrong slot rejected");
   test([&](auto& m){m.template Put<uint32_t>(lane+8,0xab000800);},"full handle slot mismatch rejected");
+  test([&](auto& m){m.template Put<uint32_t>(entries+2049*16+4,0xac000000);},
+      "stable retired shipping generation cannot impersonate a current lane");
+  test([&](auto& m){m.template Put<uint32_t>(entries+2049*16+4,0xab000001);},
+      "shipping generation uses the original exact epoch word");
   test([&](auto& m){m.template Put<uint32_t>(lane+8,UINT32_MAX);},"invalid native handle rejected");
   test([&](auto& m){m.template Put<uint64_t>(lane,base+0x0442c328);},"null object primary type rejected");
   test([&](auto& m){m.template Put<uint64_t>(lane+0x10,base);},"secondary type must match exact class");
   test([&](auto& m){m.template Put<uint32_t>(lane+0x1c,2);},"uninitialized lane kind rejected");
-  test([&](auto& m){m.template Put<uint32_t>(lane+0x20,UINT32_MAX);},"invalid treaty reference rejected");
+  test([&](auto& m){m.template Put<uint16_t>(lane+0x20,0x65);},"legacy treaty reference type rejected");
+  test([&](auto& m){m.template Put<uint16_t>(lane+0x20,0);},"unknown goods-transfer reference type rejected");
+  test([&](auto& m){m.template Put<uint32_t>(lane+0x28,UINT32_MAX);},"invalid treaty reference rejected");
   test([&](auto& m){m.template Put<uint32_t>(lane+0x18,UINT32_MAX);},"invalid country rejected");
   test([&](auto& m){m.template Put<uint32_t>(lane+0x48,UINT32_MAX);},"invalid endpoint rejected");
   test([&](auto& m){m.template Put<uint32_t>(lane+0x4c,0x11000000);},"same endpoints rejected");
@@ -62,7 +69,7 @@ int main(){
   test([&](auto& m){m.template Put<std::array<uint16_t,2>>(ranges+4,{5,0});},"unordered ranges rejected");
   test([&](auto& m){m.template Put<uint64_t>(lane+0x30,UINT64_MAX-2);},"range address overflow rejected");
   test([&](auto& m){m.bytes.erase(ranges);},"unreadable range rejected");
-  for(auto address:{base+0x05c42d88,db,entries,lane,ranges})
+  for(auto address:{base+0x05c42d88,db,entries,entries+2049*16+4,lane,ranges})
     test([&](auto& m){m.mutate=address;},"any observed input mutation rejected");
   test([&](auto& m){m.current=false;},"retired request rejected");
   auto port=good;port.Put<uint32_t>(lane+0x1c,0);port.Put<uint16_t>(lane+0x20,0);
@@ -72,7 +79,7 @@ int main(){
   auto empty=good;empty.Put<uint32_t>(db+0x2c,0);empty.Put<uint32_t>(db+0x3c,0);empty.Put<uint64_t>(db+0x20,0);
   require(check(empty) && check(empty)->lanes.empty(),"known empty native database remains distinct from unavailable");
   auto zero=good;zero.Put<uint64_t>(entries+2049*16+8,0);zero.Put<uint64_t>(entries+8,lane);
-  zero.Put<uint32_t>(lane+8,0);zero.Put<uint32_t>(lane+0x20,0);
+  zero.Put<uint32_t>(lane+8,0);zero.Put<uint32_t>(lane+0x28,0);
   require(check(zero) && check(zero)->lanes[0].id==0 && check(zero)->lanes[0].treaty==0,"zero handles are valid identities");
   auto noRoute=good;noRoute.Put<uint32_t>(lane+0x3c,0);noRoute.Put<uint64_t>(lane+0x30,0);
   require(check(noRoute) && check(noRoute)->lanes[0].provinces.empty(),"empty computed membership never invents a route");
