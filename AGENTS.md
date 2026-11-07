@@ -218,7 +218,7 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ### 2026-11-07 — R236完成：物流列排序/居中/缩写与切州自动重排
 
-本会话接管后按官方入口重建：主体26b70987…／51,840,048B、引导71dae36d…；build.ps1／build_tests.ps1（71 PASS）／verify_embedded／selftest 560,386（首跑560,419）／默认debug全通过，deploy.ps1 exit0且安装＝dist。实机隐藏桌面45112/暂停59883360：州434升降序通过；切州5后未点表头，freight.log自动`kind=1 id=5 ready=1 rows=40 descending=1`，行序为上一轮手动升序的精确逆序（保持原降序方向），截图物流列518.26→89.97；WM_CLOSE exit0、五输入逐字节不变、输入桌面全程Default。测试时空闲10.46GiB，脚本副本门槛12→8GiB（仅测试）。A25同构建三次尝试均无臂数据：隐藏桌面Present被遮挡0批次；可见窗口点击需键盘焦点而用户正用电脑（截屏证实），不可夺焦。需用户空闲约25分钟会话，脚本就绪；详见STATUS与checkpoint A25-ATTEMPTS.md，不push，完整目标ACTIVE。
+本会话接管后按官方入口重建：主体26b70987…／51,840,048B、引导71dae36d…；build.ps1／build_tests.ps1（71 PASS）／verify_embedded／selftest 560,386（首跑560,419）／默认debug全通过，deploy.ps1 exit0且安装＝dist。实机隐藏桌面45112/暂停59883360：州434升降序通过；切州5后未点表头，freight.log自动`kind=1 id=5 ready=1 rows=40 descending=1`，行序为上一轮手动升序的精确逆序（保持原降序方向），截图物流列518.26→89.97；WM_CLOSE exit0、五输入逐字节不变、输入桌面全程Default。测试时空闲10.46GiB，脚本副本门槛12→8GiB（仅测试）。A25同构建三对/20轮无人值守PASS：P95 +0.456/0.421/0.563ms≤2、模拟最大降0.66%≤5%；20轮uploads=0 reused=206 pool=206、repeats_skipped=1…20。输入全PostMessage指针零移动、焦点守卫；三次失败尝试与一次夺焦作废保留于A25-ATTEMPTS.md。详见STATUS/PERFORMANCE，不push，完整目标ACTIVE。
 
 ### 2026-11-07 — R236进行中：物流列与原版排序
 
