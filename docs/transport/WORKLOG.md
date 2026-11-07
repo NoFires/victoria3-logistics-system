@@ -1,12 +1,26 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-07 — R234：隔离虚拟指针与渲染线程截图，游戏交互通过
+
+按MASTER §2.4完整重读01/02/03，保留原版正式UI/双DLL裁决。新增desktop_test_input.h，仅显式IRONROAD_TEST_DESKTOP精确匹配CodexFreightTest_命名的当前窗口/线程桌面、PID属于本进程且该桌面不是输入桌面时启用。默认无环境变量不安装指针hook；测试模式只返回自有原子虚拟坐标，不调用物理Get/SetCursorPos，拒绝ClipCursor修改共享约束，窗口失效/身份不符返回拒绝。WndProc只复制WM_MOUSEMOVE与原子截图请求；注册消息须匹配cookie/空payload，渲染线程沿用实际D3D读回，不在UI回调调用绘图或游戏经济。无新游戏ABI/地址，无地图身份/分配算法修改，无玩家Python/第三DLL依赖。
+
+新增原生测试接入统一build_tests：缺环境、输入桌面、错桌面、坏名称、过长名称拒绝；有效隐藏桌面的全精度/负坐标、错误窗口/请求、重绑/退休、一发截图与物理约束保护。缺失截图的原03182 DLL用例先FAIL；首A46候选67条通过后独立补查发现ClipCursor未保护，反例仅创建未启用的MinHook条目检测缺口、不调用物理约束API，先FAIL后修复。最终完整build.ps1/统一入口exit0（67条PASS、零FAIL），embedded／selftest560445亮像素／默认debug零顶点通过。实际独立D3D延迟GPU读回960×960、中心140/10/13，明确来自后续红帧而非旧图；首候选/日志留档未部署。
+
+最终主体67d8f802a1c8476396f1966ffd9437e6999f4117dce7434bb7e0af44bacfcf1e／50,880,559B，引导71dae36d…／779,879B；deploy.ps1 exit0，安装=dist，部署时47保留文件/五输入保持。自有隐藏桌面新档PID51788实际加载、phase4/暂停/date59883660，测试支持启用。12项原版事件/GPU读回包含F4市场、物流页、分类、中文谷物搜索、空结果、恢复、隐藏/显示及关闭。原生解码visible41→9→1→0→41；selectedFixed依次1349777287/516060128/91078300/0/恢复1349777287，scopeFixed始终1349777287。正式ribbon208/164/40/0，无失败/丢弃，峰16次/帧、523us/帧、239us/单步；关闭后撤帧。每项及finally后Default输入桌面/前台131628/真实指针605,230保持，包括虚拟238,386/380,318/528,460等不同目标；不再移动窗口/切换桌面/使用全局输入。
+
+剩余：游戏GPU读回图出现红蓝通道交换，现有DebugReadbackOnce固定按RGBA解释，尚需核对实际Format并补BGRA反例；不能用该图宣称颜色已验收。启动期一次interface identity unavailable拒绝后正常解码，不能称零WARN。原R232二十轮/65秒属03182旧产品，不能充当当前67d8同构建性能；完整端点、州/商品交互、改图/生命周期/设备及三对前台性能仍待，目标ACTIVE。
+
+正常WM_CLOSE退出0；首私有helper恢复守卫再次拒绝，独立确认无游戏且设置唯一差异为暂设save_on_exit=false后已自动逐字节恢复，最终五输入exact；未把上轮“关进程句柄即可解决”推测当事实。私有helper现改用真实GetExitCodeProcess判定活跃而非仅进程名，活跃/终止但持有句柄/缺失PID的独立测试通过，完整游戏退出的新helper调整仍待下一次验证。游戏自然更新freight.log/loader.log与原有诊断readback.ppm，其他保留文件保持。当前无游戏、不push。
+
+证据：E:/Code/v3-analysis/checkpoints/2026-11-07-r234-desktop-test-input（before、capture-before.log、clip-before/after.log、first-*与最终pipeline、candidate/audit、live/private-ui.jsonl/private-cleanup.jsonl/panel-*.log/session-freight.log/validation.json/after.json、process-liveness-test.json）。Win32契约参考[ClipCursor](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-clipcursor)；虚拟输入/渲染截图通过与完整UI/生命周期/P95保持分层。
+
 ### 2026-11-07 — R233：隐藏桌面实际启动/键盘隔离通过，鼠标与画面仍待
 
 用户全自动授权继续。产品源码/双DLL未变，仍03182e3b…／71dae36d…；本轮只开发私有测试进程并记录证据，未重建/部署，不继承为新产品回归。先在新建隐藏桌面运行实际D3D11 harness：完整枚举该桌面上的自有PID窗口，960×960 GPU读回有效（自定maxRGB>80计86900像素，不冒充selftest阈值），262帧、退出0；用户输入桌面Default/前台131628/指针605,230保持，未SwitchDesktop/未调用全局输入。第一版过早查询未初始化线程desktop而断言拒绝，第二版读回路径错指dist根目录；其后又误将空桌面的EnumDesktopWindows返回0/无错误当失败，均已修正为当前窗口实际枚举见证，保留脚本与失败证据，不能把未取得见证的旧result当通过。
 
 随后相同产品自主在隐藏桌面加载新档PID20484，实际SDL窗口枚举在CodexFreightGameR233_52976、输入桌面仍Default。phase4/暂停/date59883660，三次正式快照406/359/359ms、4290/4290选路；启动期一次interface identity unavailable拒绝，随后原生面板解码可用，不称零WARN。仅定向F4即可打开原版市场（market0/default）；前后台记录含finally后仍为Default/同前台/同指针。
 
-鼠标/捕获NOT_RUN通过：原生/零点对齐点击均未进入物流页，不能虚报成功。独立只读子进程确认hidden thread的GetCursorPos返回0/ERROR_ACCESS_DENIED5且输出哨兵未改；Present返回0x087a0001，PrintWindow虽返回1但图像停在加载画面。下一步需要隔离模式的虚拟输入和GPU画面读回，先用小型harness验证；不得为实现测试切换用户输入桌面、重用R232有指针副作用方法，或放宽游戏ABI/访问门控。当前游戏已正常WM_CLOSE退出0、隐藏桌面句柄关闭，无游戏或harness进程；独立桌面/键盘隔离子项通过，完整无人值守鼠标/绘图未通过。
+鼠标/捕获方法未通过：原生/零点对齐点击均未进入物流页，不能虚报成功。独立只读子进程确认hidden thread的GetCursorPos返回0/ERROR_ACCESS_DENIED5且输出哨兵未改；Present返回0x087a0001，PrintWindow虽返回1但图像停在加载画面。下一步需要隔离模式的虚拟输入和GPU画面读回，先用小型harness验证；不得为实现测试切换用户输入桌面、重用R232有指针副作用方法，或放宽游戏ABI/访问门控。当前游戏已正常WM_CLOSE退出0、隐藏桌面句柄关闭，无游戏或harness进程；独立桌面/键盘隔离子项通过，完整无人值守鼠标/绘图未通过。
 
 退出首版恢复守卫拒绝：独立核对无游戏后，JSON唯一差异是本轮暂设的game.save_on_exit=false（原项不存在），已按备份逐字节原子恢复。推测首版在关闭自有Win32进程/线程句柄前枚举仍含退出进程；仅是推测，不按此覆盖未知设置。私有helper已将句柄关闭提前，尚未用新游戏复验该调整；after-before-settings-recheck.json保留原拒绝，最终after.json/五输入均exact。用户新档/INI/content/continue均始终保持。不push，goal ACTIVE。
 

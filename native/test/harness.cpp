@@ -117,7 +117,10 @@ int wmain(int argc, wchar_t** argv) {
       TranslateMessage(&msg);
       DispatchMessageW(&msg);
     }
-    const float clear[4] = {0.10f, 0.12f, 0.16f, 1.0f};
+    const bool capturePhase = GetEnvironmentVariableW(L"IRONROAD_HARNESS_CAPTURE_PHASE", nullptr, 0) &&
+        GetTickCount() - start > 4000;
+    const float clear[4] = {capturePhase ? 0.55f : 0.10f,
+                           capturePhase ? 0.04f : 0.12f, capturePhase ? 0.05f : 0.16f, 1.0f};
     context->OMSetRenderTargets(1, &rtv, nullptr);
     context->ClearRenderTargetView(rtv, clear);
     D3D11_VIEWPORT vp{0, 0, (float)cw, (float)ch, 0, 1};

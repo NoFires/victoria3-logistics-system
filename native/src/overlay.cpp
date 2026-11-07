@@ -10,6 +10,7 @@
 #include "native_port_approach.h"
 #include "native_sea_cache.h"
 #include "frame_timing.h"
+#include "desktop_test_input.h"
 
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
@@ -2273,6 +2274,7 @@ bool Overlay::InitImGui(IDXGISwapChain* swap) {
   // is debug-only; the standalone harness explicitly enables it for readback.
   m_visible = GetEnvironmentVariableW(L"IRONROAD_DEBUG_UI", nullptr, 0) > 0 || m_readbackWanted;
   m_origWndProc = (WNDPROC)SetWindowLongPtrW(m_hwnd, GWLP_WNDPROC, (LONG_PTR)&Overlay::WndProcThunk);
+  if (desktop_test::Install(m_hwnd)) V3_INFO("isolated desktop test input enabled");
   SetTimer(m_hwnd, 0x4952, 500, nullptr);
   SetTimer(m_hwnd, 0x4953, 25, nullptr);
   m_imguiReady = true;
@@ -2429,7 +2431,7 @@ void Overlay::OnPresent(IDXGISwapChain* swap) {
     m_readbackDone = true;
     DebugReadbackOnce();
   }
-  if (m_captureFrameRequested) {
+  if (desktop_test::TakeCapture() || m_captureFrameRequested) {
     m_captureFrameRequested = false;
     DebugReadbackOnce();
   }
@@ -3541,6 +3543,7 @@ void Overlay::DrawUi() {
 
 LRESULT CALLBACK Overlay::WndProcThunk(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
   Overlay& o = Instance();
+  if (desktop_test::Message(hwnd,msg,wp,lp)) return 0;
   if (msg == WM_APP + 0x51) {
     o.OnUiThreadPublish();
     return 0;

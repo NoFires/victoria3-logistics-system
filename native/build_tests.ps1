@@ -14,6 +14,21 @@ if ($LASTEXITCODE -ne 0) { throw 'native discovery regression tests failed' }
   '-ld3d11' '-ldxgi' '-luser32' '-lgdi32'
 if ($LASTEXITCODE -ne 0) { throw "harness build failed" }
 Write-Host "Built $testBuild\harness.exe"
+$desktopHooks = @()
+foreach ($source in @('buffer.c', 'hook.c', 'trampoline.c', 'hde/hde64.c')) {
+  $object = Join-Path $testBuild ('desktop_' + [IO.Path]::GetFileNameWithoutExtension($source) + '.o')
+  & (Join-Path $tools 'gcc.exe') -O2 -D_WIN32_WINNT=0x0A00 "-I$here\third_party\minhook" `
+    -c (Join-Path $here "third_party/minhook/src/$source") -o $object
+  if ($LASTEXITCODE -ne 0) { throw 'desktop test hook build failed' }
+  $desktopHooks += $object
+}
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static -municode -DNOMINMAX `
+  "-I$here\src" "-I$here\third_party\minhook\include" `
+  -o (Join-Path $testBuild 'desktop_test_input_tests.exe') `
+  (Join-Path $here 'test/desktop_test_input_tests.cpp') @desktopHooks '-luser32'
+if ($LASTEXITCODE -ne 0) { throw 'desktop input tests build failed' }
+& (Join-Path $testBuild 'desktop_test_input_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'desktop input tests failed' }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
   -o (Join-Path $testBuild 'frame_timing_tests.exe') (Join-Path $here 'test\frame_timing_tests.cpp')
 if ($LASTEXITCODE -ne 0) { throw 'frame timing tests build failed' }
@@ -237,6 +252,8 @@ if ($LASTEXITCODE -ne 0) { throw "freight loader tests failed" }
 if ($LASTEXITCODE -ne 0) { throw "freight deployment tests failed" }
 
 if (Test-Path -LiteralPath (Join-Path $root "dist\freight\freight.dll")) {
+  & (Join-Path $testBuild 'desktop_test_input_tests.exe') --runtime (Join-Path $root 'dist/version.dll')
+  if ($LASTEXITCODE -ne 0) { throw 'isolated desktop GPU capture tests failed' }
   & python (Join-Path $root "tools\test_freight_loader.py") --runtime
   if ($LASTEXITCODE -ne 0) { throw "freight runtime directory tests failed" }
   & powershell -ExecutionPolicy Bypass -File (Join-Path $root 'tools/test_native_gui_runtime.ps1')
