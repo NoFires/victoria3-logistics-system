@@ -6,7 +6,7 @@
 
 实机隐藏桌面 pid45112、同存档/暂停59883360、输入桌面 Default：按上一轮动作序列复现到州434，市场41行/州39行的 work/share 升降序、分类/中文搜索/空结果、原版 price/balance/name 和 price_difference 长键均通过。上一轮反例是切州5后发布前原版以相等值排序、就绪后仍为商品ID顺序；本轮接 019D4EF0 后，未点表头即自动记录 `kind=1 id=5 ready=1 rows=40 ascending=0 descending=1`，ordered_ui 连续3次 key=ironroad_work、count=40，行序为上一轮手动升序的精确逆序，截图物流列 518.26→89.97 单调下降——切州自动重排与方向保持通过。WM_CLOSE exit0；settings 自动恢复；五输入逐字节不变；无游戏。
 
-环境偏差：测试时空闲 10.46 GiB（总 31.66 GiB，Chrome/Steam 占用），复用脚本副本将 12 GiB 门槛降为 8 GiB；仅测试脚本。证据：2026-11-07-r236-final-live（RESULT.md、session-freight.log、ordered-ui.jsonl、state5-auto.png、after.json）；上一轮反例与 ABI 静态证据在 2026-11-07-r236-logistics-columns。A25 同构建三对/20轮尝试因主机内存不足被后台压力管理器停止（仅完成 closed1 重载、无臂数据；游戏正常退出0、settings/五输入保持，证据 2026-11-07-r236-perf）；不 push，goal ACTIVE，A25/A24 与剩余 A01–A27 继续。
+环境偏差：测试时空闲 10.46 GiB（总 31.66 GiB，Chrome/Steam 占用），复用脚本副本将 12 GiB 门槛降为 8 GiB；仅测试脚本。证据：2026-11-07-r236-final-live（RESULT.md、session-freight.log、ordered-ui.jsonl、state5-auto.png、after.json）；上一轮反例与 ABI 静态证据在 2026-11-07-r236-logistics-columns。A25 同构建三对/20轮三次尝试均无臂数据后定位协议前置：隐藏桌面 DXGI 遮挡（hr=0x087a0001）使游戏启动后不持续 Present→0 批次；默认桌面可见窗口的 PostMessage 点击需窗口持键盘焦点，实机核对截屏证实前台是用户浏览器（用户正在使用），夺焦点不可接受且失焦自动解除暂停。三次均正常收场（退出0/settings 恢复/五输入不变），根因与就绪脚本见 checkpoint A25-ATTEMPTS.md；A25 待用户空闲约 25 分钟的会话。不 push，goal ACTIVE，A25/A24 与剩余 A01–A27 继续。
 
 ### 2026-11-07 — R236进行中：物流列居中/缩写及原版排序接线
 

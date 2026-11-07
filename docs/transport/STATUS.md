@@ -8,7 +8,7 @@
 
 实机（本会话接管后重跑）：隐藏桌面自有进程 45112，同存档/暂停 date59883360，输入桌面全程 Default。上一轮反例（切州后发布前原版以相等值排序、就绪后仍为商品 ID 顺序）已复现；本轮接 `0x019D4EF0` 保持方向刷新。州 434 以 `ironroad_work` 升降序通过；切至州 5 后**未点击表头**，日志自动出现 `native logistics sort kind=1 id=5 ready=1 rows=40 ascending=0 descending=1`，`ordered_ui` 读取 key=`ironroad_work`、40 行；行序为上一轮手动升序的精确逆序（同一组数值保持上一轮选定的降序方向），截图物流列 518.26→89.97 单调下降。切州自动重排通过。`WM_CLOSE` exit0；settings 自动恢复；save/settings/ini/content/continue 五输入逐字节不变；无游戏。运行环境偏差：测试时空闲 10.46 GiB（总 31.66 GiB），复用的实机脚本副本把 12 GiB 门槛降为 8 GiB，仅测试脚本、不涉及产品。
 
-证据：E:/Code/v3-analysis/checkpoints/2026-11-07-r236-final-live（RESULT.md、build/tests 日志、session-freight.log、ordered-ui.jsonl、state5-auto.png、after.json）；上一轮反例与静态/ABI 证据在 2026-11-07-r236-logistics-columns。A25 同构建三对/20轮尝试因主机内存不足（空闲降至约2 GiB）被后台压力管理器停止，仅完成 closed1 重载、无臂数据；游戏已正常关闭，settings/五输入保持（证据 2026-11-07-r236-perf）。不 push，完整目标 ACTIVE；同构建 A25、A24 设备丢失及剩余 A01–A27 仍待（A25 待内存充足且用户要求时重跑）。
+证据：E:/Code/v3-analysis/checkpoints/2026-11-07-r236-final-live（RESULT.md、build/tests 日志、session-freight.log、ordered-ui.jsonl、state5-auto.png、after.json）；上一轮反例与静态/ABI 证据在 2026-11-07-r236-logistics-columns。A25 同构建三对/20轮在本会话三次尝试均无臂数据，已定位协议前置条件：隐藏桌面 Present 被遮挡（hr=0x087a0001）不持续呈现→0 批次；默认桌面可见窗口的点击需要窗口持键盘焦点，而实机核对时前台是用户浏览器（截屏证实用户在用电脑），夺焦点会打断用户且失焦自动解除暂停（R198），不可接受。三次尝试均正常收场（WM_CLOSE 退出0、settings 恢复、五输入逐字节不变），根因与剩余路径记录于 checkpoint A25-ATTEMPTS.md。A25 需用户离开电脑约 25 分钟的空闲会话执行（脚本已就绪）。不 push，完整目标 ACTIVE；同构建 A25、A24 设备丢失及剩余 A01–A27 仍待。
 
 ### 2026-11-07 — R235：BGRA截图修复与当前构建伦敦/地区实机核对
 

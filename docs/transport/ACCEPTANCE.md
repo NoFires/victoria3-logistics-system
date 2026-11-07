@@ -28,7 +28,7 @@ cfd8f632…／71dae36d…已完整构建/统一69条PASS/资源/自检560375/默
 
 主体 `21a82419…`／引导 `71dae36d…`；完整统一 build_tests.ps1 exit0（60条PASS、零FAIL），embedded／selftest（560390亮像素）／默认debug零顶点均通过。新增方向/断路/实际港内七段路径与视图/ribbon 回归只证明离线行为；真实 kind6 采集、加载、UI、生命周期及性能仍 NOT_RUN。下面 R200–R226 矩阵绑定旧安装 `404abb88…`，不外推为 R227 当前源码验收。
 
-2026-11-07 R236 当前构建 `26b70987…`／`71dae36d…`（51,840,048B）：官方 build.ps1/build_tests.ps1（71 PASS）/verify_embedded/selftest（560,386）/默认debug/deploy 全通过，安装＝dist；市场/州物流列排序/居中/k-M 与切州自动重排实机通过（STATUS R236）。下面的矩阵行仍绑定 `404abb88…`（R225）或旧构建；A25 同构建三对/20轮尝试被主机内存压力停止、无臂数据，因此 A25 对 R236 仍为 PARTIAL，不得沿用 404abb88 的 PASS。
+2026-11-07 R236 当前构建 `26b70987…`／`71dae36d…`（51,840,048B）：官方 build.ps1/build_tests.ps1（71 PASS）/verify_embedded/selftest（560,386）/默认debug/deploy 全通过，安装＝dist；市场/州物流列排序/居中/k-M 与切州自动重排实机通过（STATUS R236）。下面的矩阵行仍绑定 `404abb88…`（R225）或旧构建；A25 同构建三次尝试均无臂数据（隐藏桌面 DXGI 遮挡 0 批次；可见窗口点击需键盘焦点而用户正用电脑），A25 对 R236 仍为 PARTIAL，需用户空闲约 25 分钟的会话执行，不得沿用 404abb88 的 PASS。
 
 ## 1.15.0 当前构建矩阵（freight `404abb88…` / version `71dae36d…`，2026-11-06，R200–R226）
 
