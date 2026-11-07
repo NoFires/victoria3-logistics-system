@@ -1,5 +1,7 @@
 # 交付说明（Victoria 3 1.15.0）
 
+> **2026-11-07 R236 当前构建（最终）**：主体 `26b70987b66df6e209f27b4b6afa3930c861f9c4da4fe1f1149c7ca5f6aa2cf2`（51,840,048 B），引导 `71dae36d…`。官方 `build.ps1`／`build_tests.ps1`（71 PASS）／`verify_embedded`／`selftest`（560,386；首跑560,419）／默认 debug／`deploy.ps1` 均 exit0，安装＝dist。市场/物流与州/本地价格的数量、占比居中，显示 k/M 缩写（底层 1e5 整数与卡片精确值不变），表头接入原版 CGuiSort；实机隐藏桌面切州 5 后**未点表头**自动记录 `kind=1 id=5 ready=1 descending=1`，行序为上一轮手动升序的精确逆序（保持原降序方向），物流列 518.26→89.97；WM_CLOSE exit0、五输入逐字节不变、输入桌面 Default。同构建 A25 三对/20轮尝试被主机内存压力管理器停止（无臂数据，待重跑）；详见 STATUS R236。
+
 > **2026-11-07 R235 当前测试安装**：主体`cfd8f6324ed973c42321ec4a4dbc9c61226a821372c683c3d0f66d760816a352`（50,891,737B），引导71dae36d…。cfd8f632…／71dae36d…已完整构建/统一69条PASS/资源/自检560375/默认debug/官方部署。先复现真实BGRA晚帧红蓝交换，再按Format修复；隐藏新档实际Format87/颜色正确。19动作与清理后前台/指针保持；原版查找器定位伦敦，远近景海路可见，伦敦周边物流列/方向与海陆筛选256/123/133/62/194段，统计固定/零新增上传。WM_CLOSE退出0，设置首轮自动恢复/五输入当时exact。Escape尚未关州页、海段实际方向/全端点及完整矩阵待续；中断后其他会话改过输入，已分开记证；不push，goal ACTIVE。
 
 > **2026-11-07 R234 当前测试安装**：主体`67d8f802a1c8476396f1966ffd9437e6999f4117dce7434bb7e0af44bacfcf1e`（50,880,559B），引导71dae36d…；源码/构建/安装一致，完整67条PASS/资源/selftest560445/default-debug/官方部署通过。新增仅显式隔离桌面启用的开发测试支持，玩家默认无指针hook。隐藏新档实际原版物流/分类/中文搜索/空结果/隐藏显示、208ribbon及GPU读回通过，真实桌面/指针保持；正常退出/五输入恢复。读回通道与完整最终矩阵仍待，详见STATUS R234。
@@ -40,7 +42,9 @@
 | 历史 R228 测试安装（本轮installed-before归档） | `bbee96cb61931355b9c8dfb6d82b91cb883cc0dc84c7a8214dd894b4cc93d3ae` | 50,651,488 B |
 | 历史R229测试安装（R231 installed-before归档） | `716fd6892523eab6bc14fc17dfe4d2f78556815febf6e0e0ae43b8929ebaf1d8` | 50,835,433 B |
 | 历史R231/R232/R233安装（R234 installed-before） | `03182e3b26aa5b4f216729cf446e71e78d0f562dd872bfe3854e744cf6912138` | 50,835,433 B |
-| `dist/freight/freight.dll`（当前R234测试安装） | `67d8f802a1c8476396f1966ffd9437e6999f4117dce7434bb7e0af44bacfcf1e` | 50,880,559 B |
+| 历史 R234 测试安装（installed-before） | `67d8f802a1c8476396f1966ffd9437e6999f4117dce7434bb7e0af44bacfcf1e` | 50,880,559 B |
+| 历史 R235 测试安装（installed-before） | `cfd8f6324ed973c42321ec4a4dbc9c61226a821372c683c3d0f66d760816a352` | 50,891,737 B |
+| `dist/freight/freight.dll`（当前 R236 构建） | `26b70987b66df6e209f27b4b6afa3930c861f9c4da4fe1f1149c7ca5f6aa2cf2` | 51,840,048 B |
 | `dist/version.dll`（当前构建 71dae36d） | `71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e` | 779,879 B |
 | 历史回滚主体（2028e03b） | `2028e03bc288cd89ff1df23c3dd4f94b9413594636ca2781a183d916c7d9d4a7` | 50,025,206 B |
 | 历史 R226 安装主体（installed-before归档） | `404abb8883100bab17c6bfb2200919ffb89c1fba26f4643c1a379cb875c57c92` | 50,220,030 B |
@@ -49,8 +53,9 @@
 - 安装布局：`binaries\version.dll` + `binaries\freight\freight.dll`；配置 `freight.ini`、日志
   `freight.log`/`loader.log`、缓存与资源都在 `binaries\freight\`，不依赖 playset、外部 Mod、
   Python 或手工资源。
-- 历史安装：2026-11-06 安装R226构建 `404abb88…`／`71dae36d…`，R228安装已由顶部当前记录取代；旧已验收构建
-  `2028e03b…`／`c8020412…` 保留在回滚副本。安装时必须无游戏进程，以 `.tmp` + rename 原子替换。
+- 历史安装：2026-11-07 安装 R236 构建 `26b70987…`／`71dae36d…`（deploy.ps1 exit0）；更早 R226/R228/R235
+  记录由顶部当前记录取代；旧已验收构建 `2028e03b…`／`c8020412…` 保留在回滚副本。安装时必须无游戏进程，
+  以 `.tmp` + rename 原子替换。
 - 回滚副本：`E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery\dist`（已验收的
   `2028e03b…`／`c8020412…`），源码对应交付提交 `3ec16a0` 一带；候选源码为本地 `main` HEAD
   （R227 修改前 HEAD `b8f098a`；R227 提交后以 `git log -1` 为准）。
@@ -67,10 +72,11 @@ powershell -ExecutionPolicy Bypass -File deploy.ps1                # 游戏关�
 powershell -ExecutionPolicy Bypass -File deploy.ps1 -Uninstall
 ```
 
-官方 PowerShell 入口已实际执行（2026-11-06）：`native\build_tests.ps1` exit 0（完整测试，含迁移后的
-1.15 `test_splines.py` 源 hash／计数）；`tools\selftest.ps1` PASS（loader＋ImGui，960×960／560,432
-亮像素，阈值 5,000）；`deploy.ps1` exit 0（安装＝`dist`，`404abb88…`／`71dae36d…`）；`build.ps1`
-exit 0，官方产物已采用。日志见 `checkpoint2026-11-06-main-build/ps-*.log`。
+官方 PowerShell 入口已实际执行（2026-11-07 R236 最终构建）：`native\build_tests.ps1` exit0（71 PASS、
+零FAIL，含排序值/64+4 ABI）；`tools\selftest.ps1` PASS（loader＋ImGui，560,386／首跑560,419 亮像素，
+阈值 5,000）；`deploy.ps1` exit0（安装＝`dist`，`26b70987…`／`71dae36d…`）；`build.ps1` exit0。
+日志见 `checkpoint2026-11-07-r236-final-live/official-*.log`；R225 旧日志保留在
+`checkpoint2026-11-06-main-build/ps-*.log`。
 
 ## 3. 原版界面操作
 
@@ -78,6 +84,7 @@ exit 0，官方产物已采用。日志见 `checkpoint2026-11-06-main-build/ps-*
   贸易量、已铺铁路（MU）、逐商品市场价格/贸易量/占比，以及地图物流带。
 - **筛选**：搜索框、商品分类、“显示/隐藏”、颜色（热度/单商品/原生绿）。
 - **地区本地价格**：选择州→“本地价格”页签：物流列、商品/方向/方式筛选。
+- **物流列排序**：点击“物流”列表头按数量/占比排序，再次点击反向；切换州/市场后保持原方向自动重排。
 - **原版功能保留**：价格、排序、提示、右键菜单、商品详情与“用途”页均按原版工作。
 
 ## 4. 模型口径（一期，观察性）
@@ -93,10 +100,10 @@ exit 0，官方产物已采用。日志见 `checkpoint2026-11-06-main-build/ps-*
 ## 5. 验收与性能结果
 
 - A01–A27 当前构建矩阵见 `docs/transport/ACCEPTANCE.md` 顶部“1.15.0 当前构建矩阵”。
-- 性能（同存档/相机/速度 III，三对 65 秒，当前构建 `404abb88…`）：P95 增加
+- 性能（同存档/相机/速度 III，三对 65 秒）：上一构建 `404abb88…`（R225）P95 增加
   `0.894 / 0.818 / 0.863 ms`（门槛 2 ms），模拟速度最大降幅 `0.31 %`（门槛 5 %），窗口
   61.80–62.64 秒，见 `PERFORMANCE.md`。旧 `2028e03b…` 的 `0.593 / 0.518 / 0.671` 与 `0.46 %`
-  仅属旧构建。
+  仅属旧构建。当前 R236 构建 `26b70987…` 的同构建三对/20轮缓存尚未复跑，不能沿用上述结果。
 - 缓存/压力：稳定 65 秒零新增几何上传；20 轮稳定 revision `uploads=0 reused=201/200`、池
   230/8192、每帧上限 16、`overrun_frames=0`；末段数据 revision 变化时 203 paths／45 uploads、
   池 275。旧 `2028e03b…` 的 `reused=185`／池 346 仅属旧构建。

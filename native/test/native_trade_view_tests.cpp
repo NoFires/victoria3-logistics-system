@@ -581,8 +581,8 @@ int main(){
       FormatFreightWork(&document)=="7.00012" && FormatFreightDemand(&document)=="-- / -- / --",
       "native quantities are separate from model work/Freight demand/unknown rail calibration");
   auto rows=FormatFreightGoods(&document);
-  Check(Variable(rows,"ironroad_good_work_grain")=="2.00002" && Variable(rows,"ironroad_good_share_grain")=="28.6%" &&
-      Variable(rows,"ironroad_good_work_unused")=="0.00","native formatting preserves original1e-5 values and fixed market denominator");
+  Check(Variable(rows,"ironroad_good_work_grain")=="2" && Variable(rows,"ironroad_good_share_grain")=="28.6%" &&
+      Variable(rows,"ironroad_good_work_unused")=="0","native rows compact the display while facts retain original1e-5 values and fixed market denominator");
   auto hovered=filter;hovered.hoverGood=1;
   auto hover=BuildNativeTradeView(snapshot,*facts,hovered);
   Check(hover && hover->selectionQuantity==700012 && hover->filteredQuantity==200002 && hover->marketQuantity==700012 &&
@@ -621,7 +621,7 @@ int main(){
   Check(state && state->marketQuantity==1600023 && state->scopeQuantity==1300016 && state->scopeDrawable==400005 &&
       Good(*state,1)==1100013 && Good(*state,2)==200003,"state counts exact original incoming/outgoing records once and excludes another state's trade");
   auto stateDoc=BuildLogisticsDocument(snapshot,*state,other);
-  Check(Variable(FormatStateFreightGoods(&stateDoc,200),"ironroad_state_work_200_grain")=="11.00013" &&
+  Check(Variable(FormatStateFreightGoods(&stateDoc,200),"ironroad_state_work_200_grain")=="11" &&
       FormatStateFreightGoods(&stateDoc,300).empty(),"native state variable publication requires its exact full state scope");
   auto incoming=other;incoming.mapDirection=1;
   auto imports=BuildNativeTradeView(snapshot,*facts,incoming);

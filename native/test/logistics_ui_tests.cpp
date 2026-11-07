@@ -93,23 +93,31 @@ int main() {
     const auto found=std::find_if(values.begin(),values.end(),[&](const auto& row){return row.first==key;});
     return found==values.end()?std::string{}:found->second;
   };
-  Check(nativeGoods.size()==4 && variable(nativeGoods,"ironroad_good_work_grain")=="50.00" &&
+  Check(nativeGoods.size()==4 && variable(nativeGoods,"ironroad_good_work_grain")=="50" &&
         variable(nativeGoods,"ironroad_good_share_grain")=="71.4%",
         "native row variables use weighted order-distance and a whole-market percentage");
   auto stateFilter=filter;stateFilter.kind=FreightViewKind::State;stateFilter.state=10;
   auto stateDocument=BuildLogisticsDocument(snapshot,allocated,stateFilter);
   const auto stateRows=FormatStateFreightGoods(&stateDocument,10);
   Check(stateDocument.kind==FreightViewKind::State && stateDocument.state==10 && stateRows.size()==2 &&
-        variable(stateRows,"ironroad_state_work_10_grain")=="50.00" &&
-        variable(stateRows,"ironroad_state_work_10_tools")=="20.00",
+        variable(stateRows,"ironroad_state_work_10_grain")=="50" &&
+        variable(stateRows,"ironroad_state_work_10_tools")=="20",
         "native state rows publish final input/output work under state and good identity");
+  Check(FormatNativeTradeQuantity(100000000,true)=="1k" &&
+        FormatNativeTradeQuantity(123456000,true)=="1.23k" &&
+        FormatNativeTradeQuantity(100000000000LL,true)=="1M" &&
+        FormatNativeTradeQuantity(99999999999LL,true)=="1M" &&
+        FormatNativeTradeQuantity(99999000,true)=="999.99" &&
+        FormatNativeTradeQuantity(0,true)=="0" && FormatNativeTradeQuantity(-1,true)=="--" &&
+        FormatNativeTradeQuantity(1,true)=="0.00001" && FormatNativeTradeQuantity(123456000)=="1234.56",
+        "compact row quantities use k/M, trim padding, promote rounded suffixes and retain precise facts");
   auto largeWork=stateDocument;largeWork.allFreight=2000000;
   largeWork.goods[0].freight=1234.56;largeWork.goods[1].freight=1000000;
   const auto compactRows=FormatStateFreightGoods(&largeWork,10);
-  Check(variable(compactRows,"ironroad_state_work_10_grain")=="1.2k" &&
-        variable(compactRows,"ironroad_state_work_10_tools")=="1.0M" &&
-        variable(FormatFreightGoods(&largeWork),"ironroad_good_work_grain")=="1234.56",
-        "narrow state column abbreviates large work without changing market precision or model values");
+  Check(variable(compactRows,"ironroad_state_work_10_grain")=="1.23k" &&
+        variable(compactRows,"ironroad_state_work_10_tools")=="1M" &&
+        variable(FormatFreightGoods(&largeWork),"ironroad_good_work_grain")=="1.23k",
+        "market and state lists use the same compact display without changing model values");
   Check(FormatStateFreightGoods(&document,10).empty() && FormatStateFreightGoods(&stateDocument,20).empty(),
         "market totals and another state cannot enter the state column");
   stateFilter.hoverGood=2;
@@ -127,17 +135,17 @@ int main() {
   Check(FormatStateFreightGoods(&invalidState,10).empty(),"unversioned state rows remain unavailable");
   invalidState=stateDocument;invalidState.allFreight=0;
   for(auto& good:invalidState.goods)good.freight=0;
-  Check(variable(FormatStateFreightGoods(&invalidState,10),"ironroad_state_work_10_grain")=="0.00",
+  Check(variable(FormatStateFreightGoods(&invalidState,10),"ironroad_state_work_10_grain")=="0",
         "known zero state work stays distinct from unavailable");
   auto zeroState=snapshot;for(auto& orders:zeroState.orders)if(orders.state==10)orders.state=0;
   auto zeroStateResult=AllocateFreight(zeroState,graph,{});stateFilter.hoverGood=-1;stateFilter.state=0;
   auto zeroStateDocument=BuildLogisticsDocument(zeroState,zeroStateResult,stateFilter);
-  Check(variable(FormatStateFreightGoods(&zeroStateDocument,0),"ironroad_state_work_0_grain")=="50.00",
+  Check(variable(FormatStateFreightGoods(&zeroStateDocument,0),"ironroad_state_work_0_grain")=="50",
         "explicit state zero has its own canonical keys");
   for(auto& orders:zeroState.orders)if(orders.state==0)orders.state=0x80000011;
   zeroStateResult=AllocateFreight(zeroState,graph,{});stateFilter.state=0x80000011;
   zeroStateDocument=BuildLogisticsDocument(zeroState,zeroStateResult,stateFilter);
-  Check(variable(FormatStateFreightGoods(&zeroStateDocument,0x80000011),"ironroad_state_work_-2147483631_grain")=="50.00",
+  Check(variable(FormatStateFreightGoods(&zeroStateDocument,0x80000011),"ironroad_state_work_-2147483631_grain")=="50",
         "state keys match native GetIDString signed decimal formatting for high-bit IDs");
   Check(FormatFreightGoods(&selected)==nativeGoods && FormatFreightGoods(&hoverDocument)==nativeGoods,
         "native goods values and shares stay fixed across category selection and temporary hover");
@@ -157,7 +165,7 @@ int main() {
   invalidGoods=document;invalidGoods.allFreight=0;
   for(auto& good:invalidGoods.goods)good.freight=0;
   const auto zeroGoods=FormatFreightGoods(&invalidGoods);
-  Check(variable(zeroGoods,"ironroad_good_work_grain")=="0.00" && variable(zeroGoods,"ironroad_good_share_grain")=="--",
+  Check(variable(zeroGoods,"ironroad_good_work_grain")=="0" && variable(zeroGoods,"ironroad_good_share_grain")=="--",
         "known zero work differs from an undefined zero-market percentage");
   Check(selected.intermediaryDemand->target==document.intermediaryDemand->target,
         "presentation filters cannot change Freight intermediary demand");

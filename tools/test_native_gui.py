@@ -53,6 +53,7 @@ assert 'Freight demand / fulfilled / unmet (model units):' not in fragment
 assert 'IRONROAD_FREIGHT_WORK' in fragment and 'IRONROAD_FREIGHT_SHARE' in fragment
 assert "Concatenate('ironroad_good_work_', Goods.GetKey)" in fragment
 assert "Concatenate('ironroad_good_share_', Goods.GetKey)" in fragment
+assert "Market.Sort('ironroad_work')" in fragment and "Market.Sort('ironroad_share')" in fragment
 assert fragment.count('__IRONROAD_NATIVE_MARKET_PRICE__') == 1
 # Live 1.13.11 rejects `margin_right` on icon widgets:
 #   pdx_gui_widget.cpp - Property 'margin_right'(815) not handled
@@ -106,6 +107,7 @@ for bad in (state_raw+b'changed', raw):
         raise AssertionError('unknown state GUI or market GUI must be rejected')
 assert 'State.GetIDString' in fragment and 'ironroad_state_rows_id_v1' in fragment
 assert "Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey)))" in fragment
+assert "StatesPanel.Sort('ironroad_work')" in state_patched
 assert 'IRONROAD_STATE_WORK_TOOLTIP' in state_patched
 assert "GetVariableSystem.Get('ironroad_state_context_v1')" in fragment
 for name in ('good', 'direction', 'transport'):
@@ -190,11 +192,31 @@ assert sum(width(node) for node in market_headers) == 540
 assert [width(node) for node in market_headers[:3]] == [55, width(market_columns[0]), width(market_columns[1])]
 assert sum(width(node) for node in market_headers[3:]) == width(market_columns[2])
 assert 55 + sum(width(node) for node in market_columns) == 540, 'market content must fit inherited row'
+for kind, flow in children(market_columns[2][market_columns[2].index('{')+1:-1]):
+    if kind == 'flowcontainer':
+        cells = [width(node) for kind, node in children(flow[flow.index('{')+1:-1]) if kind in ('widget', 'textbox')]
+        assert cells == [95, 95], ('ready and unavailable logistics rows must keep both column widths', cells)
 for key in ('MARKET_PANEL_BALANCE_GOLD', 'MARKET_PANEL_BALANCE', 'MARKET_PANEL_BALANCE_BLUE'):
     start = fragment.rfind('textbox = {', 0, fragment.index('text = "' + key + '"'))
     end = braces(fragment)[fragment.index('{', start)]
     cell = fragment[start:end+1]
     assert 'autoresize' not in cell and re.search(r'size\s*=\s*\{\s*\d+\s+55\s*\}', cell), 'balance floats at row top'
+# Numeric glyphs need an intrinsic-size box anchored at the cell centre;
+# centring only a full-width textbox leaves its contents at the default edge.
+for text, value_key, bound in [(fragment, "ironroad_good_work_", 95),
+                               (fragment, "ironroad_good_share_", 95),
+                               (state_cell, "ironroad_state_work_", 60)]:
+    candidates=[]
+    def walk(text):
+        for kind,node in children(text):
+            if kind=='textbox': candidates.append(node)
+            else: walk(node[node.index('{')+1:-1])
+    walk(text)
+    cells=[node for node in candidates if 'raw_text =' in node and value_key in node]
+    assert cells, value_key
+    for cell in cells:
+        assert 'parentanchor = center' in cell and 'autoresize = yes' in cell, value_key+' glyphs must be centred'
+        assert f'maximumsize = {{ {bound} ' in cell, value_key+' must stay inside its column'
 print('PASS: screenshot layout bounds, state header/cell alignment, market goods header and centered balance cells')
 
 # The formal legend must describe the exact production width bands, not example

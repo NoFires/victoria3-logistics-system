@@ -186,7 +186,7 @@ def patch_state(raw):
     header = header.replace('text = "concept_market_price"', 'text = "IRONROAD_MARKET_PRICE"')
     header = header.replace('text = "PRICE_DIFFERENCE"', 'text = "IRONROAD_PRICE_DIFFERENCE"')
     header += ('sort_button = { align = hcenter|nobaseline text = "IRONROAD_FREIGHT_COLUMN" '
-               'size = { 60 20 } margin_left = 0 margin_right = 0 tooltip = "IRONROAD_STATE_WORK_TOOLTIP" }\n')
+               'size = { 60 20 } margin_left = 0 margin_right = 0 tooltip = "IRONROAD_STATE_WORK_TOOLTIP" enabled = "[And(GetVariableSystem.Exists(\'ironroad_state_rows_id_v1\'), EqualTo_string(GetVariableSystem.Get(\'ironroad_state_rows_id_v1\'), State.GetIDString))]" onclick = "[StatesPanel.Sort(\'ironroad_work\')]" }\n')
     section = section[:row_start] + row + section[row_end+1:]
     section = section[:header_start] + header + section[header_end:]
     section = section[:header_start] + 'ironroad_state_filters = {}\n' + section[header_start:]

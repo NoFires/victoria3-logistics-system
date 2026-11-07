@@ -34,6 +34,11 @@ if ($LASTEXITCODE -ne 0) { throw 'desktop input tests failed' }
 if ($LASTEXITCODE -ne 0) { throw 'readback format tests build failed' }
 & (Join-Path $testBuild 'readback_format_tests.exe')
 if ($LASTEXITCODE -ne 0) { throw 'readback format tests failed' }
+& (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static -DNOMINMAX "-I$here\src" "-I$here\third_party\minhook\include" `
+  -o (Join-Path $testBuild 'native_logistics_sort_tests.exe') (Join-Path $here 'test/native_logistics_sort_tests.cpp') @desktopHooks '-luser32'
+if ($LASTEXITCODE -ne 0) { throw 'native logistics sort tests build failed' }
+& (Join-Path $testBuild 'native_logistics_sort_tests.exe')
+if ($LASTEXITCODE -ne 0) { throw 'native logistics sort tests failed' }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `
   -o (Join-Path $testBuild 'frame_timing_tests.exe') (Join-Path $here 'test\frame_timing_tests.cpp')
 if ($LASTEXITCODE -ne 0) { throw 'frame timing tests build failed' }
@@ -113,6 +118,8 @@ if ($LASTEXITCODE -ne 0) { throw 'native port tests build failed' }
 if ($LASTEXITCODE -ne 0) { throw 'native port tests failed' }
 & $gpuPython (Join-Path $root 'tools\test_native_trade_selector.py')
 if ($LASTEXITCODE -ne 0) { throw 'exact-build native trade selector harness failed' }
+& $gpuPython (Join-Path $root 'tools/test_native_sort_abi.py')
+if ($LASTEXITCODE -ne 0) { throw 'native sorting ABI tests failed' }
 & $gpuPython (Join-Path $root 'tools\test_native_world_hub.py')
 if ($LASTEXITCODE -ne 0) { throw 'exact-build native world hub getter harness failed' }
 & (Join-Path $tools 'g++.exe') -std=c++20 -O2 -static "-I$here\src" `

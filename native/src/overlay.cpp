@@ -12,6 +12,7 @@
 #include "frame_timing.h"
 #include "desktop_test_input.h"
 #include "readback_format.h"
+#include "native_logistics_sort.h"
 
 #include <imgui.h>
 #include <imgui_impl_dx11.h>
@@ -1241,6 +1242,10 @@ bool Overlay::Install(std::string* error) {
 
   if (game.Ready()) {
     uint8_t* base = game.Base();
+    if(m_settings.nativeVariables){
+      std::string why;
+      if(!InstallNativeLogisticsSort(base,&why))V3_WARN("native logistics sorting unavailable: %s",why.c_str());
+    }
     if (m_settings.nativeVariables && m_stateDataLoaded) {
       void* end=base+kRvaAccessScopeEnd;
       void* retire=base+kRvaDestroyNativeWorld;
@@ -2653,6 +2658,7 @@ void Overlay::QueueLogisticsVariables(const std::shared_ptr<const LogisticsDocum
     if (values == m_lastPublished && goods == m_lastGoods && stateId==m_lastStateId) return;
     m_lastStateId=stateId;m_pendingStateId=stateId;
     m_pendingStateDocument=stateLive?document:nullptr;
+    m_pendingSortDocument=(live || stateLive)?document:nullptr;
     m_lastPublished = values;
     m_lastGoods=goods;
     m_pendingGoods=std::move(goods);
@@ -2665,6 +2671,7 @@ void Overlay::QueueLogisticsVariables(const std::shared_ptr<const LogisticsDocum
 
 void __fastcall Overlay::DestroyNativeWorldThunk(void* nativeWorld) {
   Overlay& o=Instance();
+  PublishNativeLogisticsSort(nullptr);
   try {
     const auto world=o.m_snapshotMailbox.RetireWorld(reinterpret_cast<uint64_t>(nativeWorld),o.m_economyWorld);
     if(world) {
@@ -3151,9 +3158,11 @@ void Overlay::PollHideFlows() {
 }
 
 void Overlay::OnUiThreadPublish() {  std::array<std::string, 9> values;
+  RefreshNativeLogisticsSort();
   std::vector<std::pair<std::string,std::string>> goods;
   std::shared_ptr<const FreightFrame> frame;
   std::shared_ptr<const LogisticsDocument> stateDocument;
+  std::shared_ptr<const LogisticsDocument> sortDocument;
   std::string stateId;
   uint64_t applied=0;
   {
@@ -3163,6 +3172,7 @@ void Overlay::OnUiThreadPublish() {  std::array<std::string, 9> values;
     goods=std::move(m_pendingGoods);
     frame=std::move(m_pendingPublishFrame);applied=m_pendingPublishApplied;
     stateDocument=std::move(m_pendingStateDocument);stateId=std::move(m_pendingStateId);
+    sortDocument=std::move(m_pendingSortDocument);
     m_publishPending = false;
   }
   const auto current=[&]{return frame && m_logisticsSession && m_logisticsSession->Status().world==m_economyWorld.load() &&
@@ -3171,6 +3181,7 @@ void Overlay::OnUiThreadPublish() {  std::array<std::string, 9> values;
       stateDocument->world==m_economyWorld.load() &&
       m_nativeStateOwner.CanPublish(*m_logisticsSession,*stateDocument,frame,applied) &&
       stateId==m_nativeStateOwner.ReadyId();};
+  PublishNativeLogisticsSort(nullptr);
   if (frame && !current()) {
     values[0]="waiting for model view";
     for (size_t i=1;i<=5;++i)values[i]="--              ";
@@ -3207,14 +3218,14 @@ void Overlay::OnUiThreadPublish() {  std::array<std::string, 9> values;
   m_writtenGoodsKeys.clear();
   for (auto& [key,value]:goods){rows[key]=value;m_writtenGoodsKeys.push_back(key);}
   for (auto& [key,value]:rows) {
-    const std::string stateValue=value;
+    const std::string displayValue=value;
     if(value.size()<16)value.resize(16,' ');
     std::string error;
     bool written=SetGuiVariable(Game::Instance().Base(),key,value,&error);
     // Prime short strings through the verified heap path, then assign the
     // unpadded text to the existing entry. Padding otherwise elides as "...".
-    if(written && key.starts_with("ironroad_state_work_") && stateValue.size()<16)
-      written=SetGuiVariable(Game::Instance().Base(),key,stateValue,&error);
+    if(written && displayValue.size()<16)
+      written=SetGuiVariable(Game::Instance().Base(),key,displayValue,&error);
     if(!written) {
       published=false;V3_WARN("UI-thread goods variable %s failed: %s",key.c_str(),error.c_str());
     }
@@ -3241,6 +3252,10 @@ void Overlay::OnUiThreadPublish() {  std::array<std::string, 9> values;
     SetGuiVariable(Game::Instance().Base(),"ironroad_goods_context_v1","ironroad-rows-unavailable",&error);
     SetGuiVariable(Game::Instance().Base(),"ironroad_state_rows_id_v1","ironroad-state-unavailable",&error);
     LockGuard lock(m_publishMutex);m_lastPublished={};m_lastGoods.clear();
+  }
+  if(published && current() && !NativeWorldRetired() && (!stateDocument || stateCurrent())){
+    PublishNativeLogisticsSort(sortDocument.get());
+    RefreshNativeLogisticsSort();
   }
   V3_INFO("UI-thread variables published");
   if (m_settings.testHideVariable && !m_hideTestWritten) {

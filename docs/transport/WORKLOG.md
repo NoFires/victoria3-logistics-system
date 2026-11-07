@@ -1,5 +1,29 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-07 — R236完成：最终构建/官方清单与切州自动重排实机
+
+本会话经用户明确授权接管 codex-root-20261107 的 R236 claim（原 claim 未过期、进程仍在），未改动其证据。最终源码按官方入口重跑：build.ps1 exit0；build_tests.ps1 exit0（71 PASS/零FAIL，含 native logistics sorting values 与 64+4 sort ABI）；verify_embedded PASS（26b70987…）；selftest.ps1 PASS 560,386（首跑560,419）；test_debug_default.ps1 PASS 零 UI 顶点；deploy.ps1 exit0，安装＝dist。主体 26b70987…／51,840,048 B，引导 71dae36d…／779,879 B。
+
+实机隐藏桌面 pid45112、同存档/暂停59883360、输入桌面 Default：按上一轮动作序列复现到州434，市场41行/州39行的 work/share 升降序、分类/中文搜索/空结果、原版 price/balance/name 和 price_difference 长键均通过。上一轮反例是切州5后发布前原版以相等值排序、就绪后仍为商品ID顺序；本轮接 019D4EF0 后，未点表头即自动记录 `kind=1 id=5 ready=1 rows=40 ascending=0 descending=1`，ordered_ui 连续3次 key=ironroad_work、count=40，行序为上一轮手动升序的精确逆序，截图物流列 518.26→89.97 单调下降——切州自动重排与方向保持通过。WM_CLOSE exit0；settings 自动恢复；五输入逐字节不变；无游戏。
+
+环境偏差：测试时空闲 10.46 GiB（总 31.66 GiB，Chrome/Steam 占用），复用脚本副本将 12 GiB 门槛降为 8 GiB；仅测试脚本。证据：2026-11-07-r236-final-live（RESULT.md、session-freight.log、ordered-ui.jsonl、state5-auto.png、after.json）；上一轮反例与 ABI 静态证据在 2026-11-07-r236-logistics-columns。A25 同构建三对/20轮尝试因主机内存不足被后台压力管理器停止（仅完成 closed1 重载、无臂数据；游戏正常退出0、settings/五输入保持，证据 2026-11-07-r236-perf）；不 push，goal ACTIVE，A25/A24 与剩余 A01–A27 继续。
+
+### 2026-11-07 — R236进行中：物流列居中/缩写及原版排序接线
+
+新增用户约束已写入AGENTS稳定规则及MASTER：能复用当前原版函数尽量复用。本轮优先市场/物流、州/本地价格的数量和占比居中、1000→1k缩写与数值排序；原生海段方向/州关闭验证顺延，未删除完整目标。
+
+源码已去除数字行初始化后的尾部空格，文字按自身大小锚定列中心，市场/州共享k/M缩写，卡片诊断及底层1e5整数保留。首次单测暴露旧精度期待11.00013，已随新显示契约修正；已通过GUI结构/布局和新数值作用域定向测试。排序接入原版CGuiSort选择/每列方向记录/稳定排序和原生函数对象注册复制释放；仅在自有ironroad_work/ironroad_share键的动态作用域提供已发布复制数值，不重写搜索/分类/排序算法，不改游戏经济或原版排序键。
+
+精确EXE473186e8…/image140000000已独立复核；Ghidra旧同名1.13程序被识别排除，当前显式victoria3-v115-473186e8.exe。64组当前原始机器码比较器/排序/注册/原生clone释放隔离用例PASS（分配、map插入、hash与数值getter为显式fixture；不证明实机UIscope）。新增回归均接统一入口，嵌套原版排序作用域泄漏、短键保留堆存储、未就绪占位列收缩均先复现后修复。
+
+最终完整build.ps1成功，统一build_tests.ps1 exit0（71条PASS、零FAIL）、embedded、自检560421亮像素与默认debug零顶点通过；最终源哈希冻结核对。主体031d397a…／51,308,409B，引导71dae36d…／779,879B，deploy.ps1 exit0且安装=dist，47保留文件/五输入保持。早期GUI归档因构建后修改门控而拒绝、私有冻结清单因路径分隔符和有意资源修改而拒绝，均保留原失败；最终构建后重新冻结并完整重跑检查，不复用失配结论。
+
+当前已自主启动自有隐藏桌面新档PID8804，实机升降序/搜索分类/原版其他排序与视觉验收正在进行，未宣称通过。此前用户暂停已停止旧自有pipeline/编译子进程，随后用户恢复任务；不push，goal ACTIVE。
+
+补充实机反例：031d397a…自有隐藏新档8804/暂停59883360，市场41行的work/share升降序及分类/中文搜索/空结果/原版price-balance-name均通过；州434的39行升降序及price_difference长键返回通过。但切至州5后原版在物流发布前已按相等数值排过一次，发布就绪后列表仍为商品ID顺序，须再点击才恢复。这不是通过项。现已接原版019D4EF0保持方向刷新，当前UI线程重新解析可见typed owner/行，只保留自有复制数值，失败等待下一次UI发布；64排序+4原始刷新ABI及定向值/作用域用例PASS，正在最终完整重建。首会话正常退出0/设置首轮自动恢复/五输入exact。用户期间实际移动鼠标，记录每项前后值而不宣称整场指针不变；测试均无全局输入或切换输入桌面。
+
+证据：E:/Code/v3-analysis/checkpoints/2026-11-07-r236-logistics-columns（before/installed-before、centering-before/after、compact-before、first-*、pre-ready-gate-*、paused.json、sorting-string-xrefs.json、native-sort-vtables.json、sort-abi-first.log、frozen-source.json）。
+
 ### 2026-11-07 — R235：BGRA截图修复与当前构建伦敦/地区实机核对
 
 继续R234同一读回主题，保持原版正式UI、默认关闭调试和严格原生门控；无游戏ABI/分配/地图几何修改。先以未修改67d8主体在真实D3D11 BGRA缓冲复现晚红帧读回13/10/140（预期140/10/13），负例FAIL留档。新增readback_format.h仅接受RGBA/BGRA的UNORM及sRGB四字节布局，按实际Format取RGB，保留编码值/RowPitch，拒绝未知、浮点、压缩和其他像素布局。软件反例及真实RGBA/BGRA延迟帧接入统一入口，不能用测试图代替真实游戏Format证明。

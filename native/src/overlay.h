@@ -246,6 +246,7 @@ class Overlay {
   std::vector<std::pair<std::string,std::string>> m_pendingGoods,m_lastGoods;
   std::shared_ptr<const FreightFrame> m_pendingPublishFrame;
   std::shared_ptr<const LogisticsDocument> m_pendingStateDocument;
+  std::shared_ptr<const LogisticsDocument> m_pendingSortDocument;
   std::string m_pendingStateId,m_lastStateId;
   uint64_t m_pendingPublishApplied=0;
   std::vector<std::string> m_writtenGoodsKeys; // UI thread only; clear removed rows

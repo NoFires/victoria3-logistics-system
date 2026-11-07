@@ -19,14 +19,22 @@ uint8_t Category(const std::string& name) {
   if (name=="military") return 8;
   return 0;
 }
+std::string CompactQuantity(double value) {
+  static constexpr const char* suffixes[]={"","k","M","B","T"};
+  unsigned suffix=0;
+  while(value>=1000 && suffix<4){value/=1000;++suffix;}
+  if(std::round(value*100)>=100000 && suffix<4){value/=1000;++suffix;}
+  char text[64];
+  std::snprintf(text,sizeof(text),"%.*f",value>0 && value<0.01?5:2,value);
+  std::string result=text;
+  while(result.back()=='0')result.pop_back();
+  if(result.back()=='.')result.pop_back();
+  return result+suffixes[suffix];
+}
 } // namespace
 std::string FormatNativeTradeQuantity(int64_t quantity,bool compact) {
   if(quantity<0)return "--";
-  if(compact && quantity>=1000*kNativeTradeQuantityScale){
-    char text[64];const bool millions=quantity>=1000000*kNativeTradeQuantityScale;
-    std::snprintf(text,sizeof(text),"%.1f%s",double(quantity)/kNativeTradeQuantityScale/(millions?1000000:1000),millions?"M":"k");
-    return text;
-  }
+  if(compact)return CompactQuantity(double(quantity)/kNativeTradeQuantityScale);
   char fraction[8];std::snprintf(fraction,sizeof(fraction),"%05lld",(long long)(quantity%kNativeTradeQuantityScale));
   std::string value=std::to_string(quantity/kNativeTradeQuantityScale)+"."+fraction;
   while(value.back()=='0' && value.size()-value.find('.')>3)value.pop_back();
@@ -85,8 +93,7 @@ static std::vector<std::pair<std::string,std::string>> FreightGoodsVariables(con
     }
     const bool valid=std::isfinite(good.freight) && good.freight>=0 && good.freight<=document->allFreight;
     char work[64],share[64];
-    if (valid && compact && good.freight>=1000000) std::snprintf(work,sizeof(work),"%.1fM",good.freight/1000000);
-    else if (valid && compact && good.freight>=1000) std::snprintf(work,sizeof(work),"%.1fk",good.freight/1000);
+    if (valid && compact) std::snprintf(work,sizeof(work),"%s",CompactQuantity(good.freight).c_str());
     else if (valid) std::snprintf(work,sizeof(work),"%.2f",good.freight);
     else std::strcpy(work,"--");
     if (valid && document->allFreight>0)
@@ -132,7 +139,7 @@ LogisticsDocument BuildLogisticsDocument(const EconomySnapshot& snapshot,const N
   return document;
 }
 std::vector<std::pair<std::string,std::string>> FormatFreightGoods(const LogisticsDocument* document) {
-  return FreightGoodsVariables(document,false);
+  return FreightGoodsVariables(document,true);
 }
 std::vector<std::pair<std::string,std::string>> FormatStateFreightGoods(const LogisticsDocument* document,uint32_t state) {
   if (!document || state==UINT32_MAX || document->kind!=FreightViewKind::State ||

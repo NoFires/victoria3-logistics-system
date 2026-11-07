@@ -11,14 +11,14 @@ types ironroad_logistics
             textbox = {
                 visible = "[And3(GetVariableSystem.Exists('ironroad_state_rows_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_rows_id_v1'), State.GetIDString), GetVariableSystem.Exists(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey)))))]"
                 raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey))))]"
-                size = { 60 50 }
+                parentanchor = center autoresize = yes maximumsize = { 60 50 }
                 align = center
                 using = elide_fontsize_min
             }
             textbox = {
                 visible = "[Not(And3(GetVariableSystem.Exists('ironroad_state_rows_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_rows_id_v1'), State.GetIDString), GetVariableSystem.Exists(Concatenate('ironroad_state_work_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey))))))]"
                 raw_text = "--"
-                size = { 60 50 }
+                parentanchor = center autoresize = yes maximumsize = { 60 50 }
                 align = center
             }
         }
@@ -406,9 +406,9 @@ types ironroad_logistics
                 }
             }
             vertical_divider = {}
-            sort_button = { align = hcenter|nobaseline text = "IRONROAD_FREIGHT_WORK" size = { 95 30 } margin_left = 0 margin_right = 0 tooltip = "IRONROAD_WORK_TOOLTIP" }
+            sort_button = { align = hcenter|nobaseline text = "IRONROAD_FREIGHT_WORK" size = { 95 30 } margin_left = 0 margin_right = 0 tooltip = "IRONROAD_WORK_TOOLTIP" enabled = "[And3(GetVariableSystem.Exists('ironroad_goods_context_v1'), GetVariableSystem.Exists('ironroad_hover_context_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_goods_context_v1'), GetVariableSystem.Get('ironroad_hover_context_v1')))]" onclick = "[Market.Sort('ironroad_work')]" }
             vertical_divider = {}
-            sort_button = { align = hcenter|nobaseline text = "IRONROAD_FREIGHT_SHARE" size = { 95 30 } margin_left = 0 margin_right = 0 tooltip = "IRONROAD_SHARE_TOOLTIP" }
+            sort_button = { align = hcenter|nobaseline text = "IRONROAD_FREIGHT_SHARE" size = { 95 30 } margin_left = 0 margin_right = 0 tooltip = "IRONROAD_SHARE_TOOLTIP" enabled = "[And3(GetVariableSystem.Exists('ironroad_goods_context_v1'), GetVariableSystem.Exists('ironroad_hover_context_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_goods_context_v1'), GetVariableSystem.Get('ironroad_hover_context_v1')))]" onclick = "[Market.Sort('ironroad_share')]" }
         }
         flowcontainer = {
             direction = vertical
@@ -435,21 +435,21 @@ types ironroad_logistics
                                 visible = "[And3(GetVariableSystem.Exists('ironroad_goods_context_v1'), GetVariableSystem.Exists('ironroad_hover_context_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_goods_context_v1'), GetVariableSystem.Get('ironroad_hover_context_v1')))]"
                                 widget = {
                                     size = { 95 55 }
-                                    textbox = { visible = "[GetVariableSystem.Exists(Concatenate('ironroad_good_work_', Goods.GetKey))]" raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_good_work_', Goods.GetKey))]" size = { 95 55 } align = center tooltip = "IRONROAD_WORK_TOOLTIP" }
-                                    textbox = { visible = "[Not(GetVariableSystem.Exists(Concatenate('ironroad_good_work_', Goods.GetKey)))]" raw_text = "--" size = { 95 55 } align = center }
+                                    textbox = { visible = "[GetVariableSystem.Exists(Concatenate('ironroad_good_work_', Goods.GetKey))]" raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_good_work_', Goods.GetKey))]" parentanchor = center autoresize = yes maximumsize = { 95 55 } align = center tooltip = "IRONROAD_WORK_TOOLTIP" }
+                                    textbox = { visible = "[Not(GetVariableSystem.Exists(Concatenate('ironroad_good_work_', Goods.GetKey)))]" raw_text = "--" parentanchor = center autoresize = yes maximumsize = { 95 55 } align = center }
                                 }
                                 vertical_divider = {}
                                 widget = {
                                     size = { 95 55 }
-                                    textbox = { visible = "[GetVariableSystem.Exists(Concatenate('ironroad_good_share_', Goods.GetKey))]" raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_good_share_', Goods.GetKey))]" size = { 95 55 } align = center tooltip = "IRONROAD_SHARE_TOOLTIP" }
-                                    textbox = { visible = "[Not(GetVariableSystem.Exists(Concatenate('ironroad_good_share_', Goods.GetKey)))]" raw_text = "--" size = { 95 55 } align = center }
+                                    textbox = { visible = "[GetVariableSystem.Exists(Concatenate('ironroad_good_share_', Goods.GetKey))]" raw_text = "[GetVariableSystem.Get(Concatenate('ironroad_good_share_', Goods.GetKey))]" parentanchor = center autoresize = yes maximumsize = { 95 55 } align = center tooltip = "IRONROAD_SHARE_TOOLTIP" }
+                                    textbox = { visible = "[Not(GetVariableSystem.Exists(Concatenate('ironroad_good_share_', Goods.GetKey)))]" raw_text = "--" parentanchor = center autoresize = yes maximumsize = { 95 55 } align = center }
                                 }
                             }
                             flowcontainer = {
                                 visible = "[Not(And3(GetVariableSystem.Exists('ironroad_goods_context_v1'), GetVariableSystem.Exists('ironroad_hover_context_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_goods_context_v1'), GetVariableSystem.Get('ironroad_hover_context_v1'))))]"
-                                textbox = { raw_text = "--" size = { 95 55 } align = center }
+                                widget = { size = { 95 55 } textbox = { raw_text = "--" parentanchor = center autoresize = yes maximumsize = { 95 55 } align = center } }
                                 vertical_divider = {}
-                                textbox = { raw_text = "--" size = { 95 55 } align = center }
+                                widget = { size = { 95 55 } textbox = { raw_text = "--" parentanchor = center autoresize = yes maximumsize = { 95 55 } align = center } }
                             }
                         }
                     }

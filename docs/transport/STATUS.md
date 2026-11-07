@@ -1,5 +1,15 @@
 # 当前状态
 
+### 2026-11-07 — R236：物流列居中/缩写及原版排序接线（完成）
+
+新增“优先复用原版函数”约束已写入 AGENTS/MASTER。市场/物流与州/本地价格的数量、占比居中；显示统一 k/M 缩写（底层 1e5 整数与卡片精确值不变）；表头接入原版 CGuiSort 的 `Market.Sort`/`StatesPanel.Sort('ironroad_work'/'ironroad_share')`。排序只注册自有键，复用原版 balance 比较器、方向记录、稳定排序与函数对象 clone/释放；不重写搜索/分类/排序，不改经济或原版排序键。
+
+精确 EXE 473186e8… 的原始机器码隔离用例 64+4 PASS（分配/map/hash/数值 getter 为 fixture）；嵌套原版排序作用域、堆键保留、未就绪占位列均先复现后修复。最终完整 `build.ps1` exit0；统一 `build_tests.ps1` exit0（71 PASS、零 FAIL）；`verify_embedded.py` PASS（SHA256=26b70987…）；`selftest.ps1` PASS（560,386 亮像素；首跑560,419，阈值5,000）；`test_debug_default.ps1` PASS（零 UI 顶点，调试窗默认关闭）；`deploy.ps1` exit0，安装＝dist。主体 26b70987…／51,840,048 B，引导 71dae36d…／779,879 B。
+
+实机（本会话接管后重跑）：隐藏桌面自有进程 45112，同存档/暂停 date59883360，输入桌面全程 Default。上一轮反例（切州后发布前原版以相等值排序、就绪后仍为商品 ID 顺序）已复现；本轮接 `0x019D4EF0` 保持方向刷新。州 434 以 `ironroad_work` 升降序通过；切至州 5 后**未点击表头**，日志自动出现 `native logistics sort kind=1 id=5 ready=1 rows=40 ascending=0 descending=1`，`ordered_ui` 读取 key=`ironroad_work`、40 行；行序为上一轮手动升序的精确逆序（同一组数值保持上一轮选定的降序方向），截图物流列 518.26→89.97 单调下降。切州自动重排通过。`WM_CLOSE` exit0；settings 自动恢复；save/settings/ini/content/continue 五输入逐字节不变；无游戏。运行环境偏差：测试时空闲 10.46 GiB（总 31.66 GiB），复用的实机脚本副本把 12 GiB 门槛降为 8 GiB，仅测试脚本、不涉及产品。
+
+证据：E:/Code/v3-analysis/checkpoints/2026-11-07-r236-final-live（RESULT.md、build/tests 日志、session-freight.log、ordered-ui.jsonl、state5-auto.png、after.json）；上一轮反例与静态/ABI 证据在 2026-11-07-r236-logistics-columns。A25 同构建三对/20轮尝试因主机内存不足（空闲降至约2 GiB）被后台压力管理器停止，仅完成 closed1 重载、无臂数据；游戏已正常关闭，settings/五输入保持（证据 2026-11-07-r236-perf）。不 push，完整目标 ACTIVE；同构建 A25、A24 设备丢失及剩余 A01–A27 仍待（A25 待内存充足且用户要求时重跑）。
+
 ### 2026-11-07 — R235：BGRA截图修复与当前构建伦敦/地区实机核对
 
 继续R234同一读回主题，保持原版正式UI、默认关闭调试和严格原生门控；无游戏ABI/分配/地图几何修改。先以未修改67d8主体在真实D3D11 BGRA缓冲复现晚红帧读回13/10/140（预期140/10/13），负例FAIL留档。新增readback_format.h仅接受RGBA/BGRA的UNORM及sRGB四字节布局，按实际Format取RGB，保留编码值/RowPitch，拒绝未知、浮点、压缩和其他像素布局。软件反例及真实RGBA/BGRA延迟帧接入统一入口，不能用测试图代替真实游戏Format证明。

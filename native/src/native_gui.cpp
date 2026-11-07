@@ -181,7 +181,7 @@ bool PatchNativeStateGui(const std::vector<uint8_t>& original,std::string* patch
     replace(header,"text = \"concept_local_price\"","text = \"IRONROAD_LOCAL_PRICE\"\ntooltip = \"concept_local_price\"");
     replace(header,"text = \"concept_market_price\"","text = \"IRONROAD_MARKET_PRICE\"");
     replace(header,"text = \"PRICE_DIFFERENCE\"","text = \"IRONROAD_PRICE_DIFFERENCE\"");
-    header+="sort_button = { align = hcenter|nobaseline text = \"IRONROAD_FREIGHT_COLUMN\" size = { 60 20 } margin_left = 0 margin_right = 0 tooltip = \"IRONROAD_STATE_WORK_TOOLTIP\" }\n";
+    header+="sort_button = { align = hcenter|nobaseline text = \"IRONROAD_FREIGHT_COLUMN\" size = { 60 20 } margin_left = 0 margin_right = 0 tooltip = \"IRONROAD_STATE_WORK_TOOLTIP\" enabled = \"[And(GetVariableSystem.Exists('ironroad_state_rows_id_v1'), EqualTo_string(GetVariableSystem.Get('ironroad_state_rows_id_v1'), State.GetIDString))]\" onclick = \"[StatesPanel.Sort('ironroad_work')]\" }\n";
     section.replace(rowStart,rowEnd-rowStart+1,row);
     section.replace(headerStart,headerEnd-headerStart,header);
     section.insert(headerStart,"ironroad_state_filters = {}\n");
