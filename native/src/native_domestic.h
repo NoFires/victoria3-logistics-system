@@ -284,12 +284,15 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
         if(!runtimeNode(definition,pu64(row,0x10+side*8),nodes[side]))
           return fail("port access endpoint identity differs");
       }
-      const bool firstLand=(nodes[0].flags&0x7f)==2 && !(nodes[0].flags&0x380);
-      const bool secondLand=(nodes[1].flags&0x7f)==2 && !(nodes[1].flags&0x380);
+      const bool firstLand=!(nodes[0].flags&0x380);
+      const bool secondLand=!(nodes[1].flags&0x380);
       if(!((firstLand && (nodes[1].flags&0x380)==0x200) ||
            (secondLand && (nodes[0].flags&0x380)==0x200)))
         return fail("unsupported current port access roles");
       const auto& land=nodes[firstLand?0:1];const auto& sea=nodes[firstLand?1:0];
+      // Kind6 also joins cities and production hubs to the naval network.
+      // This port-only model must skip those actual links, not reject the world.
+      if((land.flags&0x7f)!=2)continue;
       const auto state=provinceState(land.province);
       int64_t distance=0;std::memcpy(&distance,def.data()+0x18,8);
       if(!state || land.anchor>=0x1fffffff || sea.anchor>=0x1fffffff ||

@@ -31,7 +31,7 @@ def run():
         (binary / "version.dll").write_bytes(foreign)
         ini = binary / "freight/freight.ini"
         ini.write_bytes(b"keep=1")
-        env = dict(os.environ)
+        env = {key: value for key, value in os.environ.items() if key.upper() != "PSMODULEPATH"}
         env["PSModulePath"] = str(Path(os.environ["SystemRoot"]) / "System32/WindowsPowerShell/v1.0/Modules")
         def deploy(*args, succeeds=True):
             result = subprocess.run(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",

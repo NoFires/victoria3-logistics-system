@@ -150,8 +150,21 @@ int main(){
         "out-of-bounds current access node rejected");
     Check(bad([&](auto& m){m.template Put<int64_t>(accessDef+0x18,-1);}),
         "negative original access distance rejected");
-    Check(bad([&](auto& m){m.template Put<uint16_t>(ndefB+4,1);}),
-        "primary city cannot impersonate a physical port role");
+    for(uint16_t role:{0x401,0xc01,0x404,0xc04,0x408,0xc08,0x410,0xc10,0x420,0x440,0xc40}){
+      auto other=access;other.Put<uint16_t>(ndefB+4,role);
+      auto filtered=run(other);
+      Check(filtered && filtered->portAccess.empty() && filtered->portTransfers.size()==1 &&
+          filtered->land.size()==1 && filtered->orders==owned->orders,
+          "actual non-port land/sea connections cannot reject unrelated current port and goods data");
+    }
+    auto reversed=access;
+    reversed.Put<uint64_t>(accessDef+8,nndefA);reversed.Put<uint64_t>(accessDef+0x10,ndefB);
+    reversed.Put<uint64_t>(ncrow+0x50,navalNode);reversed.Put<uint64_t>(ncrow+0x58,landNodes+0x30);
+    auto reverseCopy=run(reversed);
+    Check(reverseCopy && reverseCopy->portAccess==owned->portAccess,
+        "current port access roles bind the actual land endpoint in either array order");
+    Check(bad([&](auto& m){m.template Put<uint16_t>(nndefA+4,0x80);}),
+        "sea-region node cannot impersonate the linked naval endpoint");
     Check(bad([&](auto& m){m.template Put<uint64_t>(accessDef+0x20,key);}),
         "keyless access cannot silently replace an authored connection");
   }
