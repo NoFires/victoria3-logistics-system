@@ -1,5 +1,17 @@
 # 当前状态
 
+### 2026-11-07 — R233：隐藏桌面实际启动/键盘隔离通过，鼠标与画面仍待
+
+用户全自动授权继续。产品源码/双DLL未变，仍03182e3b…／71dae36d…；本轮只开发私有测试进程并记录证据，未重建/部署，不继承为新产品回归。先在新建隐藏桌面运行实际D3D11 harness：完整枚举该桌面上的自有PID窗口，960×960 GPU读回有效（自定maxRGB>80计86900像素，不冒充selftest阈值），262帧、退出0；用户输入桌面Default/前台131628/指针605,230保持，未SwitchDesktop/未调用全局输入。第一版过早查询未初始化线程desktop而断言拒绝，第二版读回路径错指dist根目录；其后又误将空桌面的EnumDesktopWindows返回0/无错误当失败，均已修正为当前窗口实际枚举见证，保留脚本与失败证据，不能把未取得见证的旧result当通过。
+
+随后相同产品自主在隐藏桌面加载新档PID20484，实际SDL窗口枚举在CodexFreightGameR233_52976、输入桌面仍Default。phase4/暂停/date59883660，三次正式快照406/359/359ms、4290/4290选路；启动期一次interface identity unavailable拒绝，随后原生面板解码可用，不称零WARN。仅定向F4即可打开原版市场（market0/default）；前后台记录含finally后仍为Default/同前台/同指针。
+
+鼠标/捕获NOT_RUN通过：原生/零点对齐点击均未进入物流页，不能虚报成功。独立只读子进程确认hidden thread的GetCursorPos返回0/ERROR_ACCESS_DENIED5且输出哨兵未改；Present返回0x087a0001，PrintWindow虽返回1但图像停在加载画面。下一步需要隔离模式的虚拟输入和GPU画面读回，先用小型harness验证；不得为实现测试切换用户输入桌面、重用R232有指针副作用方法，或放宽游戏ABI/访问门控。当前游戏已正常WM_CLOSE退出0、隐藏桌面句柄关闭，无游戏或harness进程；独立桌面/键盘隔离子项通过，完整无人值守鼠标/绘图未通过。
+
+退出首版恢复守卫拒绝：独立核对无游戏后，JSON唯一差异是本轮暂设的game.save_on_exit=false（原项不存在），已按备份逐字节原子恢复。推测首版在关闭自有Win32进程/线程句柄前枚举仍含退出进程；仅是推测，不按此覆盖未知设置。私有helper已将句柄关闭提前，尚未用新游戏复验该调整；after-before-settings-recheck.json保留原拒绝，最终after.json/五输入均exact。用户新档/INI/content/continue均始终保持。不push，goal ACTIVE。
+
+证据：E:/Code/v3-analysis/checkpoints/2026-11-07-r233-hidden-desktop/{result.json,harness.log,hidden-harness.ppm,live/launch.json,desktop-window.json,private-cursor-read.json,private-ui.jsonl,private-cleanup.jsonl,session-freight.log,settings-diff.json,settings-restoration.json,after.json}。官方参考：[线程桌面连接](https://learn.microsoft.com/en-us/windows/win32/winstation/thread-connection-to-a-desktop)、[SetCursorPos输入桌面前提](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setcursorpos)、[DXGI状态](https://learn.microsoft.com/en-us/windows/win32/direct3ddxgi/dxgi-status)。文档给出API契约，实际隔离/图像是否有效以上述当前进程证据裁决。
+
 ### 2026-11-07 — R232：全自动原版物流页与20轮重开/后台缓存验收
 
 用户最新明确要求全自动执行，覆盖此前“游戏界面手动”边界；不再等待人工开档或点击。源码/双DLL未改，沿用R231同一03182e3b…／71dae36d…及已通过的官方60条回归，未冒充重新构建。本轮在自有新档PID8672/暂停59883660，以窗口定向F4打开市场、实际按钮进入物流页，生产解码确认market0/tab=ironroad_logistics/41商品。原版界面截图有真实贸易量13497.77287／已建铁路510.99MU，原版价格/趋势/图标列仍在；后台模型3442笔shipment形成208条正式ribbon，failed/dropped均0，首次上传208、池208，峰每帧16次/580us。
