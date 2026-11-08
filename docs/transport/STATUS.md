@@ -1,8 +1,8 @@
 # 当前状态
 
-### 2026-11-08 — R241：枢纽歧义精确证据入库（诊断分支），交付保持 26b70987
+### 2026-11-08 — R241完成：省交换枢纽歧义定性为修正，R242 多枢纽注入立项
 
-省交换 fail-closed 的字段级诊断（state/双方锚点/节点/省份/坐标）经官方入口 exit0 后在夹具世界捕获精确歧义：**state=483，existing anchor=700 node=16290 province=20301 pos=437900000,293200000；incoming anchor=800 node=16293 province=20304 pos=428500000,302000000**——两个 role-1 主枢纽随省交换并入同州，模型按州取唯一装卸点故拒绝（符合规范）。诊断按"证据绑定构建"从 main 撤下，入库 `diagnostic/hub-detail`（d24ab75）；main 0027612 重建逐字节复现 `26b70987…` 并重新部署（安装＝dist），landHubs 输出与成功路径零变化。消歧两条裁决路径（R210 冻结件回放；州定义地理枢纽字段 RE）与红线见 checkpoint2026-11-08-r240-cross-save/NEXT.md。不 push，完整目标 ACTIVE。
+两轮字段级诊断（分支 diagnostic/hub-detail d24ab75→fdb4f7b，官方入口 exit0）在夹具世界捕获：state=483 的 anchor=700（node 16290，province 20301）经 keyless 连接 359（R229 有见证走廊）登记，anchor=800（node 16293，province 20304）经 keyed 连接 93116 登记——两枢纽均有当前对象见证。R229 前旧构建无 keyless 分支、只登记 anchor=800：R210 的 187 ribbons 视图默默漏掉一个有见证枢纽，现行拒绝是修正而非回归。正解为 R242 多枢纽州注入（landHubs 有序集合＋多门注入＋守恒/确定性/缓存身份反例＋夹具实机复验＋同构建门槛重跑），红线与设计见 checkpoint2026-11-08-r240-cross-save/NEXT.md。交付构建保持 26b70987…（main 0027612 重建逐字节复现、已重装），诊断不入交付直至门槛齐。不 push，完整目标 ACTIVE。
 
 ### 2026-11-08 — R240：replace/omit PASS；省交换 fail-closed 发现；跨存档与拓扑通道受限
 

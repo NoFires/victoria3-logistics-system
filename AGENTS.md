@@ -216,9 +216,9 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
-### 2026-11-08 — R241完成：枢纽歧义精确证据入库（诊断分支），交付构建保持不变
+### 2026-11-08 — R241完成：省交换枢纽歧义定性为"修正"，R242 多枢纽注入立项
 
-为省交换世界的 fail-closed 拒绝加入字段级诊断（州/双方锚点/节点/省份/坐标），官方入口 exit0 后在夹具世界捕获：state=483，existing anchor=700 node=16290 province=20301，incoming anchor=800 node=16293 province=20304——两个 role-1 枢纽随省交换并入同州。诊断按"证据绑定构建"从 main 撤下，入库分支 diagnostic/hub-detail（d24ab75）；main 从 0027612 重建逐字节复现 26b70987… 并重新部署（安装＝dist），landHubs 输出与成功路径零变化。消歧裁决两条路径（R210 冻结件回放；州定义地理枢纽字段 RE）与红线记录于 checkpoint2026-11-08-r240-cross-save/NEXT.md。不push，完整目标ACTIVE。
+两轮字段级诊断（分支 diagnostic/hub-detail d24ab75→fdb4f7b，官方入口 exit0）在夹具世界捕获：state=483 的 anchor=700（node 16290，province 20301）经 **keyless 连接 359**（R229 有见证走廊）登记，anchor=800（node 16293，province 20304）经 **keyed 连接 93116** 登记——两个枢纽均有当前对象见证。R229 前旧构建无 keyless 分支，只登记 anchor=800：**R210 的 187 ribbons 视图默默漏掉一个有见证枢纽，现行拒绝是修正而非回归**。正解为 R242 多枢纽州注入（landHubs 改有序集合、州净供需多门注入、守恒/确定性/缓存身份反例、夹具实机复验＋同构建门槛重跑），红线与设计记于 checkpoint2026-11-08-r240-cross-save/NEXT.md。交付构建保持 26b70987…（main 0027612 重建逐字节复现、已重装），诊断不入交付直至门槛齐。不push，完整目标ACTIVE。
 
 ### 2026-11-08 — R240完成：replace/omit 复绑、省交换 fail-closed 发现
 
