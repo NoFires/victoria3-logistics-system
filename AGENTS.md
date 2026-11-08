@@ -216,6 +216,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-08 — R242完成：多枢纽州注入落地，省交换世界正常发布；交付晋级 b035a8c1
+
+landHubs 改为州→升序锚点集合，模型注入按州自有枢纽交集（无自有枢纽保持唯一区枢纽借用，区多枢纽不借用）——vanilla 逐位一致；匿名 role-1 路点优雅跳过。统一入口全 PASS（多枢纽/匿名/身份/负例覆盖）。省交换夹具实机：快照接受＋land=514 shipments=3583＋owner selected＋206 ribbons 冷建（此前 fail-closed）。交付晋级 freight b035a8c1…（51,911,326B）：官方清单/selftest 560463/默认debug/deploy 全过；同构建 A25 三对 P95 +0.661/+0.616/+0.500ms≤2、模拟最大降 0.56%≤5%、20 轮 uploads=0 reused=206 pool=206 repeats_skipped=1…20。过程失败保留：首版交集未去重→重复注入点拒绝（补排序去重）。R237–R239 证据绑定 26b70987；b035a8c1 的部署矩阵/生命周期子项待同构建复验。不push，完整目标ACTIVE。详见STATUS与checkpoint2026-11-08-r242-perf、r239-map-compat/R242-RESULT.md。
+
 ### 2026-11-08 — R241完成：省交换枢纽歧义定性为"修正"，R242 多枢纽注入立项
 
 两轮字段级诊断（分支 diagnostic/hub-detail d24ab75→fdb4f7b，官方入口 exit0）在夹具世界捕获：state=483 的 anchor=700（node 16290，province 20301）经 **keyless 连接 359**（R229 有见证走廊）登记，anchor=800（node 16293，province 20304）经 **keyed 连接 93116** 登记——两个枢纽均有当前对象见证。R229 前旧构建无 keyless 分支，只登记 anchor=800：**R210 的 187 ribbons 视图默默漏掉一个有见证枢纽，现行拒绝是修正而非回归**。正解为 R242 多枢纽州注入（landHubs 改有序集合、州净供需多门注入、守恒/确定性/缓存身份反例、夹具实机复验＋同构建门槛重跑），红线与设计记于 checkpoint2026-11-08-r240-cross-save/NEXT.md。交付构建保持 26b70987…（main 0027612 重建逐字节复现、已重装），诊断不入交付直至门槛齐。不push，完整目标ACTIVE。
