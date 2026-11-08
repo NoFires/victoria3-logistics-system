@@ -17,8 +17,15 @@ namespace v3 {
 inline bool IsNativeCapturePoint(uint64_t caller,const NativeAccessObservation& s) {
   return caller==kRvaCommandScopeReturn && s.phase==4 && s.access==2 && !s.hidden && s.owns==1 && s.context==1;
 }
-inline bool NativeCaptureDue(bool paused,uint64_t request,uint64_t copiedRequest,uint64_t now,uint64_t copiedAt) {
-  return paused || request!=copiedRequest || now-copiedAt>=30000;
+// A completed command captures when that command enters pause, when the world
+// or request changed, or 30 s after the last copy. Commands while already
+// paused reuse the last snapshot: repeating whole-world copies at the same
+// date blocked the command thread ~390 ms each (four copies in one second).
+// Paused edits surface at the next pause entry or within the same 30 s bound
+// the running state already has.
+inline bool NativeCaptureDue(bool paused,bool pausedAtLastCommand,uint64_t world,uint64_t copiedWorld,
+                             uint64_t request,uint64_t copiedRequest,uint64_t now,uint64_t copiedAt) {
+  return (paused && !pausedAtLastCommand) || world!=copiedWorld || request!=copiedRequest || now-copiedAt>=30000;
 }
 struct NativeCaptureRequest {
   // revision is the minimum version allocated for this resident request;

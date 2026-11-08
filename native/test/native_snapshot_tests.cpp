@@ -6,10 +6,12 @@
 using namespace v3;
 void Check(bool ok,const char* why){if(!ok){std::printf("FAIL: %s\n",why);std::exit(1);}}
 int main(){
-  Check(!NativeCaptureDue(false,2,2,30999,1000) && NativeCaptureDue(false,2,2,31000,1000),
+  Check(!NativeCaptureDue(false,false,1,1,2,2,30999,1000) && NativeCaptureDue(false,false,1,1,2,2,31000,1000),
       "running collection waits 30 seconds, including the exact boundary");
-  Check(NativeCaptureDue(true,2,2,1001,1000),"last paused command is captured without waiting for a later command");
-  Check(NativeCaptureDue(false,3,2,1001,1000),"new world/request bypasses previous world's timer");
+  Check(NativeCaptureDue(true,false,1,1,2,2,1001,1000),"entering pause captures once so inspection starts fresh");
+  Check(!NativeCaptureDue(true,true,1,1,2,2,1001,1000),"commands while already paused reuse the last snapshot");
+  Check(NativeCaptureDue(false,false,2,1,2,2,1001,1000) && NativeCaptureDue(false,false,1,1,3,2,1001,1000),
+      "new world/request bypasses previous world's timer");
   NativeAccessObservation s;s.phase=4;s.access=2;s.owns=1;s.context=1;
   Check(IsNativeCapturePoint(kRvaCommandScopeReturn,s),"completed command with native ownership accepted");
   Check(!IsNativeCapturePoint(kRvaCommandScopeReturn+1,s),"same scope flags at another caller confer no permission");

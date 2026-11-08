@@ -1,5 +1,13 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-08 — R251：暂停期重复全量采集修复（ba13a595…）
+
+用户实机报告暂停前后卡顿并给出机制分析：暂停命令安全窗口内同步复制全世界（~390 ms），`NativeCaptureDue`（native_snapshot.h:20）只要已暂停就允许再次全量采集，同日期连抄使界面 `--` 后重算；要求修重复采集与刷新交接本身，不藏 `--`。现场日志复核（用户会话）：date=59885544 两次同日期复制、date=59885832 四次（rev22–25，375+391+375+391 ms ≈ 1.5 s 命令线程阻塞；rev22/rev24 未进 UI 交接，纯冗余）。
+
+修复（4 文件 +27/−11，源码前备份 checkpoint before/）：gate 改边沿触发 `(paused && !pausedAtLastCommand) || world!=copiedWorld || request!=copiedRequest || now-copiedAt>=30000`；overlay 调用点每次完成命令更新 seen 标记、发布时记录 copiedWorld；测试改 4 组契约（30 秒边界含精确值、进暂停触发一次、暂停中复用、世界/请求变化立即复制）。定向编译运行 PASS；官方 build_tests.ps1 exit 0（72 PASS，日志 2 处 FAIL 字样匹配为 "fail-closed"/"failed" 文案）；verify_embedded（SHA=ba13a595…）/selftest 560396/默认 debug 零顶点通过；deploy.ps1 exit 0，安装=dist（51,928,202 B）。
+
+实机：session_default 启动 38824（audit.json 首版因 PowerShell UTF8 BOM 解析失败，无 BOM 重写后成功——已记录）；载入爆发仅 1 次复制（旧构建同场景 4 次）。随后用户本人接管手动游玩（用户明示"是我操控的"），16 次复制对应 16 个不同日期、零同日期重复（最小间隔 1.156 s），每次复制对应一次进入暂停；验证脚本"交互期间日期不变"断言被手动游玩作废（r251_verify.py 保留，同日期间隔断言改在真实游玩日志复核通过）。会话由用户退出，exit 0、设置恢复、五输入逐字节保持、无残留进程。边界：每次进暂停仍一次 ~375 ms 复制（新鲜数据代价）；运行态零新增复制；同构建 A25/生命周期/改图矩阵未重跑；海端 2 unavailable/36 partial 未变。claim R251（owner bg-r251）登记。证据：live/old-session-copies.log（旧缺陷）、live/new-session-manual-play.log（修复后真实游玩）、live/after.json、build/tests/deploy 日志。
+
 ### 2026-11-08 — R250：审查后更新完整交付目标，保持暂停
 
 用户先要求ponytail-review核对进度，随后要求“更新目标”。本轮只读核对源码/测试/调用链、R245原始流水线、R246–R249证据；dist=安装13f2aeb9…/71dae36d…、当前133文件=R245测试冻结（71 PASS/0 FAIL），产品未改、未新建游戏或运行测试。按MASTER §2.4完整重读00/01/03用于任务书交接。

@@ -2728,11 +2728,15 @@ void Overlay::CopyAtNativeScopeEnd(uint64_t caller) {
     V3_INFO("native snapshot source bound before copy: world=%llu",(unsigned long long)request->world);
   }
   const auto start=GetTickCount64();std::string why;
-  // Paused commands are sparse but may be the last write before a long idle.
-  // Always retain their latest input. Running simulation copies at most once
-  // per 30 seconds; rendering never triggers a database scan.
-  if(!NativeCaptureDue(access->paused,request->revision,m_lastNativeRequestRevision.load(),
-                       start,m_lastNativeSnapshotAt.load()))return;
+  // Entering pause captures once so inspection starts from fresh data;
+  // further paused commands reuse the last copy. Running simulation copies at
+  // most once per 30 seconds; rendering never triggers a database scan.
+  const bool due=NativeCaptureDue(access->paused,m_lastNativeCommandPaused.load(),
+                                  request->world,m_lastNativeSnapshotWorld.load(),
+                                  request->revision,m_lastNativeRequestRevision.load(),
+                                  start,m_lastNativeSnapshotAt.load());
+  m_lastNativeCommandPaused.store(access->paused);
+  if(!due)return;
   const uint64_t revision=++m_economyRevision;
   auto copy=CopyNativeSnapshot(memory,base,tls,caller,*request,revision,[&]{
     return m_snapshotMailbox.Current(request) && request->world==m_economyWorld.load();
@@ -2752,6 +2756,7 @@ void Overlay::CopyAtNativeScopeEnd(uint64_t caller) {
   }
   if(m_snapshotMailbox.Publish(request,copy)) {
     m_lastNativeSnapshotAt.store(GetTickCount64());m_lastNativeRequestRevision.store(request->revision);
+    m_lastNativeSnapshotWorld.store(request->world);
     V3_INFO("native snapshot copied: thread=%lu world=%llu revision=%llu date=%u states=%zu goods=%zu legacy_orders/rails=not_collected total=%llu ms",
         GetCurrentThreadId(),(unsigned long long)request->world,(unsigned long long)revision,
         copy->identity.date,copy->states.size(),copy->catalog.goods.size(),(unsigned long long)(GetTickCount64()-start));

@@ -308,7 +308,9 @@ class Overlay {
   std::atomic<bool> m_nativeRecoveryStatusDirty{false};
   void PollHideFlows();
   NativeSnapshotMailbox m_snapshotMailbox;
-  std::atomic<uint64_t> m_lastNativeSnapshotAt{0},m_lastNativeRequestRevision{0};
+  std::atomic<uint64_t> m_lastNativeSnapshotAt{0},m_lastNativeRequestRevision{0},
+      m_lastNativeSnapshotWorld{0};
+  std::atomic<bool> m_lastNativeCommandPaused{false};
   void RequestNativeSnapshot();
   void CopyAtNativeScopeEnd(uint64_t caller);
   // UI drains owned copies only. Engine database copies run in the completed
