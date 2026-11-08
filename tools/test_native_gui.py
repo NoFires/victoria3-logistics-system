@@ -53,6 +53,15 @@ assert 'Freight demand / fulfilled / unmet (model units):' not in fragment
 assert 'IRONROAD_FREIGHT_WORK' in fragment and 'IRONROAD_FREIGHT_SHARE' in fragment
 assert "Concatenate('ironroad_good_work_', Goods.GetKey)" in fragment
 assert "Concatenate('ironroad_good_share_', Goods.GetKey)" in fragment
+assert 'tooltip = "IRONROAD_GOOD_DEMAND_TOOLTIP"' in fragment
+assert 'tooltip = "IRONROAD_STATE_DEMAND_TOOLTIP"' in fragment
+for content in localization_files().values():
+    assert content.startswith(b'\xef\xbb\xbf')
+    text = content.decode('utf-8-sig')
+    assert re.search(r'IRONROAD_GOOD_DEMAND_TOOLTIP:0 "[^\n]*ironroad_good_demand_', text)
+    assert re.search(r'IRONROAD_STATE_DEMAND_TOOLTIP:0 "[^\n]*ironroad_state_demand_[^\n]*State.GetIDString', text)
+    assert text.count('IRONROAD_GOOD_DEMAND_TOOLTIP:0') == 1
+    assert text.count('IRONROAD_STATE_DEMAND_TOOLTIP:0') == 1
 assert "Market.Sort('ironroad_work')" in fragment and "Market.Sort('ironroad_share')" in fragment
 assert fragment.count('__IRONROAD_NATIVE_MARKET_PRICE__') == 1
 # Live 1.13.11 rejects `margin_right` on icon widgets:

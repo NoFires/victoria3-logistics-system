@@ -487,7 +487,7 @@ int main() {
     Check(doc && doc->kind==FreightViewKind::State && doc->state==30 && doc->market==7 &&
           doc->selectionFreight==3 && doc->allFreight==13 && native.Status().owner==kOwnerNativeState &&
           owner.CanPublish(native,*doc,frame,applied),"state frame and publication retain scope plus fixed market denominator");
-    Check(owner.ReadyId()=="30" && FormatStateFreightGoods(doc.get(),30).size()==2,"state ready ID matches canonical row payload");
+    Check(owner.ReadyId()=="30" && FormatStateFreightGoods(doc.get(),30).size()==4,"state ready ID matches canonical row payload");
     auto missing=panel;missing.available=false;
     Check(owner.Update(native,missing,roster,true).closed && !owner.CanPublish(native,*doc,frame,applied),
           "unreadable state panel withdraws the queued rows");

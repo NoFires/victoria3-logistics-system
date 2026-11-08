@@ -804,6 +804,9 @@ int main(){
     auto domesticRibbons=BuildNativeTradeRibbons(*domesticFacts,*domesticView);
     Check(domesticRibbons && domesticRibbons->size()==3,"current land geometry is drawn alongside original sea trade");
     auto domesticDocument=BuildLogisticsDocument(domesticSnapshot,*domesticView,filter);
+    Check(Variable(FormatFreightGoods(&domesticDocument),"ironroad_good_demand_grain")=="500.00 / 500.00 / 0.00" &&
+        Variable(FormatFreightGoods(&domesticDocument),"ironroad_good_demand_unused")=="0.00 / 0.00 / 0.00",
+        "native market row publishes per-good demand and explicit zero through the existing variable writer");
     Check(domesticDocument.nativeTrade->domesticScopeQuantity==50000000 &&
         domesticDocument.nativeTrade->scopeQuantity-domesticDocument.nativeTrade->domesticScopeQuantity==700012 &&
         FormatFreightDemand(&domesticDocument)=="500.00 / 500.00 / 0.00",
@@ -830,6 +833,9 @@ int main(){
     Check(domesticState && domesticState->scopeQuantity==50000000 && domesticState->domesticTarget==500000 &&
         domesticState->segments.size()==1 && domesticState->segments[0].direction==1,"domestic state counts its final imports once with incoming direction");
     auto stateDocument=BuildLogisticsDocument(domesticSnapshot,*domesticState,stateFilter);
+    Check(Variable(FormatStateFreightGoods(&stateDocument,400),"ironroad_state_demand_400_grain")=="500.00 / 500.00 / 0.00" &&
+        FormatStateFreightGoods(&stateDocument,100).empty(),
+        "native state demand variables require the current exact state scope");
     const auto stateGrain=std::find_if(stateDocument.goods.begin(),stateDocument.goods.end(),
         [](const LogisticsGood& row){return row.id==1;});
     Check(stateGrain!=stateDocument.goods.end() && stateGrain->intermediaryDemand &&
@@ -838,6 +844,50 @@ int main(){
         stateGrain->intermediaryDemand->unmet==stateDocument.intermediaryDemand->unmet,
         "per-good contribution follows the same state scope as the ledger totals");
     auto disconnected=std::make_shared<NativeDomesticSources>(*inputs);disconnected->land.clear();source->domestic=disconnected;
+    {
+      auto multiSnapshot=domesticSnapshot;
+      auto multiSource=std::make_shared<NativeWorldTradeSnapshot>(*source);
+      auto multiInputs=std::make_shared<NativeDomesticSources>(*inputs);
+      multiInputs->orders.insert(multiInputs->orders.end(),{{100,UINT32_MAX,7,2,100000,0},
+          {400,UINT32_MAX,7,2,0,250000},{200,UINT32_MAX,8,2,0,900000}});
+      multiSource->statePairs.clear();multiSource->groupPairs.clear();multiSource->domestic=multiInputs;
+      multiSnapshot.nativeTrade=multiSource;
+      auto facts=BuildNativeTradeFacts(multiSnapshot);
+      auto view=facts?BuildNativeTradeView(multiSnapshot,*facts,filter):std::nullopt;
+      Check(view.has_value(),"two-good native domestic fixture is valid");
+      auto doc=BuildLogisticsDocument(multiSnapshot,*view,filter);
+      const auto rows=FormatFreightGoods(&doc);
+      Check(FormatFreightDemand(&doc)=="750.00 / 600.00 / 150.00" &&
+          Variable(rows,"ironroad_good_demand_grain")=="500.00 / 500.00 / 0.00" &&
+          Variable(rows,"ironroad_good_demand_iron")=="250.00 / 100.00 / 150.00",
+          "two goods sum to the market ledger while insufficient supply retains unmet demand");
+      auto selected=filter;selected.search="grain";selected.hoverGood=2;
+      auto filtered=BuildNativeTradeView(multiSnapshot,*facts,selected);
+      auto filteredDoc=BuildLogisticsDocument(multiSnapshot,*filtered,selected);
+      Check(FormatFreightGoods(&filteredDoc)==rows && FormatFreightDemand(&filteredDoc)==FormatFreightDemand(&doc),
+          "search and hover never change per-good demand or its full-market total");
+      auto scoped=filter;scoped.kind=FreightViewKind::State;scoped.state=100;
+      auto stateView=BuildNativeTradeView(multiSnapshot,*facts,scoped);
+      auto stateDoc=BuildLogisticsDocument(multiSnapshot,*stateView,scoped);
+      Check(FormatFreightDemand(&stateDoc)=="0.00 / 0.00 / 0.00" &&
+          Variable(FormatStateFreightGoods(&stateDoc,100),"ironroad_state_demand_100_iron")=="0.00 / 0.00 / 0.00",
+          "exporter demand is not inferred from its shipped quantity");
+      scoped.state=400;stateView=BuildNativeTradeView(multiSnapshot,*facts,scoped);
+      stateDoc=BuildLogisticsDocument(multiSnapshot,*stateView,scoped);
+      Check(FormatFreightDemand(&stateDoc)==FormatFreightDemand(&doc) &&
+          Variable(FormatStateFreightGoods(&stateDoc,400),"ironroad_state_demand_400_iron")=="250.00 / 100.00 / 150.00",
+          "switching states publishes the current importing state's full demand contribution");
+      scoped.kind=FreightViewKind::Market;scoped.market=8;
+      stateView=BuildNativeTradeView(multiSnapshot,*facts,scoped);stateDoc=BuildLogisticsDocument(multiSnapshot,*stateView,scoped);
+      Check(FormatFreightDemand(&stateDoc)=="900.00 / 0.00 / 900.00" &&
+          Variable(FormatFreightGoods(&stateDoc),"ironroad_good_demand_grain")=="0.00 / 0.00 / 0.00",
+          "another market cannot borrow the first market's goods or fulfillment");
+      multiInputs->land.clear();facts=BuildNativeTradeFacts(multiSnapshot);view=BuildNativeTradeView(multiSnapshot,*facts,filter);
+      doc=BuildLogisticsDocument(multiSnapshot,*view,filter);
+      Check(FormatFreightDemand(&doc)=="750.00 / 0.00 / 750.00" &&
+          Variable(FormatFreightGoods(&doc),"ironroad_good_demand_iron")=="250.00 / 0.00 / 250.00",
+          "disconnected goods retain their original targets as unmet instead of disappearing");
+    }
     auto disconnectedFacts=BuildNativeTradeFacts(domesticSnapshot);auto disconnectedView=BuildNativeTradeView(domesticSnapshot,*disconnectedFacts,filter);
     Check(disconnectedView && disconnectedView->domesticMarketQuantity==0 && disconnectedView->domesticTarget==500000 &&
         disconnectedView->domesticUnmet==500000 && disconnectedView->marketQuantity==700012,

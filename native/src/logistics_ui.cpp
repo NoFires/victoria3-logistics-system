@@ -40,17 +40,20 @@ std::string FormatNativeTradeQuantity(int64_t quantity,bool compact) {
   while(value.back()=='0' && value.size()-value.find('.')>3)value.pop_back();
   return value;
 }
-std::string FormatFreightDemand(const LogisticsDocument* document) {
-  if (!document || !document->world || document->synthetic ||
-      document->freightDemandRevision != kFreightDemandRevision || !document->intermediaryDemand)
-    return "-- / -- / --";
-  const auto& d = *document->intermediaryDemand;
+static std::string FormatDemand(const std::optional<FreightDemand>& demand) {
+  if (!demand) return "-- / -- / --";
+  const auto& d = *demand;
   if (!std::isfinite(d.target) || !std::isfinite(d.fulfilled) || !std::isfinite(d.unmet) ||
       d.target < 0 || d.fulfilled < 0 || d.unmet < 0 || d.fulfilled > d.target)
     return "-- / -- / --";
   char buffer[192];
   std::snprintf(buffer, sizeof(buffer), "%.2f / %.2f / %.2f", d.target, d.fulfilled, d.unmet);
   return buffer;
+}
+std::string FormatFreightDemand(const LogisticsDocument* document) {
+  if (!document || !document->world || document->synthetic ||
+      document->freightDemandRevision != kFreightDemandRevision) return "-- / -- / --";
+  return FormatDemand(document->intermediaryDemand);
 }
 std::string FormatFreightWork(const LogisticsDocument* document) {
   if(document && document->world && !document->synthetic && document->nativeTrade){
@@ -81,6 +84,9 @@ static std::vector<std::pair<std::string,std::string>> FreightGoodsVariables(con
   for (const auto& good:document->goods) {
     if (good.key.empty() || good.key.size()>128 || std::any_of(good.key.begin(),good.key.end(),[](char c){
         return !((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='_');})) return {};
+    values.emplace("ironroad_good_demand_"+good.key,
+        FormatDemand(document->freightDemandRevision==kFreightDemandRevision && document->intermediaryDemand
+                     ?good.intermediaryDemand:std::nullopt));
     if(document->nativeTrade){
       const int64_t total=document->nativeTrade->marketQuantity;
       const bool valid=total>=0 && good.tradeQuantity && *good.tradeQuantity>=0 && *good.tradeQuantity<=total;
@@ -152,9 +158,11 @@ std::vector<std::pair<std::string,std::string>> FormatStateFreightGoods(const Lo
   if (std::count_if(document->states.begin(),document->states.end(),[&](const auto& s){return s.id==state;})!=1 ||
       std::none_of(document->states.begin(),document->states.end(),[&](const auto& s){return s.id==state && s.market==document->market;})) return {};
   std::vector<std::pair<std::string,std::string>> values;
-  const std::string prefix="ironroad_good_work_";
   for (auto& [key,value]:FreightGoodsVariables(document,true))
-    if (key.starts_with(prefix)) values.emplace_back("ironroad_state_work_"+std::to_string(int32_t(state))+"_"+key.substr(prefix.size()),std::move(value));
+    for (const std::string field:{"work_","demand_"}) {
+      const std::string prefix="ironroad_good_"+field;
+      if (key.starts_with(prefix)) values.emplace_back("ironroad_state_"+field+std::to_string(int32_t(state))+"_"+key.substr(prefix.size()),std::move(value));
+    }
   return values;
 }
 void LogisticsSelection::SetCategory(GoodsCategory category) {

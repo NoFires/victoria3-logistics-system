@@ -93,16 +93,31 @@ int main() {
     const auto found=std::find_if(values.begin(),values.end(),[&](const auto& row){return row.first==key;});
     return found==values.end()?std::string{}:found->second;
   };
-  Check(nativeGoods.size()==4 && variable(nativeGoods,"ironroad_good_work_grain")=="50" &&
+  Check(nativeGoods.size()==6 && variable(nativeGoods,"ironroad_good_work_grain")=="50" &&
         variable(nativeGoods,"ironroad_good_share_grain")=="71.4%",
         "native row variables use weighted order-distance and a whole-market percentage");
   auto stateFilter=filter;stateFilter.kind=FreightViewKind::State;stateFilter.state=10;
   auto stateDocument=BuildLogisticsDocument(snapshot,allocated,stateFilter);
   const auto stateRows=FormatStateFreightGoods(&stateDocument,10);
-  Check(stateDocument.kind==FreightViewKind::State && stateDocument.state==10 && stateRows.size()==2 &&
+  Check(stateDocument.kind==FreightViewKind::State && stateDocument.state==10 && stateRows.size()==4 &&
         variable(stateRows,"ironroad_state_work_10_grain")=="50" &&
         variable(stateRows,"ironroad_state_work_10_tools")=="20",
         "native state rows publish final input/output work under state and good identity");
+  Check(variable(nativeGoods,"ironroad_good_demand_grain")=="9.00 / 5.00 / 4.00" &&
+        variable(nativeGoods,"ironroad_good_demand_tools")=="2.00 / 2.00 / 0.00" &&
+        variable(stateRows,"ironroad_state_demand_10_grain")=="0.00 / 0.00 / 0.00",
+        "goods demand variables retain target, fulfilled and unmet at market or state scope");
+  auto missingDemand=document;missingDemand.goods[0].intermediaryDemand.reset();
+  Check(variable(FormatFreightGoods(&missingDemand),"ironroad_good_demand_grain")=="-- / -- / --",
+        "missing per-good demand is unavailable rather than a fabricated zero");
+  missingDemand=document;missingDemand.freightDemandRevision=0;
+  Check(variable(FormatFreightGoods(&missingDemand),"ironroad_good_demand_grain")=="-- / -- / --",
+        "unverified demand revision cannot publish per-good values");
+  for(double invalid:{-1.,double(INFINITY),double(NAN)}){
+    auto invalidDemand=document;invalidDemand.goods[0].intermediaryDemand->fulfilled=invalid;
+    Check(variable(FormatFreightGoods(&invalidDemand),"ironroad_good_demand_grain")=="-- / -- / --",
+        "per-good demand shares the total ledger validation");
+  }
   Check(FormatNativeTradeQuantity(100000000,true)=="1k" &&
         FormatNativeTradeQuantity(123456000,true)=="1.23k" &&
         FormatNativeTradeQuantity(100000000000LL,true)=="1M" &&

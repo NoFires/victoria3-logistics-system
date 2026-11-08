@@ -215,8 +215,14 @@ def localization_files():
                          if language == 'english' else
                          ['物流', '当前州原版贸易量＋国内模型分配，最终输入／输出每笔只计一次，单位为商品数量。缺少原版图形保留已知原版数量；-- 仅表示数据不可用。'])
         keys += ['LOCAL_PRICE', 'MARKET_PRICE', 'PRICE_DIFFERENCE']
+        keys += ['GOOD_DEMAND_TOOLTIP', 'STATE_DEMAND_TOOLTIP']
+        demand = ('$IRONROAD_FREIGHT_LEDGER$: ',
+                  '\\nDomestic model demand from this good; default coefficient 1. This is a demand ledger, not goods traded, convoy usage or distance work.' if language == 'english' else
+                  '\\n该商品贡献的国内模型需求，默认系数为1。这是需求账，不是商品贸易量、运输船占用或距离工作量。')
         translations += (['Local price', 'Market price', 'Difference'] if language == 'english'
                          else ['本地价', '市场价', '价差'])
+        translations += ["$IRONROAD_WORK_TOOLTIP$\\n\\n" + demand[0] + "[GetVariableSystem.Get(Concatenate('ironroad_good_demand_', Goods.GetKey))]" + demand[1],
+                         "$IRONROAD_STATE_GOOD_TOOLTIP$\\n\\n" + demand[0] + "[GetVariableSystem.Get(Concatenate('ironroad_state_demand_', Concatenate(State.GetIDString, Concatenate('_', Goods.GetKey))))]" + demand[1]]
         keys += ['ORDERS_LEDGER', 'FREIGHT_LEDGER', 'MODEL_ALLOCATION', 'MAP_RETIRED']
         translations += (['Goods quantity: total / original trade / domestic model allocation',
                           'Domestic Freight demand: target / fulfilled / unmet', 'Original trade + domestic model allocation',
