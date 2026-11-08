@@ -1,5 +1,21 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-09 — R254：恢复目标，bc96745c改图五正例/替换缺文件负例与就绪判据重绑
+
+本次恢复发现当前main已到73a903b：R251暂停重复采集、R252逐商品Freight字段及R253同构建A25已由新提交实现；起初预留的R251号在编辑前改为未使用的R254，不覆盖或重复旧修复。用户恢复后的目标保持ACTIVE。完整重读01/02/03，核对当前代码/测试/状态；主体bc96745c…/引导71dae36d…安装=dist，产品源码/DLL未变，沿用R252官方72 PASS及R253性能证据，不虚报重建/部署/重测性能。经济策划文档不扩为本轮经济写入授权。
+
+修正仅私有验收脚本的就绪判断：绑定本会话loader标记之后、当前world/revision的native snapshot UI handoff，再要新GPU读回并验证原版面板open/tab/count；删除泛化启动UI变量发布和固定10秒延时。五个有效场景均一次通过此判据，无全局输入/抢焦点/切换桌面；输入桌面Default，用户自然前台/指针变化逐项记录，不称整场坐标恒定。
+
+五场自有隐藏新1.15存档均暂停date59883360：replace12572、目录5804、ZIP25468均BEKES definition150/geo901/valid1；省交换39548的0087C9模板region id140/geo155/valid1；同key样条12060点268437460实际X4082.966309、预期X+10误差0。各1156州/54商品、正式物流41行数值可见，无snapshot pending/--；gen2/world1/rev2完成206条ribbon，uploads206/reused0/pool206/failed0/dropped0，每帧最多16次、超时0，峰449/539/603/656/577us。每场一次启动期interface identity unavailable后恢复。每场仅一次全量采集391/406/406/391/407ms，确认当前门控行为，不冒充空格事件延迟对照。
+
+当前四个非省交换场景selection_fixed1364829646（13648.29646），省交换1365255755（13652.55755），比旧13f2多次启动采集时的值略有差异；按本次实际快照记录，未强制旧期望或证明跨版本/初始化时序数值完全相同。原始日志保留供后续输入/初始化稳定性核对。GPU截图只证明本次界面数值可见和批次完成，不声称改动点路线已逐像素/距离/方向验收。
+
+替换缺文件负例39504：与完整replacement相同地图文件内容，仅缺02_east_europe；运行报Failed to read key reference: STATE_BEKES且无native snapshot/freight view发布，自行退出1，证实未从低层原版文件补齐。phase4曾短暂出现，首次负例脚本误当作就绪并试图关闭已消失窗口，断言拒绝；没有强杀/重启。检查同一会话最终after.json/无进程后，按原字节恢复content并删除唯一测试ZIP，恢复脚本/失败脚本均归档。私有负例观察器去掉phase4提前结束，语法/实际轨迹反例检查通过，修订版未再启动游戏，不冒充再次实机通过。负例不是产品正常启动/无崩溃验收。
+
+五场WM_CLOSE正常退出0；负例自然退出1且设置自动恢复。最终五输入及全部存档文件集合/每份hash一致，临时Mod列表恢复、测试文件均移除，无游戏。bc967当前改图夹具绑定/发布子项已补证，不等于全部改图变体/修改点逐像素、完整生命周期/设备或全目标完成。已恢复MASTER/TASKS当前入口并承认R251–R253完成部分；G1显示/多商品闭环、G2海端2 unavailable/36 partial、真正设备/跨国家/完整交互/部署等继续。
+
+暂停体验仍有边界：R251已消除每条暂停命令无条件整采，但单次同步复制仍约0.4秒；暂停中最后一次编辑后无后续原生命令时，不能承诺30秒墙钟内自动刷新。这两项保留待复现/优化，不把当前A25通过或本轮启动采集冒充“暂停零卡顿”。证据checkpoint2026-11-09-r254-map-readiness（PLAN.md、prepare/run/omit-first-attempt/recover_omit脚本、validation-final.json、五场ready/probe/validation/截图/会话日志/after、omit/{freight.log,game-error.log,validation.json}）。
+
 ### 2026-11-09 — R253：bc96745c 的 A25 三对与 20 轮缓存重绑（无人值守）
 
 第一次链启动死于编排器竞态：wait_paused 在 session_default 写 launch.json 前导入 live_read 立即崩溃，finally 误杀健康会话——修复为先等 launch.json（wait_launch，会话早退即报错）。第二次链在 open1 臂中途被用户手动终止（closed1 完整留档 live-killed/、perf-run-killed.log、r252_perf_arms-killed.json），游戏随后自行退出 0、五输入保持。用户清除交付目标钩子并授权桌面后干净重跑全链成功：六臂 closed1/open1/closed2/open2/closed3/open3 全记录（重载退休 69→75、批号 5210→5866），分析 PASS。analyze_perf.py 的模拟速度窗口按 R251 门控放宽 [t0−5,t1+5]（运行臂快照落在边界点击：unpause 30 秒项＋pause 边沿），并指向本轮 arms 文件 r252_perf_arms.json。
