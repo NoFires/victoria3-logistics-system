@@ -216,6 +216,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-08 — R241完成：枢纽歧义精确证据入库（诊断分支），交付构建保持不变
+
+为省交换世界的 fail-closed 拒绝加入字段级诊断（州/双方锚点/节点/省份/坐标），官方入口 exit0 后在夹具世界捕获：state=483，existing anchor=700 node=16290 province=20301，incoming anchor=800 node=16293 province=20304——两个 role-1 枢纽随省交换并入同州。诊断按"证据绑定构建"从 main 撤下，入库分支 diagnostic/hub-detail（d24ab75）；main 从 0027612 重建逐字节复现 26b70987… 并重新部署（安装＝dist），landHubs 输出与成功路径零变化。消歧裁决两条路径（R210 冻结件回放；州定义地理枢纽字段 RE）与红线记录于 checkpoint2026-11-08-r240-cross-save/NEXT.md。不push，完整目标ACTIVE。
+
 ### 2026-11-08 — R240完成：replace/omit 复绑、省交换 fail-closed 发现
 
 replace_paths（geo=901＋206 ribbons 冷建）与 omit 负例（世界拒绝建立）PASS；省交换夹具探针绑定正确但快照拒绝 `ambiguous current primary land hub`（fail-closed 符合规范；R210 同夹具曾发布 187 ribbons，R230–R231 后 hub 解析行为不同，需枢纽消歧原生证据，列为后续）。跨存档对话框对全部注入通道不响应（退休机制已由六次重载证明）；显示拓扑/模式 API 本环境失败，A24 仍需硬件事件。所有会话退出0、五输入不变。详见STATUS与checkpoint2026-11-08-r240-cross-save，不push，完整目标ACTIVE。

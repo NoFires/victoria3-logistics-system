@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-08 — R241：枢纽歧义精确证据入库（诊断分支），交付保持 26b70987
+
+省交换 fail-closed 的字段级诊断（state/双方锚点/节点/省份/坐标）经官方入口 exit0 后在夹具世界捕获精确歧义：**state=483，existing anchor=700 node=16290 province=20301 pos=437900000,293200000；incoming anchor=800 node=16293 province=20304 pos=428500000,302000000**——两个 role-1 主枢纽随省交换并入同州，模型按州取唯一装卸点故拒绝（符合规范）。诊断按"证据绑定构建"从 main 撤下，入库 `diagnostic/hub-detail`（d24ab75）；main 0027612 重建逐字节复现 `26b70987…` 并重新部署（安装＝dist），landHubs 输出与成功路径零变化。消歧两条裁决路径（R210 冻结件回放；州定义地理枢纽字段 RE）与红线见 checkpoint2026-11-08-r240-cross-save/NEXT.md。不 push，完整目标 ACTIVE。
+
 ### 2026-11-08 — R240：replace/omit PASS；省交换 fail-closed 发现；跨存档与拓扑通道受限
 
 26b70987…构建（安装＝dist）：

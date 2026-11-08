@@ -1,5 +1,9 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-08 — R241：枢纽歧义诊断两轮迭代与构建隔离
+
+第一轮诊断（拒绝消息携带州+双锚点）官方入口 exit0，省交换世界捕获 state=483 existing=700 incoming=800；第二轮把 hubs 表值扩为 HubNode（省份/节点ID/坐标），消息携带完整双方节点（existing anchor=700 node=16290 province=20301；incoming anchor=800 node=16293 province=20304）。两轮 landHubs 输出与成功路径零变化。按"证据绑定构建"规范，诊断从 main 撤下入分支 diagnostic/hub-detail（d24ab75）；main 0027612 重建逐字节复现 26b70987…，deploy.ps1 重装（安装＝dist）。消歧裁决路径与红线写入 checkpoint2026-11-08-r240-cross-save/NEXT.md。不push，goal ACTIVE。
+
 ### 2026-11-08 — R240：replace/omit 复绑 PASS、省交换 fail-closed、跨存档/拓扑通道受限
 
 replace_paths 夹具（geo=901＋页面 206 ribbons 冷建）与 omit 负例（世界拒绝建立）在 26b70987 复绑通过。省交换夹具三会话一致出现 `ambiguous current primary land hub` 拒绝发布：探针绑定正确（id=140 geo=155），快照 fail-closed 符合规范；R210 同夹具曾发布 187 ribbons，R230–R231 之后 hub 解析行为不同——需要枢纽消歧原生证据后才能判定旧发布是否含猜测或新过滤引入歧义；未经证据不启用猜测路径，列为后续。跨存档对话框对全部注入通道（窗口消息/注入指针/键盘）不响应，六次重载已证明退休机制；SetDisplayConfig 与 ChangeDisplaySettingsW 在本环境失败，A24 仍需真实硬件事件。所有会话退出0、五输入不变。证据 checkpoint2026-11-08-r240-cross-save（RESULT.md）与 r239-map-compat。不push，goal ACTIVE。
