@@ -8,6 +8,10 @@ R241 定性的"修正"落地为正解：主枢纽登记改按州收集全部有�
 
 交付构建晋级：freight `b035a8c1…`（51,911,326 B）／引导 71dae36d…，安装＝dist；官方入口（全部 PASS）／selftest 560463／默认 debug 零顶点／deploy 全通过。同构建 A25：三对 P95 +0.661/+0.616/+0.500 ms ≤2、模拟最大降 0.56% ≤5%、六臂 62.54–63.05 秒身份一致；20 轮 uploads=0 reused=206 pool=206 repeats_skipped=1…20（checkpoint2026-11-08-r242-perf/PERF-ARMS.md）。过程失败保留：首版交集未去重→重复注入点触发拒绝（补排序去重）。R237–R239 的部署矩阵/生命周期/改图证据绑定 26b70987（原构建）；b035a8c1 已重绑官方清单/自检/A25/省交换/性能，部署矩阵与生命周期子项待同构建复验（机制未变，列为下一步）。不 push，完整目标 ACTIVE。
 
+### 2026-11-08 — R243完成：部署矩阵与生命周期在 b035a8c1 复验通过
+
+R237 脚本（期望哈希更新为 b035a8c1）四例部署矩阵复验：缺失 126／损坏 193／整套卸载无 loader 条目／重装 0，四例存活≥60s、WM_CLOSE 退出 0；收尾安装＝dist、五输入逐字节不变。R238 脚本生命周期复验：重载 world2 池恢复 slots=206＋冷建 206 ribbons（gen=6 world=2 rev=10 compute=118.436ms，无旧帧提交）；缩放往返与最小化/恢复零退休；退出 0、五输入不变。证据 checkpoint2026-11-08-r243-rebind（RESULT.md、live/audit.json、live/after.json、session-freight.log）。仍明示：A24 需真实硬件事件；跨存档对话框与跨国家分支注入通道受限（R240 记录）。不 push，完整目标 ACTIVE。
+
 ### 2026-11-08 — R241完成：省交换枢纽歧义定性为修正，R242 多枢纽注入立项
 
 两轮字段级诊断（分支 diagnostic/hub-detail d24ab75→fdb4f7b，官方入口 exit0）在夹具世界捕获：state=483 的 anchor=700（node 16290，province 20301）经 keyless 连接 359（R229 有见证走廊）登记，anchor=800（node 16293，province 20304）经 keyed 连接 93116 登记——两枢纽均有当前对象见证。R229 前旧构建无 keyless 分支、只登记 anchor=800：R210 的 187 ribbons 视图默默漏掉一个有见证枢纽，现行拒绝是修正而非回归。正解为 R242 多枢纽州注入（landHubs 有序集合＋多门注入＋守恒/确定性/缓存身份反例＋夹具实机复验＋同构建门槛重跑），红线与设计见 checkpoint2026-11-08-r240-cross-save/NEXT.md。交付构建保持 26b70987…（main 0027612 重建逐字节复现、已重装），诊断不入交付直至门槛齐。不 push，完整目标 ACTIVE。
