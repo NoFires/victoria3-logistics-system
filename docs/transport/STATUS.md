@@ -1,5 +1,16 @@
 # 当前状态
 
+### 2026-11-08 — R246：当前修复版稳定65秒/20轮关闭重开通过
+
+产品源码及双DLL未变，主体仍13f2aeb9…、引导71dae36d…、安装=dist；沿用R245完整71 PASS，不虚报重新构建/测试/部署。按MASTER §2.4再次完整重读01/03（Performance requirements、三缓存/所有权、Performance measurement、Known symptoms），采用已通过的隐藏桌面/定向PostMessage通道，无切换输入桌面/全局键鼠/新ABI。
+
+自有34640、phase4/暂停date59883360、market0/logistics/41商品：稳定65.046秒，无GPU截图请求或UI输入，13次持续原生SUBMIT样本的累计uploads均206、无新增几何上传。随后20轮实际X关闭（生产历史谓词open=false）→F4重开→物流页，逐轮新generation 4…42、206条ribbon、uploads=0/reused=206、failed=0/dropped=0、pool=206、repeats_skipped=1…20。峰485us/帧、209us/单步、16次/帧、软预算超时0；不是全渲染帧耗时。私有内存首末15,691,632,640→15,660,134,400B（-30.039MiB），末6轮逐字节相同；当前市场selection/scope/drawable始终1364836446/1364836446/1125105109，初末截图均13648.36446，未复发 --。
+
+最终X关闭/原版历史谓词关闭通过，WM_CLOSE正常退出0、settings首轮自动恢复，save/settings/ini/content/continue五输入逐字节保持，无游戏。全程输入桌面Default/前台67978保持；用户指针变化按每项记录，不将整场坐标变化归因测试或宣称整场不变。原ordered_ui关闭后误校验缓存行的问题只在本轮私有测试副本修正，未改产品。
+
+此为同构建缓存/内存子项PASS，不能标A25整体PASS：默认玩家前台三对P95/模拟速度仍待，改图/生命周期/设备矩阵及2 unavailable/36 partial海端继续。整体goal ACTIVE。证据E:/Code/v3-analysis/checkpoints/2026-11-08-r246-cache-stability（PLAN.md、cache_run.py、live/{cache-result.json,summary.json,closed-panel.json,private-ui.jsonl,market-after20.png,session-freight.log,after.json}）。
+
+
 ### 2026-11-08 — R245完成：物流 --、独立主枢纽与缺几何交接
 
 根因已实机定位：当时安装b4facf6d…（非旧文档b035a8c1…）将role1连接的匿名海侧anchor=0x1fffffff当成坏记录，拒绝整份快照。自有隐藏新档2508/暂停59883360只读枚举3699条kind6，194条role1包含该匿名海侧值，role2无此异常，运行节点身份错误0。保留用户未提交的role1过滤修复并正式构建；有效独立role1锚点同时登记landHubs，缺绘图控制点只标记当前接入边缺几何，保留原版距离/连接/数量；已有控制点坐标不一致与无见证hub仍拒绝。新增独立节点/匿名海端/缺控制点回归，前两缺口先FAIL后PASS。匿名夹具首版误共享已有type5端点导致不相干样条拒绝，修正为无该样条的匿名节点，不放宽生产检查。

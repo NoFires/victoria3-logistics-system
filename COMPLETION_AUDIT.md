@@ -1,5 +1,7 @@
 # Completion audit — R61 (2026-10-24)
 
+> **历史审计，勿作当前结论。** 下表绑定R61/1.13.11，单DLL、state+0x48及尚无原版贸易等描述均已由后续实现覆盖。当前为1.15.0、双DLL；最新构建13f2aeb9…的直接证据见STATUS R245/R246与ACCEPTANCE顶部。当前缓存/内存子项通过，完整目标仍未完成；旧表PASS不自动继承，新表局部PASS也不能升级为完整目标完成。
+
 The complete goal is **not** achieved. This checklist preserves the supplied
 prompt's scope; it does not redefine completion as a successful route-preview
 DLL.

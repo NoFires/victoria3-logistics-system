@@ -2,7 +2,7 @@
 
 维多利亚 3 货运可视化：在原版市场和地区面板查看模型分配，并沿地图真实运输样条显示货流。
 
-**开发中 · Windows x64 · 当前本机验证版本 Victoria 3 1.13.11**。本项目不是通用版本插件；其他游戏版本须重新验证 ABI。项目原有内部名称为 Ironroad，GitHub 仓库名为 `victoria3-logistics-system`。
+**开发中 · Windows x64 · 当前本机验证版本 Victoria 3 1.15.0**。本项目不是通用版本插件；其他游戏版本须重新验证 ABI。项目原有内部名称为 Ironroad，GitHub 仓库名为 `victoria3-logistics-system`。
 
 ## 已有功能
 
