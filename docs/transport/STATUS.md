@@ -1,5 +1,11 @@
 # 当前状态
 
+### 2026-11-08 — R252：正式native商品行补逐商品Freight需求贡献，交付晋级 bc96745c…
+
+R250确认的实现缺口落地：正式native分支此前只有需求总账（logistics_session.cpp:285选中的3参BuildLogisticsDocument只设document.intermediaryDemand，商品行不赋intermediaryDemand），不满足"Freight需求账保留来源商品贡献"。最小改动：NativeTradeView新增domesticGoodDemand（与domesticDemand同市场/州作用域、同freightDemand单位，BuildNativeTradeView同一balance循环累计），文档构建器在domesticDemand存在时给每行FreightDemand{}并按good.id填入累计——与旧模型分支（logistics_ui.cpp:225-236）语义一致。无GUI渲染变化（该字段当前无消费点；目标要求记录，显示后续接）。
+
+测试先行：3条新断言在未修复代码上FAIL复现（native商品行为nullopt），修复后PASS——单平衡商品行逐项等于总账、无balance目录商品显式零、州作用域文档逐商品随总账同scope。定向套件PASS；官方入口exit 0（72 PASS/0 FAIL）；verify_embedded（SHA=bc96745c…）/selftest 560362亮像素/默认debug零顶点通过；deploy exit 0，安装=dist。交付主体bc96745c…（52,098,461 B）＋引导71dae36d…。边界：字段已记录未显示；海端2 unavailable/36 partial、同构建A25/生命周期/改图重绑仍待。证据checkpoint2026-11-08-r252-per-good-demand（before四文件、build/tests/deploy日志）。claim R252（owner bg-r252）。
+
 ### 2026-11-08 — R251：暂停期重复全量采集修复，交付晋级 ba13a595…
 
 用户实机报告暂停前后卡顿并给出日志证据：date=59885832 的 rev22–25 同日期连续 4 次整份复制（375+391+375+391 ms ≈ 1.5 s 命令线程阻塞；rev22/rev24 未进 UI 交接，纯冗余）。根因为 `NativeCaptureDue` 的 `paused` 项无条件放行——暂停期间每个完成命令都复制世界。修复为边沿触发：进入暂停、世界/请求变化或距上次复制满 30 秒才复制，暂停中的后续命令复用上一份快照；暂停中改动在下次进暂停或 30 秒界内补上，与运行态节流契约一致；未隐藏 `--`，失效/发布语义未动。改动 4 文件 +27/−11（gate 签名/注释、overlay 调用点每次完成命令更新 seen 标记、发布时记录 copiedWorld、4 组契约测试：30 秒边界/进暂停触发/暂停中复用/世界请求变化）。

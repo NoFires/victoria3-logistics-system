@@ -38,6 +38,9 @@ struct NativeTradeView {
   int64_t domesticMarketQuantity=0,domesticScopeQuantity=0,domesticSelectionQuantity=0;
   int64_t domesticTarget=0,domesticAllocated=0,domesticUnmet=0; // milli-orders
   std::optional<FreightDemand> domesticDemand;
+  // Per-good contribution to domesticDemand: same market/state scope and
+  // freight-demand units, so goods rows can attribute the ledger totals.
+  std::map<uint32_t,FreightDemand> domesticGoodDemand;
   std::optional<double> builtRailMapLength; // current market, independent of goods/state/hover
   std::vector<NativeGoodQuantity> goods;
   std::vector<NativeSegmentQuantity> segments;

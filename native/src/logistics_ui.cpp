@@ -134,6 +134,11 @@ LogisticsDocument BuildLogisticsDocument(const EconomySnapshot& snapshot,const N
     const auto quantity=quantities.find(good.id);
     if(quantity!=quantities.end())row.tradeQuantity=quantity->second;
     if(row.tradeQuantity && view.marketQuantity>0)row.share=double(*row.tradeQuantity)/double(view.marketQuantity);
+    if(document.intermediaryDemand){
+      row.intermediaryDemand=FreightDemand{};
+      if(const auto demand=view.domesticGoodDemand.find(good.id);demand!=view.domesticGoodDemand.end())
+        row.intermediaryDemand=demand->second;
+    }
     document.goods.push_back(std::move(row));
   }
   return document;

@@ -808,6 +808,18 @@ int main(){
         domesticDocument.nativeTrade->scopeQuantity-domesticDocument.nativeTrade->domesticScopeQuantity==700012 &&
         FormatFreightDemand(&domesticDocument)=="500.00 / 500.00 / 0.00",
         "formal document separates original quantity, domestic model quantity and Freight target/fulfilled/unmet");
+    const auto grainRow=std::find_if(domesticDocument.goods.begin(),domesticDocument.goods.end(),
+        [](const LogisticsGood& row){return row.id==1;});
+    Check(grainRow!=domesticDocument.goods.end() && grainRow->intermediaryDemand &&
+        grainRow->intermediaryDemand->target==domesticDocument.intermediaryDemand->target &&
+        grainRow->intermediaryDemand->fulfilled==domesticDocument.intermediaryDemand->fulfilled &&
+        grainRow->intermediaryDemand->unmet==domesticDocument.intermediaryDemand->unmet,
+        "native goods rows carry the per-good Freight demand contribution the ledger totals sum");
+    Check(std::any_of(domesticDocument.goods.begin(),domesticDocument.goods.end(),
+        [](const LogisticsGood& row){return row.id!=1 && row.intermediaryDemand &&
+            row.intermediaryDemand->target==0 && row.intermediaryDemand->fulfilled==0 &&
+            row.intermediaryDemand->unmet==0;}),
+        "catalog goods without domestic balances keep an explicit zero contribution");
     auto selection=filter;selection.hoverGood=2;
     auto noGrain=BuildNativeTradeView(domesticSnapshot,*domesticFacts,selection);
     Check(noGrain && noGrain->segments.size()==2 && noGrain->marketQuantity==domesticView->marketQuantity &&
@@ -817,6 +829,14 @@ int main(){
     auto domesticState=BuildNativeTradeView(domesticSnapshot,*domesticFacts,stateFilter);
     Check(domesticState && domesticState->scopeQuantity==50000000 && domesticState->domesticTarget==500000 &&
         domesticState->segments.size()==1 && domesticState->segments[0].direction==1,"domestic state counts its final imports once with incoming direction");
+    auto stateDocument=BuildLogisticsDocument(domesticSnapshot,*domesticState,stateFilter);
+    const auto stateGrain=std::find_if(stateDocument.goods.begin(),stateDocument.goods.end(),
+        [](const LogisticsGood& row){return row.id==1;});
+    Check(stateGrain!=stateDocument.goods.end() && stateGrain->intermediaryDemand &&
+        stateGrain->intermediaryDemand->target==stateDocument.intermediaryDemand->target &&
+        stateGrain->intermediaryDemand->fulfilled==stateDocument.intermediaryDemand->fulfilled &&
+        stateGrain->intermediaryDemand->unmet==stateDocument.intermediaryDemand->unmet,
+        "per-good contribution follows the same state scope as the ledger totals");
     auto disconnected=std::make_shared<NativeDomesticSources>(*inputs);disconnected->land.clear();source->domestic=disconnected;
     auto disconnectedFacts=BuildNativeTradeFacts(domesticSnapshot);auto disconnectedView=BuildNativeTradeView(domesticSnapshot,*disconnectedFacts,filter);
     Check(disconnectedView && disconnectedView->domesticMarketQuantity==0 && disconnectedView->domesticTarget==500000 &&

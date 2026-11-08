@@ -1,5 +1,9 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-08 — R252：native商品行补逐商品Freight需求贡献（bc96745c…）
+
+R250确认"正式native UI分支丢失逐商品Freight需求贡献"。复现：native_trade_view_tests 新增3条断言（平衡商品行逐项等于总账、无balance目录商品显式零、州scope文档逐商品随总账），未修复代码上 FAIL（native商品行 intermediaryDemand=nullopt）。修复（4文件，源码前备份 checkpoint before/）：NativeTradeView 新增 domesticGoodDemand（BuildNativeTradeView 同一 balance 循环按 market/州 scope 累计，与 domesticDemand 同单位）；3参 BuildLogisticsDocument 在 domesticDemand 存在时每行 FreightDemand{} 并按 good.id 填入——与旧模型分支（logistics_ui.cpp:225-236 从 result.balances 累计）语义一致。首版 `*demand` 解引用得到 pair 编译失败，改 demand->second（失败记录保留）。定向套件 PASS；官方 build_tests.ps1 exit 0（72 PASS/0 FAIL）；verify_embedded（SHA=bc96745c…）/selftest 560362/默认 debug 零顶点通过；deploy.ps1 exit 0，安装=dist（52,098,461 B）。边界：该字段当前无 GUI 消费点，目标要求"记录"已达成，显示后续接；海端 2 unavailable/36 partial、同构建 A25/生命周期/改图重绑仍待。claim R252（owner bg-r252）。证据：checkpoint2026-11-08-r252-per-good-demand。
+
 ### 2026-11-08 — R251：暂停期重复全量采集修复（ba13a595…）
 
 用户实机报告暂停前后卡顿并给出机制分析：暂停命令安全窗口内同步复制全世界（~390 ms），`NativeCaptureDue`（native_snapshot.h:20）只要已暂停就允许再次全量采集，同日期连抄使界面 `--` 后重算；要求修重复采集与刷新交接本身，不藏 `--`。现场日志复核（用户会话）：date=59885544 两次同日期复制、date=59885832 四次（rev22–25，375+391+375+391 ms ≈ 1.5 s 命令线程阻塞；rev22/rev24 未进 UI 交接，纯冗余）。

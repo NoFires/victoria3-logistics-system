@@ -175,6 +175,10 @@ std::optional<NativeTradeView> BuildNativeTradeView(const EconomySnapshot& snaps
       result.domesticDemand->target+=balance.freightDemand.target;
       result.domesticDemand->fulfilled+=balance.freightDemand.fulfilled;
       result.domesticDemand->unmet+=balance.freightDemand.unmet;
+      auto& goodDemand=result.domesticGoodDemand[balance.good];
+      goodDemand.target+=balance.freightDemand.target;
+      goodDemand.fulfilled+=balance.freightDemand.fulfilled;
+      goodDemand.unmet+=balance.freightDemand.unmet;
     }
     for(const auto& shipment:facts.domestic->allocation.shipments){
       if(cancelled && cancelled())return fail("cancelled");

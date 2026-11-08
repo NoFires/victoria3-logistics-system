@@ -1,6 +1,6 @@
 # 交付说明（Victoria 3 1.15.0）
 
-> **2026-11-08 R251当前安装**：主体 `ba13a595a45a6b288ac114ca338936a9a68ee7c7867c07d2862f30dc864d3d3f`（51,928,202 B）/引导 `71dae36d…`，安装＝dist。R251 修复暂停期重复全量采集（同日期连抄→边沿触发），官方入口 72 PASS、embedded/自检/默认debug/部署通过；实机载入爆发 1 次复制（旧 4 次）、手动游玩 16 次复制全不同日期。每次进入暂停仍复制一次（~375 ms，设计保留）。回滚与证据见 STATUS R251 与 checkpoint2026-11-08-r251-capture-dedupe。
+> **2026-11-08 R252当前安装**：主体 `bc96745c00c08be2a7bbe165f9e1ffc2e3eb504437dc13bd1b2437e542129d9c`（52,098,461 B）/引导 `71dae36d…`，安装＝dist。R252 在 R251 修复暂停期重复采集（边沿触发）基础上补齐正式native商品行的逐商品Freight需求贡献（domesticGoodDemand，与总账同作用域/单位；字段已记录、GUI显示待接）。官方入口 72 PASS、embedded/自检/默认debug/部署通过。回滚与证据见 STATUS R252/R251 与 checkpoint2026-11-08-r252-per-good-demand、checkpoint2026-11-08-r251-capture-dedupe。
 
 > **R248改图补验**：相同13f2aeb9…已通过省份交换ZIP及同key样条X+10的当前绑定/正式物流发布/206原生批次，数值可见、正常退出、配置与全部存档保持。其他改图夹具与逐点像素/设备/前台性能/海端仍未全部完成，见STATUS。
 

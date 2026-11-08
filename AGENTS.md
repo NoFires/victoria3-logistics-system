@@ -127,7 +127,7 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 ## 5. 当前状态与恢复入口
 
-当前主体ba13a595…（51,928,202 B，R251暂停期重复采集修复）/引导71dae36d…，官方入口72 PASS（R251，安装=dist）；后续局部验证见STATUS。R251同时确认724ef30..04b5127的7个提交（R245–R250）与新增修复一并待推送。用户已暂停，R249清理完成；R250只更新目标，当前正式任务书为MASTER§0/G1–G8（含逐商品Freight贡献、剩余海端及最终验收缺口），优先读STATUS R251/R250和REVIEW_R250.md。
+当前主体bc96745c…（52,098,461 B，R252逐商品Freight需求贡献＋R251暂停期重复采集修复）/引导71dae36d…，官方入口72 PASS（R252，安装=dist）；后续局部验证见STATUS。用户已暂停，R249清理完成；当前正式任务书为MASTER§0/G1–G8（剩余海端、最终验收缺口），优先读STATUS R252/R251/R250和REVIEW_R250.md。
 
 
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
@@ -215,6 +215,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 **最新操作授权（2026-10-25）**：用户明确“我现在不在电脑旁边，请你自主验证”，允许自主启动及操作测试，覆盖此前手动操控限制；保留不强制结束可能有未保存进度会话的部署约束。
 
 ## 6. 进度日志（简要记录，最新在上）
+
+### 2026-11-08 — R252：逐商品Freight需求贡献补齐，交付晋级 bc96745c…
+
+R250缺口落地：native分支商品行此前不带intermediaryDemand（只有总账）。NativeTradeView新增domesticGoodDemand（同作用域/单位，balance循环累计），3参BuildLogisticsDocument按旧模型分支语义填充商品行。3条新断言先FAIL复现后PASS（等于总账/显式零/州scope一致）。官方入口exit 0（72 PASS/0 FAIL）、embedded（bc96745c…）/selftest/默认debug通过、deploy exit 0安装=dist。交付主体bc96745c…（52,098,461 B）＋引导71dae36d…。字段已记录未显示（GUI无消费点）；海端2+36、A25/生命周期/改图重绑仍待，完整目标继续。证据checkpoint2026-11-08-r252-per-good-demand。
 
 ### 2026-11-08 — R251：暂停期重复全量采集修复，交付晋级 ba13a595…
 
