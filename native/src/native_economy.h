@@ -2,6 +2,7 @@
 #include "freight.h"
 #include "state_market.h"
 #include "state_region.h"
+#include <algorithm>
 #include <unordered_map>
 
 namespace v3 {
@@ -16,10 +17,29 @@ class EconomyReadWindow {
     m_total+=size;m_copies.push_back({address,{(uint8_t*)out,(uint8_t*)out+size}});return true;
   }
   bool Unchanged() const {
-    for(const auto& copy:m_copies){std::vector<uint8_t> after(copy.bytes.size());
-      if(!m_reader(copy.address,after.data(),after.size()) || after!=copy.bytes)return false;
+    std::vector<const Copy*> ordered;ordered.reserve(m_copies.size());
+    for(const auto& copy:m_copies)ordered.push_back(&copy);
+    std::sort(ordered.begin(),ordered.end(),[](const auto* a,const auto* b){return a->address<b->address;});
+    uint64_t address=0;std::vector<uint8_t> expected,after;
+    auto matches=[&]{
+      after.resize(expected.size());
+      return m_reader(address,after.data(),after.size()) && after==expected;
+    };
+    for(const auto* copy:ordered){
+      if(!expected.empty() && copy->address>address+expected.size()){
+        if(!matches())return false;
+        expected.clear();
+      }
+      if(expected.empty()){address=copy->address;expected=copy->bytes;continue;}
+      const size_t offset=size_t(copy->address-address),overlap=std::min(expected.size()-offset,copy->bytes.size());
+      // Merge only agreeing observed bytes; never read through an unobserved gap.
+      if(!std::equal(copy->bytes.begin(),copy->bytes.begin()+overlap,expected.begin()+offset))return false;
+      if(overlap<copy->bytes.size()){
+        const size_t tail=copy->bytes.size()-overlap,start=expected.size();expected.resize(start+tail);
+        std::memcpy(expected.data()+start,copy->bytes.data()+overlap,tail);
+      }
     }
-    return !m_copies.empty();
+    return !expected.empty() && matches();
   }
  private:
   struct Copy {uint64_t address;std::vector<uint8_t> bytes;};

@@ -108,6 +108,28 @@ int main(){
   f.bytes=original;
   EconomyReadWindow empty({});uint64_t unused=0;
   Check(!empty.Read(1,&unused,8) && !empty.Unchanged(),"missing/empty observation cannot authorize publication");
+  {
+    std::array<uint8_t,16> memory{};std::vector<std::pair<uint64_t,size_t>> reads;
+    GoodsMemoryReader reader=[&](uint64_t address,void* out,size_t size){
+      reads.emplace_back(address,size);
+      if(address<0x10000 || address-0x10000>memory.size() || size>memory.size()-(address-0x10000))return false;
+      std::memcpy(out,memory.data()+address-0x10000,size);return true;
+    };
+    EconomyReadWindow repeated(reader);uint64_t wide=0;uint32_t narrow=0;
+    Check(repeated.Read(0x10000,&wide,8) && repeated.Read(0x10000,&wide,8) &&
+        repeated.Read(0x10004,&narrow,4) && repeated.Read(0x10008,&narrow,4),"nested decoders can observe repeated and adjacent bytes");
+    reads.clear();Check(repeated.Unchanged() && reads==std::vector<std::pair<uint64_t,size_t>>{{0x10000,12}},
+        "shared validation checks identical overlapping observations in one exact contiguous read");
+    memory[11]=1;Check(!repeated.Unchanged(),"coalesced validation still rejects a changed trailing byte");memory[11]=0;
+    EconomyReadWindow conflicting(reader);
+    Check(conflicting.Read(0x10000,&wide,8),"first overlap observation copied");
+    memory[3]=1;Check(conflicting.Read(0x10002,&narrow,4),"second overlap observation sees a mutation");memory[3]=0;
+    Check(!conflicting.Unchanged(),"conflicting overlapping observations reject even after the byte changes back");
+    EconomyReadWindow separated(reader);
+    Check(separated.Read(0x10000,&narrow,4) && separated.Read(0x10008,&narrow,4),"separated observations copied");
+    reads.clear();Check(separated.Unchanged() && reads==std::vector<std::pair<uint64_t,size_t>>{{0x10000,4},{0x10008,4}},
+        "validation never extends a read across unobserved bytes");
+  }
   Check(!ReadNativeStateObject([&](auto a,auto p,auto n){return f.Read(a,p,n);},Fixture::module,2049),
         "lower 24-bit slot cannot impersonate the full handle");
   auto reject=[&](const char* label){Check(!f.Decode(),label);f.bytes=original;};

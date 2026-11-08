@@ -15,6 +15,9 @@ int main(){
   GoodsMemoryReader read=[&](uint64_t at,void* out,size_t n){
     for(size_t i=0;i<n;++i){auto f=bytes.find(at+i);if(f==bytes.end())return false;((uint8_t*)out)[i]=f->second;}return true;
   };
+  auto covers=[](uint64_t at,size_t n,uint64_t field,size_t width){
+    return at<=field && field-at<=n && width<=n-(field-at);
+  };
   put(tlsArray,tls);put(tls+0x5b60,uint8_t(1));put(tls+0x34c,uint32_t(0));
   put(module+0x05404748,uint32_t(2));put(module+0x05404738,uint32_t(0));
   put(module+0x05c07c18,idler);put(idler,module+0x04678bc0);put(idler+0x20,uint8_t(1));
@@ -202,9 +205,14 @@ int main(){
     put(ranges+4,std::array<uint16_t,2>{20,0});Check(!select(),"port output overlapping membership rejected");bytes=selectedStable;
     put(result+12,uint32_t(4));Check(!select(),"port output count cannot exceed capacity");bytes=selectedStable;
     put(result,UINT64_MAX-1);Check(!select(),"port output array address overflow rejected");bytes=selectedStable;
-    seen=0;changing=[&](uint64_t at,void* p,size_t n){if(at==fromState && ++seen==2)put(at,uint32_t(0));return read(at,p,n);};
+    seen=0;changing=[&](uint64_t at,void* p,size_t n){
+      if(covers(at,n,fromState,4) && ++seen==2)
+        put(fromState,uint32_t(0));
+      return read(at,p,n);
+    };
     Check(!CopyNativePortSearchSelection(changing,result,from,to,fromState,toState,distance,*input,nested),
-        "selected full state change during output copy rejected");bytes=selectedStable;seen=0;
+        "selected full state change during output copy rejected");
+    Check(seen==2,"selected state mutation is injected even when validation coalesces adjacent fields");bytes=selectedStable;seen=0;
     changing=[&](uint64_t at,void* p,size_t n){if(at==ranges && ++seen==2)put(at,uint16_t(21));return read(at,p,n);};
     Check(!CopyNativePortSearchSelection(changing,result,from,to,fromState,toState,distance,*input,nested),
         "selected path change during output copy rejected");bytes=selectedStable;
@@ -245,9 +253,10 @@ int main(){
     put(data,uint16_t(0));Check(!copy(),"unknown source province rejected");bytes=stable;
     put(data+0x20,uint16_t(UINT16_MAX));Check(!copy(),"unknown destination province rejected");bytes=stable;
     unsigned seen=0;GoodsMemoryReader changing=[&](uint64_t at,void* p,size_t n){
-      if(at==options+0x30 && ++seen==2)put(options+0x30,uint16_t(88));return read(at,p,n);
+      if(covers(at,n,options+0x30,2) && ++seen==2)put(options+0x30,uint16_t(88));return read(at,p,n);
     };
-    Check(!CopyNativeTradeSearchInputs(changing,source,target,options),"trade option selector mutation during copy rejected");bytes=stable;seen=0;
+    Check(!CopyNativeTradeSearchInputs(changing,source,target,options),"trade option selector mutation during copy rejected");
+    Check(seen==2,"selector mutation is injected when adjacent option fields are validated together");bytes=stable;seen=0;
     changing=[&](uint64_t at,void* p,size_t n){if(at==data+0x40 && ++seen==2)put(at,uint32_t(9));return read(at,p,n);};
     Check(!CopyNativeTradeSearchInputs(changing,source,target,options),"trade option handles mutation during copy rejected");bytes=stable;
     Check(!CopyNativeTradeSearchInputs({},source,target,options) && !CopyNativeTradeSearchInputs(read,UINT64_MAX,target,options) &&
