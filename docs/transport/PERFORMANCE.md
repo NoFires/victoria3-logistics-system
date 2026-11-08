@@ -1,5 +1,9 @@
 # 性能预算与测量
 
+### 2026-11-08 — R247 生命周期中的当前构建复用
+
+13f2aeb9…自有隐藏world1→2→3：新世界视图工作器110.307/111.895ms，恢复pool206，几何uploads0/reused206/failed0/dropped0；峰原生构建811us/帧、583us/单步、16次/帧、超时0。窗口尺寸/最小化/缩放往返保持世界身份。只证明本场景的复用和恢复，不是前台三对P95或适配器级设备丢失测量。完整证据见STATUS R247。
+
 ### 2026-11-08 — R246：当前修复版稳定65秒/20轮关闭重开通过
 
 产品源码及双DLL未变，主体仍13f2aeb9…、引导71dae36d…、安装=dist；沿用R245完整71 PASS，不虚报重新构建/测试/部署。按MASTER §2.4再次完整重读01/03（Performance requirements、三缓存/所有权、Performance measurement、Known symptoms），采用已通过的隐藏桌面/定向PostMessage通道，无切换输入桌面/全局键鼠/新ABI。

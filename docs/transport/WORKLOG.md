@@ -1,5 +1,18 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-08 — R247：隔离桌面同档重载/另一存档/主菜单及窗口生命周期通过
+
+产品源码/两DLL未变，仍13f2aeb9…/71dae36d…、安装=dist，沿用R245完整71 PASS，未重复构建或部署。按MASTER §2.4完整重读01/02/03。旧R243脚本使用SetForegroundWindow/keybd_event，未沿用；本轮只用自有隐藏桌面、已验证虚拟指针和定向PostMessage，原版PauseMenu.LoadIngame/SaveGameItem.Select/FrontEndLoadView.OnLoad及返回菜单按钮；无内部载入函数调用、全局输入或切换输入桌面。
+
+自有18536/暂停59883360：world1→同autosave_exit重载world2→另一份autosave.v3（ZIP meta确认1.15.0、SHA与原档不同）world3→原版返回主菜单phase0（world4退休事件）。三次退休均记录source retired before original destruction；world2/3恢复pool slots206/old requests cleared。视图world1/2/3分别gen2/rev4、gen6/rev10、gen10/rev13；新世界工作器重新构建110.307/111.895ms，原生几何uploads0/reused206/pool206，failed/dropped0。逐行核对退休计数之后的所有freight view/DRAW PERF均为当前世界，没有旧世界视图发布记录；菜单phase0且owner0/frame0/ribbons0，GPU截图确认主菜单可见。贸易量各次仍13648.36446，41商品，未复发 --。跨存档是同国家的两份新1.15文件，不外推为跨国家新游戏。
+
+world2客户端尺寸2560×1440→1920×1080→2560×1440逐步实际核对，SW_MINIMIZE→SW_SHOWNOACTIVATE恢复及相机滚轮±4往返通过，世界/日期不变；这不代表适配器级设备丢失。GPU初次菜单截图只取得加载背景，后续新请求已见完整菜单按钮，分别留档。启动/重载/返回菜单各一次interface identity unavailable拒绝后恢复，无snapshot pending，不称全程零WARN。前台/指针随用户活动变化逐项记录，测试无抢焦点API。
+
+WM_CLOSE在已见证phase0菜单正常退出0，settings首轮自动恢复；save/settings/ini/content/continue五输入及第二份autosave.v3哈希均保持，无游戏。R240载入对话框限制在本轮隔离通道未复现，当前“同档/另一文件/返回菜单/尺寸/最小化/缩放”子项PASS；A24真实设备丢失、跨国家新游戏、前台三对P95/模拟速度、完整改图和剩余海端仍待，整体goal ACTIVE。
+
+证据E:/Code/v3-analysis/checkpoints/2026-11-08-r247-isolated-lifecycle（PLAN.md、live/{reloaded-identity.json,alternate-identity.json,alternate-save.json,window-steps.json,validation.json,session-freight.log,reloaded-logistics.png,alternate-logistics.png,main-menu.png,menu-loading-background.png,after.json}）。
+
+
 ### 2026-11-08 — R246：当前修复版稳定65秒/20轮关闭重开通过
 
 产品源码及双DLL未变，主体仍13f2aeb9…、引导71dae36d…、安装=dist；沿用R245完整71 PASS，不虚报重新构建/测试/部署。按MASTER §2.4再次完整重读01/03（Performance requirements、三缓存/所有权、Performance measurement、Known symptoms），采用已通过的隐藏桌面/定向PostMessage通道，无切换输入桌面/全局键鼠/新ABI。
