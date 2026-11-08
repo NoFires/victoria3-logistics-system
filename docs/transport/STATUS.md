@@ -4,6 +4,14 @@
 
 按用户要求仅更新ECONOMY_DESIGN.md：基础运力=max(0,基础设施)×k1，取消独立常数底线，k1=0可取消基础运力；同步容量、承运/运力商品分账、Tooltip、数值夹具和平衡/验收要求。铁路承运受可用商品供给约束，收付款未验证前仅估算需求。R253其他会话claim仍有效，本次为独立策划编辑，不改迁移源码/DLL/验收产物，不构建/部署/游戏操作。文档一致性与示例算术静态检查通过；未声称实现或实机验收。此前审查的其他经济模型缺口仍待处理。
 
+### 2026-11-09 — R253：当前构建 A25 三对与 20 轮缓存重绑通过（bc96745c）
+
+用户清除交付目标钩子并授权桌面（"可以使用桌面，我已经离开电脑"）后，bc96745c…（R251+R252 构建）完成同构建 A25 重绑：六臂 P95 增加 +0.567/+0.563/+0.651 ms（≤2）、模拟速度三对零降幅、身份/连续性全过；20 轮关闭重开 uploads=0/reused=206/pool=206、private 平台（末 6 轮 2.6 MiB）、池恒 206、峰帧 498µs、零超时；暂停期重开零捕获（R251 门控佐证）。两次独立循环会话均 19 新代/20 重开（确定性一致，如实记录）。三会话退出 0、五输入逐字节保持；一次用户终止的中断尝试留档（live-killed、perf-run-killed.log）。至此前构建证据链＝官方入口 72 PASS/embedded/selftest/默认debug/部署 + A25 三对 + 20 轮 + R251 实机。仍缺：生命周期重载矩阵、改图矩阵在 bc96745c 未重跑（机制未变，旧结果绑定 13f2aeb9）；海端 2 unavailable/36 partial；A24 真实设备。证据 checkpoint2026-11-08-r252-perf/PERF-ARMS.md。claim R253（owner bg-r253）。
+
+### 2026-11-08 — R252：正式native商品行补逐商品Freight需求贡献，交付晋级 bc96745c…
+
+按用户要求仅更新ECONOMY_DESIGN.md：基础运力=max(0,基础设施)×k1，取消独立常数底线，k1=0可取消基础运力；同步容量、承运/运力商品分账、Tooltip、数值夹具和平衡/验收要求。铁路承运受可用商品供给约束，收付款未验证前仅估算需求。R253其他会话claim仍有效，本次为独立策划编辑，不改迁移源码/DLL/验收产物，不构建/部署/游戏操作。文档一致性与示例算术静态检查通过；未声称实现或实机验收。此前审查的其他经济模型缺口仍待处理。
+
 ### 2026-11-08 — R252：正式native商品行补逐商品Freight需求贡献，交付晋级 bc96745c…
 
 R250确认的实现缺口落地：正式native分支此前只有需求总账（logistics_session.cpp:285选中的3参BuildLogisticsDocument只设document.intermediaryDemand，商品行不赋intermediaryDemand），不满足"Freight需求账保留来源商品贡献"。最小改动：NativeTradeView新增domesticGoodDemand（与domesticDemand同市场/州作用域、同freightDemand单位，BuildNativeTradeView同一balance循环累计），文档构建器在domesticDemand存在时给每行FreightDemand{}并按good.id填入累计——与旧模型分支（logistics_ui.cpp:225-236）语义一致。无GUI渲染变化（该字段当前无消费点；目标要求记录，显示后续接）。

@@ -1,5 +1,11 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-09 — R253：bc96745c 的 A25 三对与 20 轮缓存重绑（无人值守）
+
+第一次链启动死于编排器竞态：wait_paused 在 session_default 写 launch.json 前导入 live_read 立即崩溃，finally 误杀健康会话——修复为先等 launch.json（wait_launch，会话早退即报错）。第二次链在 open1 臂中途被用户手动终止（closed1 完整留档 live-killed/、perf-run-killed.log、r252_perf_arms-killed.json），游戏随后自行退出 0、五输入保持。用户清除交付目标钩子并授权桌面后干净重跑全链成功：六臂 closed1/open1/closed2/open2/closed3/open3 全记录（重载退休 69→75、批号 5210→5866），分析 PASS。analyze_perf.py 的模拟速度窗口按 R251 门控放宽 [t0−5,t1+5]（运行臂快照落在边界点击：unpause 30 秒项＋pause 边沿），并指向本轮 arms 文件 r252_perf_arms.json。
+
+结果：P95 +0.567/+0.563/+0.651 ms（≤2）、模拟三对零降幅、六窗 61.97–63.00 秒身份一致连续。循环会话首轮 20 次重开仅 19 次新代（第 20 次无新发布），复验独立会话同样 19/20——确定性一致，如实记录不作 20/20 宣称；uploads=0/reused=206/池恒 206/内存平台（末 6 轮 2.6 MiB）/峰帧 498µs/零超时全覆盖。cycles_rerun.py 首版用 exec 截断 r252_run.py 产生 SyntaxError（失败保留），改为独立脚本后成功。三会话退出 0、五输入逐字节保持、设置恢复；并行策划会话的 STATUS 条目与 6312726 提交互不干扰（其编辑期间我的 STATUS 插入被安全拒绝后重放）。证据 checkpoint2026-11-08-r252-perf/PERF-ARMS.md。
+
 ### 2026-11-08 — R252：native商品行补逐商品Freight需求贡献（bc96745c…）
 
 R250确认"正式native UI分支丢失逐商品Freight需求贡献"。复现：native_trade_view_tests 新增3条断言（平衡商品行逐项等于总账、无balance目录商品显式零、州scope文档逐商品随总账），未修复代码上 FAIL（native商品行 intermediaryDemand=nullopt）。修复（4文件，源码前备份 checkpoint before/）：NativeTradeView 新增 domesticGoodDemand（BuildNativeTradeView 同一 balance 循环按 market/州 scope 累计，与 domesticDemand 同单位）；3参 BuildLogisticsDocument 在 domesticDemand 存在时每行 FreightDemand{} 并按 good.id 填入——与旧模型分支（logistics_ui.cpp:225-236 从 result.balances 累计）语义一致。首版 `*demand` 解引用得到 pair 编译失败，改 demand->second（失败记录保留）。定向套件 PASS；官方 build_tests.ps1 exit 0（72 PASS/0 FAIL）；verify_embedded（SHA=bc96745c…）/selftest 560362/默认 debug 零顶点通过；deploy.ps1 exit 0，安装=dist（52,098,461 B）。边界：该字段当前无 GUI 消费点，目标要求"记录"已达成，显示后续接；海端 2 unavailable/36 partial、同构建 A25/生命周期/改图重绑仍待。claim R252（owner bg-r252）。证据：checkpoint2026-11-08-r252-per-good-demand。

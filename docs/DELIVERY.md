@@ -1,6 +1,6 @@
 # 交付说明（Victoria 3 1.15.0）
 
-> **2026-11-08 R252当前安装**：主体 `bc96745c00c08be2a7bbe165f9e1ffc2e3eb504437dc13bd1b2437e542129d9c`（52,098,461 B）/引导 `71dae36d…`，安装＝dist。R252 在 R251 修复暂停期重复采集（边沿触发）基础上补齐正式native商品行的逐商品Freight需求贡献（domesticGoodDemand，与总账同作用域/单位；字段已记录、GUI显示待接）。官方入口 72 PASS、embedded/自检/默认debug/部署通过。回滚与证据见 STATUS R252/R251 与 checkpoint2026-11-08-r252-per-good-demand、checkpoint2026-11-08-r251-capture-dedupe。
+> **2026-11-08 R252当前安装**：主体 `bc96745c00c08be2a7bbe165f9e1ffc2e3eb504437dc13bd1b2437e542129d9c`（52,098,461 B）/引导 `71dae36d…`，安装＝dist。R252 在 R251 修复暂停期重复采集（边沿触发）基础上补齐正式native商品行的逐商品Freight需求贡献（domesticGoodDemand，与总账同作用域/单位；字段已记录、GUI显示待接）。官方入口 72 PASS、embedded/自检/默认debug/部署通过。R253 同构建 A25 重绑通过：六臂 P95 +0.567/+0.563/+0.651 ms（≤2）、模拟零降幅、20 轮 uploads=0/reused=206/池 206/内存平台。回滚与证据见 STATUS R253/R252/R251 与 checkpoint2026-11-08-r252-perf、checkpoint2026-11-08-r252-per-good-demand、checkpoint2026-11-08-r251-capture-dedupe。
 
 > **R248改图补验**：相同13f2aeb9…已通过省份交换ZIP及同key样条X+10的当前绑定/正式物流发布/206原生批次，数值可见、正常退出、配置与全部存档保持。其他改图夹具与逐点像素/设备/前台性能/海端仍未全部完成，见STATUS。
 
