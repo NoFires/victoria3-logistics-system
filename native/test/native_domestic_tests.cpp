@@ -79,7 +79,7 @@ int main(){
   Check(copy && copy->portTransfers.size()==1 && copy->portTransfers[0].state==second &&
       copy->portTransfers[0].anchors==std::array<uint32_t,2>{0x800064,0x8493e0} &&
       copy->portTransfers[0].spline==nkey,"port access binds the linked land province and both current anchors");
-  Check(copy && copy->landHubs==std::map<uint32_t,uint32_t>{{first,100}},
+  Check(copy && copy->landHubs==std::map<uint32_t,std::vector<uint32_t>>{{first,{100}}},
       "primary land hub uses the current node role bit and exact control");
   {
     auto direct=good;
@@ -110,7 +110,10 @@ int main(){
     Check(bad([&](auto& m){m.template Put<uint64_t>(crow+0x28,0);}),"missing corridor reference buffer rejected");
     Check(bad([&](auto& m){m.template Put<uint64_t>(crow+0x18,landNodes);}),"anonymous node must match its current runtime array slot");
     Check(bad([&](auto& m){m.template Put<int64_t>(cdef+0x18,-1);}),"negative original ground distance rejected");
-    Check(bad([&](auto& m){m.template Put<uint32_t>(ndefA+8,0x1fffffff);}),"anonymous primary hub cannot substitute for a witnessed control");
+    auto anonymous=direct;anonymous.Put<uint32_t>(ndefA+8,0x1fffffff);
+    auto skipped=run(anonymous);
+    Check(skipped && skipped->land.size()==1 && skipped->landHubs.empty(),
+        "anonymous role-1 waypoints are not injection points; the corridor itself stays modeled");
     auto strait=direct;strait.Put<uint8_t>(cdef+4,8);auto excluded=run(strait);
     Check(excluded && excluded->land.empty(),"a registered keyless strait is not an unrestricted ground road");
   }
@@ -179,10 +182,19 @@ int main(){
   {
     auto reversed=good;reversed.Put<uint32_t>(ndefA+8,200);reversed.Put<uint32_t>(ndefB+8,100);
     auto owned=run(reversed);
-    Check(owned && owned->land.size()==1 && !owned->land[0].forward && owned->landHubs.at(first)==200,
+    Check(owned && owned->land.size()==1 && !owned->land[0].forward &&
+        owned->landHubs.at(first)==std::vector<uint32_t>{200},
         "land direction follows the spline key when the definition endpoints are reversed");
-    reversed.bytes.clear();Check(owned->land[0].spline==key && owned->landHubs.at(first)==200,
+    reversed.bytes.clear();Check(owned->land[0].spline==key && owned->landHubs.at(first)==std::vector<uint32_t>{200},
         "owned land and hub copies survive engine source destruction");
+  }
+  {
+    // Two role-1 hubs of one state (province-swap worlds) both register and
+    // sort by anchor instead of refusing the whole snapshot.
+    auto twin=good;twin.Put<uint32_t>(ndefB+4,1);twin.Put<uint16_t>(ndefB+0xc,1);
+    auto twinCopy=run(twin);
+    Check(twinCopy && twinCopy->landHubs==std::map<uint32_t,std::vector<uint32_t>>{{first,{100,200}}},
+        "several witnessed primary hubs of one state all register in ascending order");
   }
   auto rejected=[&](auto change,const char* why){auto m=good;change(m);Check(!run(m),why);};
   rejected([&](auto& m){m.template Put<uint32_t>(provinceTable+16,0);},"unknown province endpoint rejected");

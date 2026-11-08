@@ -48,7 +48,7 @@ int main(){
     auto network=std::make_shared<NativeSplineNetwork>();network->width=8192;network->height=3616;
     network->points={{100,{1,1}},{200,{6,1}}};
     auto sea=std::make_shared<NativeSeaGeography>();sea->states={{10,{1,1}},{20,{2,2}}};
-    auto sources=std::make_shared<NativeDomesticSources>();sources->landHubs={{10,100},{20,200}};
+    auto sources=std::make_shared<NativeDomesticSources>();sources->landHubs={{10,{100}},{20,{200}}};
     sources->orders={{10,UINT32_MAX,7,1,1000,0},{20,UINT32_MAX,7,1,0,1000}};
     constexpr uint64_t first=kNativeAnonymousLandNode|7,second=kNativeAnonymousLandNode|8;
     NativeDirectLandLeg start{{100,first},{{{100000,100000},{300000,100000}}},200000},
@@ -119,7 +119,7 @@ int main(){
     auto sources=std::make_shared<NativeDomesticSources>();
     sources->orders={{200,UINT32_MAX,7,1,1000,0},{400,UINT32_MAX,7,1,0,1000}};
     sources->land={{1,100,200,2,local,true},{2,200,400,2,onward,true}};
-    sources->landHubs={{100,city},{400,destination}};
+    sources->landHubs={{100,{city}},{400,{destination}}};
     trade->domestic=sources;input.nativeTrade=trade;
     auto model=BuildNativeDomesticModel(input);
     Check(model && model->allocation.shipments.size()==1 && model->allocation.shipments[0].route.size()==2 &&
@@ -136,16 +136,21 @@ int main(){
     trade->states[0].market=8;auto foreign=BuildNativeDomesticModel(input);
     Check(foreign && foreign->allocation.shipments.size()==1 && foreign->allocation.shipments[0].route.size()==1,
         "another market's primary hub cannot relocate this state's known loading points");
-    trade->states[0].market=7;sources->landHubs[200]=exit;
-    Check(!BuildNativeDomesticModel(input),"conflicting primary hubs in the same current region and market are rejected");
-    sources->landHubs.erase(200);sources->landHubs[999]=city;
+    trade->states[0].market=7;sources->landHubs[200]={exit};
+    auto shared=BuildNativeDomesticModel(input);
+    Check(shared && shared->allocation.complete && shared->allocation.shipments.size()==1 &&
+        std::abs(shared->allocation.shipments[0].quantity-1000)<.00001,
+        "two witnessed hubs in one region and market each inject at their own state");
+    sources->landHubs.erase(200);sources->landHubs[999]={city};
     Check(!BuildNativeDomesticModel(input),"primary hub must belong to a current full state");
-    sources->landHubs.erase(999);sources->landHubs[100]=999;
+    sources->landHubs.erase(999);sources->landHubs[100]={999};
     Check(!BuildNativeDomesticModel(input),"primary hub must have a current control point");
-    sources->landHubs[100]=city;
+    sources->landHubs[100]={city};
     auto changed=std::make_shared<NativeWorldTradeSnapshot>(*trade);
-    auto changedSources=std::make_shared<NativeDomesticSources>(*sources);changedSources->landHubs[100]=exit;changed->domestic=changedSources;
+    auto changedSources=std::make_shared<NativeDomesticSources>(*sources);changedSources->landHubs[100]={exit};changed->domestic=changedSources;
     Check(!NativeTradeEquivalent(*trade,*changed),"same-revision primary hub change invalidates domestic allocation identity");
+    changedSources=std::make_shared<NativeDomesticSources>(*sources);changedSources->landHubs[100]={city,exit};changed->domestic=changedSources;
+    Check(!NativeTradeEquivalent(*trade,*changed),"adding a witnessed hub changes domestic allocation identity");
   }
   {
     auto input=Snapshot();auto trade=std::make_shared<NativeWorldTradeSnapshot>(*input.nativeTrade);
@@ -221,7 +226,7 @@ int main(){
     auto portNetwork=std::make_shared<NativeSplineNetwork>(*network);
     portTrade->geometry=portNetwork;
     auto portSources=std::make_shared<NativeDomesticSources>();
-    portSources->landHubs={{200,landHub}};
+    portSources->landHubs={{200,{landHub}}};
     portSources->portTransfers={{9,200,{landPort,port},portSpline,true}};
     portTrade->domestic=portSources;
     auto portInput=input;portInput.nativeTrade=portTrade;
@@ -313,7 +318,7 @@ int main(){
                           {NativeSeaSplineKeys(3000,3001)[0],{322}}};
     auto sea=std::make_shared<NativeSeaGeography>();sea->states={{10,{1,1}},{20,{2,2}}};
     sea->provinces={{10,{{1,3000},{11}}},{11,{{2,3001},{10}}}};
-    auto sources=std::make_shared<NativeDomesticSources>();sources->landHubs={{10,ha},{20,hb}};
+    auto sources=std::make_shared<NativeDomesticSources>();sources->landHubs={{10,{ha}},{20,{hb}}};
     sources->localLand={{1,10,10,2,ra,true},{2,20,20,2,rb,true}};
     sources->portTransfers={{3,10,{na,sa},ka,true},{4,20,{nb,sb},kb,true}};
     sources->orders={{10,UINT32_MAX,7,1,1000,0},{20,UINT32_MAX,7,1,0,1000}};

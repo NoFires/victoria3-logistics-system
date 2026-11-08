@@ -313,16 +313,40 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
         std::array<uint64_t,2>{access.anchors[0],access.anchors[1]}))
       return fail("invalid native port access scope or distance");
   }
-  std::map<Area,uint32_t> hubs;
-  for(const auto& [state,control]:trade.domestic->landHubs){
-    if(!areas.count(state) || !network.points.count(control))return fail("invalid current domestic land hub");
-    const auto index=node(state,control);
-    const auto [where,inserted]=hubs.emplace(areas.at(state),index);
-    if(!inserted && where->second!=index)return fail("ambiguous current domestic land hub");
+  // Hub injection points belong to their own state; a state with several
+  // witnessed hubs keeps all of them. A member state without its own hub
+  // keeps borrowing exactly one area hub — but only while the area's hub
+  // set is unambiguous (the previous single-hub behaviour).
+  std::map<uint32_t,std::vector<uint32_t>> stateHubs;
+  std::map<Area,std::vector<uint32_t>> areaHubs;
+  for(const auto& [state,controls]:trade.domestic->landHubs){
+    if(!areas.count(state))return fail("invalid current domestic land hub");
+    for(const auto control:controls){
+      if(!network.points.count(control))return fail("invalid current domestic land hub");
+      const auto index=node(state,control);
+      stateHubs[state].push_back(index);
+      areaHubs[areas.at(state)].push_back(index);
+    }
   }
+  const auto dedupe=[](auto& map){
+    for(auto& [key,list]:map){
+      std::sort(list.begin(),list.end());
+      list.erase(std::unique(list.begin(),list.end()),list.end());
+    }
+  };
+  dedupe(stateHubs);dedupe(areaHubs);
   for(auto& [state,points]:access){
-    const auto hub=hubs.find(areas.at(state));
-    if(hub!=hubs.end()){points={hub->second};continue;}
+    if(auto own=stateHubs.find(state);own!=stateHubs.end()){
+      std::vector<uint32_t> kept;
+      for(const auto point:points)
+        if(std::binary_search(own->second.begin(),own->second.end(),point))kept.push_back(point);
+      std::sort(kept.begin(),kept.end());
+      kept.erase(std::unique(kept.begin(),kept.end()),kept.end());
+      points=std::move(kept);
+      continue;
+    }
+    if(auto area=areaHubs.find(areas.at(state));
+        area!=areaHubs.end() && area->second.size()==1){points={area->second.front()};continue;}
     std::sort(points.begin(),points.end());points.erase(std::unique(points.begin(),points.end()),points.end());
   }
   FreightPolicy policy;policy.graphRevision=snapshot.revision;

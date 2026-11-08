@@ -194,11 +194,10 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     return read(runtime,row.data(),row.size()) && u32(row,0)==n.id &&
         u16(row,6)==n.province && u64(row,8)==definition;
   };
-  std::map<uint32_t,uint32_t> hubs;
-  auto hub=[&](uint32_t state,uint32_t anchor){
-    const auto [where,inserted]=hubs.emplace(state,anchor);
-    return inserted || where->second==anchor;
-  };
+  // A state may hold several witnessed primary hubs (e.g. after a province
+  // swap mod merges two hub provinces); each one is a known injection point.
+  std::map<uint32_t,std::set<uint32_t>> hubs;
+  auto hub=[&](uint32_t state,uint32_t anchor){hubs[state].insert(anchor);};
   uint64_t data=0;uint32_t cap=0,count=0;
   if(!array(manager+0x28,data,cap,count))return fail("invalid domestic land connection table");
   std::vector<uint8_t> rows(size_t(count)*0x40);
@@ -234,8 +233,7 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
       for(size_t side=0;side<2;++side){
         const auto& n=side?b:a;
         leg.anchors[side]=n.anchor==0x1fffffff?kNativeAnonymousLandNode|n.id:n.anchor;
-        if((n.flags&1) && (n.anchor==0x1fffffff || !hub(side?*destination:*source,n.anchor)))
-          return fail("invalid current keyless primary land hub");
+        if((n.flags&1) && n.anchor!=0x1fffffff)hub(side?*destination:*source,n.anchor);
       }
       NativeLandConnection copy{id,*source,*destination,row[4],key,true,leg};
       if(*source==*destination)result.localLand.push_back(copy);
@@ -255,8 +253,8 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
     else return fail("domestic land spline endpoints differ");
     const auto source=provinceState(a.province),destination=provinceState(b.province);
     if(!source || !destination)return fail("domestic travel endpoint province/state mismatch");
-    if((a.flags&1) && !hub(*source,a.anchor))return fail("ambiguous current primary land hub");
-    if((b.flags&1) && !hub(*destination,b.anchor))return fail("ambiguous current primary land hub");
+    if(a.flags&1)hub(*source,a.anchor);
+    if(b.flags&1)hub(*destination,b.anchor);
     NativeLandConnection copy{id,*source,*destination,kind==2?4u:2u,key,forward};
     const bool modeled=*source!=*destination && markets.at(*source)==markets.at(*destination);
     const bool local=*source==*destination;
@@ -321,7 +319,8 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
       return fail("invalid owned native port transfer");
     result.portTransfers.push_back({id,state,{landAnchor,seaAnchor},key,true});
   }
-  for(const auto& [state,anchor]:hubs)result.landHubs.emplace(state,anchor);
+  for(const auto& [state,anchors]:hubs)
+    result.landHubs.emplace(state,std::vector<uint32_t>(anchors.begin(),anchors.end()));
   if(!window.Unchanged())return fail("domestic sources changed during copy");
   if(!current())return fail("retired domestic sources");
   if(error)error->clear();return result;

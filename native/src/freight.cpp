@@ -5,6 +5,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 #include <map>
 #include <mutex>
@@ -66,8 +67,12 @@ FreightResult AllocateFreight(const EconomySnapshot& snapshot, const SplineGraph
     auto access=stateAccess;
     for (auto& [state,nodes] : access) {
       std::sort(nodes.begin(),nodes.end());
-      if (std::adjacent_find(nodes.begin(),nodes.end())!=nodes.end() || (!nodes.empty() && nodes.back()>=graph.nodes.size()))
-        throw std::runtime_error("invalid physical state access");
+      if (std::adjacent_find(nodes.begin(),nodes.end())!=nodes.end() || (!nodes.empty() && nodes.back()>=graph.nodes.size())) {
+        char detail[96];
+        std::snprintf(detail,sizeof(detail),"invalid physical state access: state=%u max_node=%u graph_nodes=%llu",
+            state,nodes.empty()?0u:nodes.back(),(unsigned long long)graph.nodes.size());
+        throw std::runtime_error(detail);
+      }
     }
     for (double c : policy.costPerDistance)
       if (!std::isfinite(c) || c <= 0) throw std::runtime_error("invalid route cost");

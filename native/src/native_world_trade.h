@@ -79,7 +79,7 @@ struct NativeDomesticSources {
   NativeShippingSnapshot shipping;
   std::vector<NativeLandConnection> land;
   std::vector<NativeLandConnection> localLand; // current usable intra-state links, not self shipments
-  std::map<uint32_t,uint32_t> landHubs; // full owning state -> current primary land control
+  std::map<uint32_t,std::vector<uint32_t>> landHubs; // full owning state -> witnessed primary land controls, ascending
   std::vector<NativePortTransfer> portTransfers; // current original port-access splines
   std::vector<NativePortAccess> portAccess; // current original keyless kind6 cross-network legs
   std::vector<NativeLandConnection> builtRails; // current built rail rows (1.15 row flag 4)
