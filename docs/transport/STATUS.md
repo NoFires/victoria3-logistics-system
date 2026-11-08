@@ -1,5 +1,17 @@
 # 当前状态
 
+### 2026-11-08 — R248：当前构建省份交换/同key样条变化验收通过
+
+主体13f2aeb9…/引导71dae36d…及产品源码未变，安装=dist；R245官方71 PASS继续适用，未重复构建或部署。按MASTER §2.4完整重读01/02/03（当前身份/几何、访问窗口、证据层级），复用R239私有省份交换ZIP与同key样条X+10夹具，并重新编译只读探针；测试中的固定颜色/点ID仅是夹具断言，不是产品ID→key表。临时content_load原子写入，唯一夹具路径拒绝覆盖现有文件，所有操作在非输入隐藏桌面，无全局键鼠/抢焦点/切换输入桌面。
+
+省交换自有14552/暂停59883360：0087C9模板当前region id140/geo155/valid1/vtable正确（省索引19995，运行州1051）；原版市场物流41行、总量13652.63655，模型514陆路/92海路/3583 shipment，gen2/world1/rev4视图116.456ms。与原图数值不同，按当前运行世界记录，不强制套用旧分配。相同key几何自有35148：点268437460实际X4082.966309，预期X+10误差0；点/段/连接仍33765/4281/4279。物流41行、总量13648.36446，505陆路/93海路/3498 shipment，当前视图124.839ms。
+
+两场当前快照/UI交接正常，无snapshot pending；实际GPU截图数值可见、未复发 --。各206 ribbon冷建完成，uploads206/reused0/pool206/failed0/dropped0；峰753/584us每帧、16次/帧，软预算超时0。这证明当前运行地图绑定、模型/正式UI发布及原生绘制批次，不声称已逐像素核验改动点所在路线（截图相机在北极附近），也不把冷建计时当作前台P95。均有启动期一次interface identity unavailable后恢复，不称零WARN。
+
+首省交换尝试24828正确读取归属，但在首次UI交接前发送F4，原版面板仍关闭；该自动化失败脚本/日志保留，正常退出0/输入恢复后，重试等待UI发布和新GPU读回再操作即通过。没有修改产品门控。两次正式场景均WM_CLOSE正常退出0、settings首轮自动恢复；恢复临时Mod列表后save/settings/ini/content/continue逐字节保持，存档目录文件集合及每份文件hash保持，无游戏。
+
+当前仅关闭这两个改图子项；其余geo/ZIP/replace_path/omit矩阵未在13f2重跑，真实设备丢失、跨国家新游戏、前台三对性能和2 unavailable/36 partial海端仍待，完整goal ACTIVE。证据E:/Code/v3-analysis/checkpoints/2026-11-08-r248-map-compat（PLAN.md、run.py、run-first-attempt.py、protected-before.json、validation-final.json、province首轮失败、province-retry/spline的probe.log、validation.json、live/{session-freight.log,logistics.png,after.json}）。
+
 ### 2026-11-08 — R247：隔离桌面同档重载/另一存档/主菜单及窗口生命周期通过
 
 产品源码/两DLL未变，仍13f2aeb9…/71dae36d…、安装=dist，沿用R245完整71 PASS，未重复构建或部署。按MASTER §2.4完整重读01/02/03。旧R243脚本使用SetForegroundWindow/keybd_event，未沿用；本轮只用自有隐藏桌面、已验证虚拟指针和定向PostMessage，原版PauseMenu.LoadIngame/SaveGameItem.Select/FrontEndLoadView.OnLoad及返回菜单按钮；无内部载入函数调用、全局输入或切换输入桌面。
