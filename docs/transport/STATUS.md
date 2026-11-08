@@ -1,5 +1,15 @@
 # 当前状态
 
+### 2026-11-08 — R240：replace/omit PASS；省交换 fail-closed 发现；跨存档与拓扑通道受限
+
+26b70987…构建（安装＝dist）：
+
+- **replace_paths 整目录替换 PASS**：探针 geo=901 valid=1，页面 owner selected＋206 ribbons 冷建＋uploads=206 dropped=0；**omit 负例 PASS**：世界拒绝建立（state db unavailable、游戏自行退出），与 R211 一致。证据 checkpoint2026-11-08-r239-map-compat（r239_replace/omit.json）。
+- **省交换新发现（fail-closed）**：省份归属交换夹具绑定正确（0087C9→id=140 geo=155），但快照反复拒绝 `ambiguous current primary land hub`，owner 不选择、页面停留在等待。符合"未知身份拒绝"；对照 R210 同夹具曾发布 187 ribbons——R230–R231 航运/港口角色过滤后 hub 解析行为不同。判定需主陆地枢纽消歧的原生证据，未经证据不启用猜测；列为后续工作（含旧行为是否含猜测的复核）。证据 r239_province.json（三会话一致）＋session-freight.log WARN 行。
+- **跨存档对话框自动化受限**：载入对话框对 PostMessage 点击/按键与注入指针（含选中确认）均不响应；同通道可驱动本构建全部其他 UI。退休/池恢复机制已由本构建六次重载证明；对话框场景留待手动。**显示拓扑/模式 API**（SetDisplayConfig/ChangeDisplaySettingsW）本环境分别访问违例/BADMODE 失败；A24 适配器级移除仍需硬件动作。所有会话 WM_CLOSE 退出0、五输入逐字节不变。证据 checkpoint2026-11-08-r240-cross-save（RESULT.md）。
+
+不 push，完整目标 ACTIVE。
+
 ### 2026-11-08 — R237–R239：当前构建部署矩阵／生命周期／改图兼容复绑
 
 构建 freight 26b70987…／引导 71dae36d…（安装＝dist）补齐当前构建证据：

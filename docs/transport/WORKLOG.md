@@ -1,5 +1,9 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-08 — R240：replace/omit 复绑 PASS、省交换 fail-closed、跨存档/拓扑通道受限
+
+replace_paths 夹具（geo=901＋页面 206 ribbons 冷建）与 omit 负例（世界拒绝建立）在 26b70987 复绑通过。省交换夹具三会话一致出现 `ambiguous current primary land hub` 拒绝发布：探针绑定正确（id=140 geo=155），快照 fail-closed 符合规范；R210 同夹具曾发布 187 ribbons，R230–R231 之后 hub 解析行为不同——需要枢纽消歧原生证据后才能判定旧发布是否含猜测或新过滤引入歧义；未经证据不启用猜测路径，列为后续。跨存档对话框对全部注入通道（窗口消息/注入指针/键盘）不响应，六次重载已证明退休机制；SetDisplayConfig 与 ChangeDisplaySettingsW 在本环境失败，A24 仍需真实硬件事件。所有会话退出0、五输入不变。证据 checkpoint2026-11-08-r240-cross-save（RESULT.md）与 r239-map-compat。不push，goal ACTIVE。
+
 ### 2026-11-08 — R237–R239：部署矩阵／生命周期／改图兼容在 26b70987 复绑
 
 R237（checkpoint2026-11-08-r237-deploy-matrix）：四例部署矩阵逐例准备、官方 deploy.ps1 卸载/重装；缺失 126、损坏 193、卸载无条目、重装 0，全部存活≥60s、WM_CLOSE 退出0；安装＝dist、五输入逐字节不变。R238（…r238-lifecycle）：重载 world2 池恢复＋冷重建 206 ribbons、缩放往返与最小化/恢复零退休、退出0 五输入不变；跨国家新游戏分支不重复（R119/R201 同代码路径）。R239（…r239-map-compat）：探针当前源码重编译，geo/样条/ZIP 三夹具探针精确绑定（geo=901、X+10 delta=0、states=1156 与无 Mod 基线一致），页面 206 ribbons 冷建、content_load 恢复；失败历史：2048×1152 窗口点击断言拦截与 HWND_TOP 常量错误各一次，修复后重跑。三轮输入全 PostMessage、指针零移动。不 push，完整目标 ACTIVE；A24（真实设备变化）、海路 1 unavailable＋38 partial、跨国家分支与逐像素矩阵仍明示未完成。

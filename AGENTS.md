@@ -216,6 +216,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-08 — R240完成：replace/omit 复绑、省交换 fail-closed 发现
+
+replace_paths（geo=901＋206 ribbons 冷建）与 omit 负例（世界拒绝建立）PASS；省交换夹具探针绑定正确但快照拒绝 `ambiguous current primary land hub`（fail-closed 符合规范；R210 同夹具曾发布 187 ribbons，R230–R231 后 hub 解析行为不同，需枢纽消歧原生证据，列为后续）。跨存档对话框对全部注入通道不响应（退休机制已由六次重载证明）；显示拓扑/模式 API 本环境失败，A24 仍需硬件事件。所有会话退出0、五输入不变。详见STATUS与checkpoint2026-11-08-r240-cross-save，不push，完整目标ACTIVE。
+
 ### 2026-11-08 — R237–R239完成：当前构建部署/生命周期/改图证据补齐
 
 26b70987…构建补齐当前证据：R237 部署矩阵缺失126/损坏193/卸载无条目/重装0（四例存活≥60s、退出0、安装＝dist、五输入不变）；R238 重载 world2 池恢复 slots=206＋冷重建 206 ribbons、缩放往返与最小化恢复零退休、退出0；R239 geo/样条/ZIP 三夹具探针精确绑定（geo=901、delta=0、states=1156 与基线一致）、页面 206 ribbons 冷建、content_load 恢复，探针由当前源码重编译。连同 R236（71 PASS、切州自动重排实机、A25 三对 P95≤+0.57ms/模拟≤0.66%＋20 轮 uploads=0 reused=206），当前构建具备构建部署/实机启动/数据身份/改图/UI 闭环/生命周期/性能证据。仍明示：A24 需真实设备变化、海路 1 unavailable＋38 partial、跨国家分支与逐像素矩阵未重复；不push，完整目标ACTIVE。详见STATUS。
