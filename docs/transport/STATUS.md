@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-09 — 经济策划 v1.2：基础运力替代独立马车底线
+
+按用户要求仅更新ECONOMY_DESIGN.md：基础运力=max(0,基础设施)×k1，取消独立常数底线，k1=0可取消基础运力；同步容量、承运/运力商品分账、Tooltip、数值夹具和平衡/验收要求。铁路承运受可用商品供给约束，收付款未验证前仅估算需求。R253其他会话claim仍有效，本次为独立策划编辑，不改迁移源码/DLL/验收产物，不构建/部署/游戏操作。文档一致性与示例算术静态检查通过；未声称实现或实机验收。此前审查的其他经济模型缺口仍待处理。
+
 ### 2026-11-08 — R252：正式native商品行补逐商品Freight需求贡献，交付晋级 bc96745c…
 
 R250确认的实现缺口落地：正式native分支此前只有需求总账（logistics_session.cpp:285选中的3参BuildLogisticsDocument只设document.intermediaryDemand，商品行不赋intermediaryDemand），不满足"Freight需求账保留来源商品贡献"。最小改动：NativeTradeView新增domesticGoodDemand（与domesticDemand同市场/州作用域、同freightDemand单位，BuildNativeTradeView同一balance循环累计），文档构建器在domesticDemand存在时给每行FreightDemand{}并按good.id填入累计——与旧模型分支（logistics_ui.cpp:225-236）语义一致。无GUI渲染变化（该字段当前无消费点；目标要求记录，显示后续接）。

@@ -216,6 +216,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-09 — 经济策划 v1.2：基础运力替代独立马车底线
+
+按用户要求仅更新ECONOMY_DESIGN.md：基础运力=max(0,基础设施)×k1，取消独立常数底线，k1=0可取消基础运力；同步容量、承运/运力商品分账、Tooltip、数值夹具和平衡/验收要求。铁路承运受可用商品供给约束，收付款未验证前仅估算需求。R253其他会话claim仍有效，本次为独立策划编辑，不改迁移源码/DLL/验收产物，不构建/部署/游戏操作。文档一致性与示例算术静态检查通过；未声称实现或实机验收。此前审查的其他经济模型缺口仍待处理。
+
 ### 2026-11-08 — R252：逐商品Freight需求贡献补齐，交付晋级 bc96745c…
 
 R250缺口落地：native分支商品行此前不带intermediaryDemand（只有总账）。NativeTradeView新增domesticGoodDemand（同作用域/单位，balance循环累计），3参BuildLogisticsDocument按旧模型分支语义填充商品行。3条新断言先FAIL复现后PASS（等于总账/显式零/州scope一致）。官方入口exit 0（72 PASS/0 FAIL）、embedded（bc96745c…）/selftest/默认debug通过、deploy exit 0安装=dist。交付主体bc96745c…（52,098,461 B）＋引导71dae36d…。字段已记录未显示（GUI无消费点）；海端2+36、A25/生命周期/改图重绑仍待，完整目标继续。证据checkpoint2026-11-08-r252-per-good-demand。
