@@ -144,6 +144,32 @@ int main(){
         owned->portAccess[0].positions[0]==std::array<int64_t,2>{500000,600000} &&
         owned->portAccess[0].distanceFixed==700000,
         "keyless access copies the actual physical port, naval endpoint and original distance");
+    auto hubAccess=access;hubAccess.Put<uint16_t>(ndefB+4,1);
+    auto hubOwned=run(hubAccess);
+    Check(hubOwned && hubOwned->portAccess.size()==1 &&
+        hubOwned->portAccess[0].anchors==std::array<uint32_t,2>{200,0x800064},
+        "the state's own primary hub is a witnessed landing role");
+    auto standalone=access;
+    constexpr uint64_t soloDef=0x4c0000;
+    for(size_t i=0;i<0x38;++i)standalone.bytes[soloDef+i]=standalone.bytes[ndefB+i];
+    standalone.Put<uint32_t>(world+0x5028+0x18,3);standalone.Put<uint32_t>(world+0x5028+0x1c,3);
+    standalone.Zero(landNodes+0x60,0x30);
+    standalone.Put<uint32_t>(soloDef,2);standalone.Put<uint16_t>(soloDef+4,1);standalone.Put<uint32_t>(soloDef+8,300);
+    standalone.Put<uint32_t>(landNodes+0x60,2);standalone.Put<uint16_t>(landNodes+0x66,2);standalone.Put<uint64_t>(landNodes+0x68,soloDef);
+    standalone.Put<uint64_t>(accessDef+8,soloDef);standalone.Put<uint64_t>(ncrow+0x50,landNodes+0x60);
+    auto standaloneCopy=run(standalone);
+    Check(bool(standaloneCopy),"isolated role1 is a valid current node");
+    Check(standaloneCopy->landHubs.count(second) && standaloneCopy->landHubs.at(second)==std::vector<uint32_t>{300},
+        "a standalone witnessed landing hub registers its own supply/demand injection point");
+    auto anonymousHub=standalone;anonymousHub.Put<uint32_t>(nndefA+8,0x1fffffff);
+    anonymousHub.Put<uint8_t>(ncdef+4,0); // anonymous naval node has no authored port spline
+    auto anonymousCopy=run(anonymousHub);
+    Check(anonymousCopy && anonymousCopy->portAccess.empty() && anonymousCopy->orders==owned->orders,
+        "current anonymous naval landing nodes do not reject unrelated quantity data");
+    auto building=access;building.Put<uint16_t>(ndefB+4,64);
+    auto buildingOwned=run(building);
+    Check(buildingOwned && buildingOwned->portAccess.empty() && buildingOwned->portTransfers.size()==1,
+        "non-port non-hub landing roles stay out of the port model");
     auto bad=[&](auto change){auto value=access;change(value);return !run(value);};
     Check(bad([&](auto& m){m.template Put<uint64_t>(ncrow+0x50,navalNode);}),
         "access cannot substitute a node from the other current array");
@@ -153,7 +179,16 @@ int main(){
         "out-of-bounds current access node rejected");
     Check(bad([&](auto& m){m.template Put<int64_t>(accessDef+0x18,-1);}),
         "negative original access distance rejected");
-    for(uint16_t role:{0x401,0xc01,0x404,0xc04,0x408,0xc08,0x410,0xc10,0x420,0x440,0xc40}){
+    // Live role-1 rows carry flag bits 0x401/0xc01 (R245 evidence); the model
+    // masks the low bits, so every variant is the state's own landing point.
+    for(uint16_t hubRole:{uint16_t(1),uint16_t(0x401),uint16_t(0xc01)}){
+      auto hub=access;hub.Put<uint16_t>(ndefB+4,hubRole);
+      auto hubOwned=run(hub);
+      Check(hubOwned && hubOwned->portAccess.size()==1 &&
+          hubOwned->portAccess[0].anchors==std::array<uint32_t,2>{200,0x800064},
+          "the state's own primary hub is a witnessed landing role");
+    }
+    for(uint16_t role:{0x404,0xc04,0x408,0xc08,0x410,0xc10,0x420,0x440,0xc40}){
       auto other=access;other.Put<uint16_t>(ndefB+4,role);
       auto filtered=run(other);
       Check(filtered && filtered->portAccess.empty() && filtered->portTransfers.size()==1 &&

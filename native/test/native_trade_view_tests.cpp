@@ -244,6 +244,12 @@ int main(){
     Check(portModel && portModel->portPaths.size()==1 && portModel->edges.size()==2 &&
         portModel->portPaths.begin()->second.size()==2 && portModel->edges[1].complete,
         "only the copied original access leg connects the physical land and naval port anchors");
+    auto knownHub=portNetwork->points.at(landHub);portNetwork->points.erase(landHub);
+    auto missingGeometry=BuildNativeDomesticModel(portInput,{},&portError);
+    Check(missingGeometry && missingGeometry->allocation.complete && missingGeometry->edges.size()==2 &&
+        !missingGeometry->edges[1].complete && missingGeometry->edges[1].strips.empty(),
+        "a witnessed landing hub without a graphics control keeps connectivity and marks missing geometry");
+    portNetwork->points[landHub]=knownHub;
     auto beforeAccess=*portSources;
     portSources->portAccess[0].distanceFixed++;
     auto changedAccess=std::make_shared<NativeWorldTradeSnapshot>(*portTrade);

@@ -295,20 +295,22 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
        access.anchors[0]==access.anchors[1] || access.distanceFixed<0)
       return fail("invalid owned native port access");
     std::vector<NativeSplinePoint> points;
+    bool geometryKnown=true;
     for(size_t side=0;side<2;++side){
       const auto point=network.points.find(access.anchors[side]);
-      if(point==network.points.end() || !std::isfinite(point->second.x) || !std::isfinite(point->second.z) ||
+      if(point==network.points.end()){geometryKnown=false;continue;}
+      if(!std::isfinite(point->second.x) || !std::isfinite(point->second.z) ||
          double(access.positions[side][0])!=std::floor(double(point->second.x))*100000 ||
          double(access.positions[side][1])!=std::floor(double(point->second.z))*100000)
         return fail("native port access differs from current controls");
       points.push_back(point->second);
     }
     NativeTradeGeometry shape;
-    if(points[0].x!=points[1].x || points[0].z!=points[1].z){
+    if(geometryKnown && (points[0].x!=points[1].x || points[0].z!=points[1].z)){
       const uint64_t strip=(uint64_t(1)<<63)|(uint64_t(access.id)<<6);
       if(!result.portPaths.emplace(strip,std::move(points)).second)return fail("duplicate native port access handle");
       shape.strips.push_back({strip,true});
-    }else shape.complete=access.distanceFixed==0;
+    }else shape.complete=geometryKnown && access.distanceFixed==0;
     if(!add(access.state,access.state,4,std::move(shape),double(access.distanceFixed)/100000,
         std::array<uint64_t,2>{access.anchors[0],access.anchors[1]}))
       return fail("invalid native port access scope or distance");
@@ -322,7 +324,9 @@ inline std::optional<NativeDomesticModel> BuildNativeDomesticModel(const Economy
   for(const auto& [state,controls]:trade.domestic->landHubs){
     if(!areas.count(state))return fail("invalid current domestic land hub");
     for(const auto control:controls){
-      if(!network.points.count(control))return fail("invalid current domestic land hub");
+      if(!network.points.count(control) && std::none_of(trade.domestic->portAccess.begin(),trade.domestic->portAccess.end(),
+          [&](const auto& port){return port.state==state && port.anchors[0]==control;}))
+        return fail("invalid current domestic land hub");
       const auto index=node(state,control);
       stateHubs[state].push_back(index);
       areaHubs[areas.at(state)].push_back(index);

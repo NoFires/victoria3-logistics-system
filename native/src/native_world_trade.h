@@ -69,7 +69,7 @@ struct NativePortTransfer {
 };
 struct NativePortAccess {
   uint32_t id=0,state=0;
-  std::array<uint32_t,2> anchors{}; // actual land port -> naval port, not the primary hub
+  std::array<uint32_t,2> anchors{}; // witnessed land port or primary hub -> naval port
   std::array<std::array<int64_t,2>,2> positions{}; // original definition, fixed1e5
   int64_t distanceFixed=0;
   bool operator==(const NativePortAccess&)const=default;

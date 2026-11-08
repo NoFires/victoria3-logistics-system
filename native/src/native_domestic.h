@@ -289,13 +289,24 @@ std::optional<NativeDomesticSources> DecodeNativeDomesticSources(const Reader& r
         return fail("unsupported current port access roles");
       const auto& land=nodes[firstLand?0:1];const auto& sea=nodes[firstLand?1:0];
       // Kind6 also joins cities and production hubs to the naval network.
-      // This port-only model must skip those actual links, not reject the world.
-      if((land.flags&0x7f)!=2)continue;
+      // This model admits only the two witnessed landing roles: the port (2)
+      // and the state's own primary land hub (1), which is exactly the node
+      // where the state's net supply and demand already injects.
+      const uint32_t landRole=land.flags&0x7f;
+      if(landRole!=2 && landRole!=1)continue;
       const auto state=provinceState(land.province);
       int64_t distance=0;std::memcpy(&distance,def.data()+0x18,8);
-      if(!state || land.anchor>=0x1fffffff || sea.anchor>=0x1fffffff ||
-         land.anchor==sea.anchor || distance<0)
-        return fail("invalid current port access state, controls or distance");
+      const bool valid=state && land.anchor<0x1fffffff && sea.anchor<0x1fffffff &&
+          land.anchor!=sea.anchor && distance>=0;
+      // A port row (role 2) with broken bounds is corruption: fail closed.
+      // A hub row (role 1) that cannot be a landing point (anonymous anchor,
+      // province outside the roster, same-node degenerate) is simply not a
+      // landing point: skip it and leave the lane partial as before.
+      if(!valid){
+        if(landRole==2)return fail("invalid current port access state, controls or distance");
+        continue;
+      }
+      if(landRole==1)hub(*state,land.anchor);
       result.portAccess.push_back({id,*state,{land.anchor,sea.anchor},{land.position,sea.position},distance});
       continue;
     }

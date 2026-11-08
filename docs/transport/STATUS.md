@@ -1,5 +1,15 @@
 # 当前状态
 
+### 2026-11-08 — R245完成：物流 --、独立主枢纽与缺几何交接
+
+根因已实机定位：当时安装b4facf6d…（非旧文档b035a8c1…）将role1连接的匿名海侧anchor=0x1fffffff当成坏记录，拒绝整份快照。自有隐藏新档2508/暂停59883360只读枚举3699条kind6，194条role1包含该匿名海侧值，role2无此异常，运行节点身份错误0。保留用户未提交的role1过滤修复并正式构建；有效独立role1锚点同时登记landHubs，缺绘图控制点只标记当前接入边缺几何，保留原版距离/连接/数量；已有控制点坐标不一致与无见证hub仍拒绝。新增独立节点/匿名海端/缺控制点回归，前两缺口先FAIL后PASS。匿名夹具首版误共享已有type5端点导致不相干样条拒绝，修正为无该样条的匿名节点，不放宽生产检查。
+
+完整build.ps1/build_tests.ps1 exit0（71 PASS、零FAIL），embedded/selftest560391亮像素/默认debug零顶点通过；源哈希冻结核对。主体13f2aeb9b289c0d7b296ee7c09d442625155aa9ffb44c835f7c6e3e4bda2be63（51,924,020B）＋引导71dae36d…，deploy.ps1 exit0，安装=dist，部署时48保留文件/五输入保持。无新增ABI、经济写入或猜测路径。
+
+同构建自有隐藏桌面24880，phase4/暂停59883360，1156州/54商品快照正常复制，无snapshot pending；505陆路/93海路、3499 shipment、206 ribbon。原版市场物流页41行、贸易量13648.36446，work/share原版排序和分类41→9→41通过，scopeFixed=1364836446固定，恢复206ribbon uploads0/reused206；州434/5物流数字可见，切至州5自动降序重排，GPU截图确认818.45→89.97。X关闭后面板/正式箭头撤下；私有ordered_ui误把关闭后保留的缓存行按无效当前州校验而拒绝，仅该关闭读取子项不可用，不冒充产品失败或额外探针通过。启动期一次interface identity unavailable后恢复，不称零WARN。全程输入桌面Default、无全局输入/切换桌面；用户活动指针变化单独留档。WM_CLOSE正常退出0，设置首轮自动恢复/五输入exact，无游戏。
+
+同档仍2条unavailableSea、36条partialSea；保持缺端点标记，不以数值恢复宣称所有海路补全。同构建完整A25/改图/生命周期矩阵尚未重跑，不继承b035a8c1旧结果；完整目标ACTIVE。原文00–03已按快照/模型主题完整重读；回滚与证据：E:/Code/v3-analysis/checkpoints/2026-11-08-r245-logistics-fix（before、installed-before.dll、PLAN.md、invalid-access.log、root-cause.json、pipeline.json、audit.json、live-before、live/{validation.json,session-freight.log,market-logistics.png,home-counties.png,state-closed.png,after.json}）。
+
 ### 2026-11-08 — R244：main 推送远程（71 提交）＋改图夹具在 b035a8c1 复绑
 
 用户要求上传 git：`git push origin main` 成功（`27c84ba..724ef30`，71 个提交，快进无改写），`git ls-remote` 确认远程 main＝本地 HEAD `724ef30`；远程为既有 NoFires/victoria3-logistics-system，未 force。改图五夹具在交付构建 b035a8c1… 复绑全过：geo/ZIP/replace 探针 geo=901 valid=1、样条 X+10 delta=0（计数 33765/4281/4279 不变）、omit 负例世界拒绝建立；content_load 均逐字节恢复。至此 b035a8c1 证据链＝官方清单/自检/默认debug/部署矩阵/生命周期/A25 三对＋20轮/改图六夹具（含省交换 R242 实机发布）。不 force，完整目标 ACTIVE。
