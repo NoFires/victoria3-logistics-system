@@ -220,7 +220,11 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 R258 已知 12 地址在当前库批量 create_function：9 成功（含 FUN_142883e70 429B 最大逻辑块），3 失败（中函数/跳板）。Ghidra 自动分析未达贸易子系统（12 地址全无函数无 xref），边界重建为溯源前置已完成；反编译全文存 chain-decomp.c。下一步追岸线选择逻辑＋解析 3 失败地址。证据 checkpoint2026-11-10-r270-g2-ghidra。
 
-### 2026-11-10 — R270：Ghidra 桥直连助手建成，G2 解锁
+### 2026-11-10 — R272：G2 岸线选择算法识别——锚点按州×100 算法派生＋见证 map 查找
+
+结合并行 R258 优质反编译与我重建的 FUN_142883e70 验证：状态记录经 machine+0x120+0x2db8 容器按 id 提取；遍历 UNK_14464f590 五字节表谓词；**岸锚=state×100&掩码|0x800000 算法派生**；双端排序打包 64 位 key 查 0x38 步长见证 map 取最优。partial=map 无对应 (州×100) 对见证——38 条逐端判定路径明确（无硬编码 ID 表，符合约束）。下一步：重建 FUN_1428fbc00 边界、dump 五字节表与 map 内容对照 partial。证据 checkpoint2026-11-10-r270-g2-ghidra。
+
+### 2026-11-10 — R269：G5 完整交互矩阵通过并关闭（27cefa0a…）
 
 桥/后端/握手全链诊断健康（8089 监听、ensure_backend OK、101 tools 注册），失败为本会话启动时的一次性 MCP 连接且客户端不可重连——新建 `ghidra_call.py` 直连助手（子进程 stdio JSON-RPC 驱动 launcher_dsh.py），实测冻结库 program_info 正常。G2 溯源解锁；注意 R258 地址是 Capstone 回查地址非当前库函数起始。证据 checkpoint2026-11-10-r270-g2-ghidra。
 

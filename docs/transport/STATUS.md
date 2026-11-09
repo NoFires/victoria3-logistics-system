@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R272：G2 岸线选择算法识别——锚点算法派生＋见证 map 查找（研究推进）
+
+读并行会话 R258 优质反编译（original-select-shore.c 即我重建的 FUN_142883e70 的完整参数版）并结合自身重建验证，**岸线选择算法已识别**：按 param_2 查状态记录（FUN_142883cf0：machine+0x120+0x2db8 容器按 state id 提取，初始化门 145404748/145404738 与 R223 商品解码器同款）→ 遍历 5 字节静态表 UNK_14464f590（谓词 FUN_1428fbc00——我方重建边界错误，其版本为有效谓词）→ **岸线锚点算法派生：state×100 & 0x1fffffff（或 0x1f7fffff）| 0x800000**（与已知主枢纽锚 0x800064 格式吻合）→ 双端按大小排序打包 64 位 key（<<0x1d|<<6|0x400000020000003）→ FUN_140df87b0 查 0x38 步长节点 map（端哨兵公式证实 std::map 形态）→ 取值即状态对象 → 保留最优。**G2 核心定性**：原版岸线锚点是按州 id 算法派生的（无硬编码 ID 表，符合我方约束），partial 端点=该见证 map 中无对应 (州×100) 对条目者——38 条 partial 的逐端溯源可据此算法+map 内容判定"有无见证"，不再依赖猜测。下一步：重建 FUN_1428fbc00 真实边界＋dump UNK_14464f590 五字节表＋map 内容与 38 partial 对照。证据 checkpoint2026-11-10-r270-g2-ghidra（chain-decomp.c、callers.json、R258 三份源码副本）。
+
 ### 2026-11-10 — R271：G2 链边界重建 9/12——当前库函数建立与反编译存档
 
 直连桥批量操作 R258 已知 12 地址：9 处 create_function 成功（FUN_140d57670 119B、FUN_140dcb860 343B、FUN_1418f6aa0 54B、FUN_140ed4c80 6B、FUN_140dc01c0 75B、FUN_1428fbc00 50B、FUN_142884250 51B、FUN_142884490 3B 跳板、FUN_142883e70 429B 最大真实逻辑块），反编译全文存 chain-decomp.c；3 处创建失败（140dcb6b0/148bdcaf0/149eb5400——中函数或跳板目标，需先定位所属函数起始）。Ghida 自动分析未到达贸易子系统代码区（12 地址全部无函数无交叉引用——PDX 间接调用密集形态），函数边界重建是 G2 溯源的必要前置，现已具备。下一步：读 chain-decomp.c 追岸线选择逻辑（R258 开放问题：地区图形枢纽≠本州拥有岸端/商业许可/实际通行），并解析 3 处失败地址的所属函数。工具注记：disassemble_bytes 用 start_address 非 address。证据 checkpoint2026-11-10-r270-g2-ghidra（chain-decomp.c、probe-addresses.json、tools_list_probe.py、chain_decompile.py）。
