@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R265 中断：改图夹具首轮 replace 探针通过后被游戏自退打断（待用户确认）
+
+管线复用并行 R254 全套（审计/探针/面板/守卫全改靶 27cefa0a，content 由包装暂存无 Mod 基线并恢复用户 Gora 状态）。replace 夹具：会话载入暂停、探针 `state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`（绑定正确）、ready.json 已写（快照交接见证在）——随后游戏**再次自行干净退出 0**（无崩溃事件、无我方关闭动作；今晚第二次，第一次为 R264 的 closed3）。preserve-live 守卫按设计保留现场并中止（不盲目重启）；残留夹具 ironroad_r254_replace.zip 已带路径守卫清除；content 已恢复用户状态。两次自退已查 Application 事件日志：无 victoria3 崩溃/WER 记录——像是有外部正常关闭。已向用户提出两项确认：机器是否有人/有无计划任务关闭游戏；Ghidra MCP 桥需重启（G2 依赖）。证据 checkpoint2026-11-10-r265-map-fixtures（run-log.txt、replace/session.log、probe.log、ready.json、NOTES 待补）。
+
 ### 2026-11-10 — R264：当前构建 27cefa0a 的 A25 三对与 20 轮重绑通过
 
 六臂 P95 增加 +0.379/+0.430/+0.394 ms（≤2）、模拟三对零降幅、身份/连续性全过；20 轮冷帧 u206 后逐轮 u0/r206/p206、private 平台、池恒 206、峰帧 529µs、零超时；暂停期重开零捕获。过程修正入档：8 MB 日志自动截断丢失过一次六臂数据（分析已改为会话后即时执行＋日志副本）、一次漏暂存基线 content（open 臂带用户 UI Mod 无效）、一次中途游戏自退（四臂留档）——均修正后干净重跑。会话退出 0、五输入一致、content 恢复用户 Gora UI + 状态。至此前构建证据链＝官方入口 72 PASS＋A25 三对＋20 轮＋生命周期（0ea4caf3 上 R259；另一存档/返回菜单仍绑旧构建）＋G1 三作用域矩阵。仍待：改图矩阵在 27cefa0a 重绑、G2 海端 partial（Ghidra 桥断连）、另一存档/返回菜单、部署矩阵、A01–A27 冻结终验。证据 checkpoint2026-11-09-r261-perf/PERF-ARMS.md。
