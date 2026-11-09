@@ -1,5 +1,9 @@
 # Native profile — Victoria 3 1.15.0（旧版本记录按轮次保留）
 
+### 2026-11-09 — R258：当前地区绘制枢纽/岸线候选发现，无新入口启用
+
+精确EXE仍473186e8…/1.15.0/image140000000。当前D57670/DCB860/DCB6B0/18F6AA0取地区海洋省份，2884250/2884490/2883E70/28FBC00取地区显示枢纽与当前key；DC01C0运行地区表world+3B08，locator表53E61B0、graphics5BDCAF0、CGraphicalMap VT48CAEC0，CGameObjectLocator VT49AEC58，2EB5400变换表manager+210/locator index+98。Ghidra metadata/hash与精确PE汇编/只读副本已核对；实验helper/fixture未进入生产，旧native_ports decoder明确1.13专用。194个role1陆海候选的海端anchor均1fffffff，不能当作地图key；完整岸端选择/权限与真实native访问窗口仍待。详见STATUS/checkpoint R258，当前产品及调用面保持R257。
+
 ### 2026-11-09 — R257：当前地区海侧方向关系，无新ABI
 
 EXE仍473186e8…/1.15.0/image140000000；显式Ghidra程序victoria3-v115-473186e8.exe已核对Program Information SHA256，旧victoria3.exe为1.13.11未用。当前02884080与精确PE指令确认既有geo*100/海军位/完整key编码。读取结果中39个缺本州岸端的州均与另一州共享当前地区，type5虚拟港口海侧关系仍存在；该关系只作已选海段方向见证，不能证明本州物理港口或外国陆路权限。新校验地区定义+geo、完整key/样条成员/控制端点/唯一性；缺岸端保持partial。实际DLL计数0缺失/38部分，同世界全部3499货流/26625账重放一致，无新增调用/地址启用。私有探针首尾审计exit8、空Ghidra汇编及未用字段标注纠正均保留，详见STATUS/checkpoint R257。

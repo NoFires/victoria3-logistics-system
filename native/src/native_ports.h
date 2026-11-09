@@ -2,6 +2,8 @@
 #include "native_sea_geography.h"
 
 namespace v3 {
+// Legacy 1.13.11 decoder, not wired to the 1.15 capture. Its regional graphics
+// predicate survives in 1.15, but the registry/transform layout below does not.
 // Raw read-only equivalent of the eligibility test used by025E8070/02607620.
 // Current manager transforms, not authored fallback positions or nearest coast.
 // Caller owns the verified access scope and outer combined snapshot window.
