@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R270：Gh料桥直连助手建成，G2 解锁（不再依赖会话 MCP 客户端）
+
+用户授权自动重启桥。诊断：8089 端口监听中（Ghidra java 11-08 起）、`ensure_backend` 通过、launcher 手动 stdio 握手成功（"Auto-connected via TCP…registered 101 tools"）——桥本身健康，失败发生在本会话启动时的一次性 MCP 连接，且会话客户端不可重连（ToolSearch 永久无匹配）。解法：`ghidra_call.py` 直连助手——以子进程驱动 stdio JSON-RPC（initialize→initialized→tools/call），绕过会话客户端；实测 `get_current_program_info` 返回冻结库（victoria3.exe 1.15.0 image140000000、192,483 函数）。注记：R258 的 D57670 等地址是 Capstone 线性回查地址，非当前库函数起始（`get_function_by_address` 未命中）——后续 G2 溯源需按当前库重建函数边界。G2 研究正式解锁，38 条 partial 的逐端溯源按 R257/R258 已知链（D57670→DCB860→DCB6B0/18F6AA0、ED4C80、DC01C0、28FBC00、53E61B0、8BDCAF0、9EB5400）以当前库重建继续。证据 checkpoint2026-11-10-r270-g2-ghidra（ghidra_call.py、program_info 输出）。
+
 ### 2026-11-10 — R269：G5 完整交互矩阵在 27cefa0a 通过并关闭
 
 R256 坐标序列＋ordered_ui 逐步断言（私有桌面会话 3316，27cefa0a 安装=dist，content 临时基线并已恢复用户 Gora 状态）：基础 41 行→分类切换 41→9→41→中文搜索"谷物"1 行（grain）→空结果 0 行→清空恢复 41→hover 进出截图→面板 X 关闭（open=false）→F4 重开 41 行 ironroad_logistics——全部断言通过。截图 12-search-grain.png 底部账本 30021.15/10520.41/19500.74 与 R262 需求账日志行逐位互证。会话退出 0、设置恢复、五输入一致、content 恢复用户状态。**G5 关闭**（市场/州/商品交互在当前构建：R262 账本+R263 州/市场切换+本轮分类/搜索/空结果/hover/关闭重开）。剩余：G2（待 Ghidra 桥重启）、G6 另一存档/返回菜单（自动化受限，等用户）、G7/G8 冻结终验（部署矩阵已 R266）。证据 checkpoint2026-11-10-r269-g5-ui（shots/、ordered-ui.jsonl、driver-error 无、live/after.json）。
