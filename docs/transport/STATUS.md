@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R267：G4 在 27cefa0a 完整关闭——province/spline 单会话补齐
+
+按 ≤5 分钟单会话规则分两场补齐剩余两夹具（各场 content 暂存基线/恢复用户 Gora 状态，哈希核实）：province 探针 `id=140 geo=155 valid=1 vtable_ok=1`（省交换绑定正确）、面板 41 行 ironroad_logistics、完整批次 state=complete failed=0；spline 探针 `x=4082.966309 delta=0.000000`（同 key X+10 几何精确绑定）、41 行、完整批次；两场均退出 0、五输入一致、无残留进程、无自退——短会话策略下零中断。**G4 五夹具（replace/directory/zip/province/spline）在 27cefa0a 全部通过并关闭**。G4 备注：Gora UI + UI Mod 兼容问题（BLOCKERS R262）仍为独立待决项。下一步按目标顺序：G2（待 Ghidra 桥重启）或 G5 完整交互矩阵/G6 另一存档例。证据 checkpoint2026-11-10-r265-map-fixtures（province-run2.log、spline-run.log、province/validation.json、spline/validation.json、live-province/、live/）。
+
 ### 2026-11-10 — R266：部署矩阵在 27cefa0a 重绑通过（G8 预备项关闭）
 
 R237 脚本改靶 27cefa0a…（52,197,771 B）：四用例各 ~70 秒短会话（无世界载入，符合自退后 ≤5 分钟规则）——主体缺失→loader `error=126` 存活、损坏→`error=193` 存活、整套卸载→无新 loader 条目、官方重装→`loaded freight.dll (error=0)`；结束后安装=dist、五输入一致、无残留进程。注：用例运行使用用户当前 content 状态（Gora UI + 启用），loader 行为不受 UI Mod 影响。至此 G8 的部署矩阵预备项在当前构建关闭；G7/G8 其余项待冻结终验。证据 checkpoint2026-11-10-r266-deploy-matrix（matrix-run.log、live/audit.json、四用例 json）。
