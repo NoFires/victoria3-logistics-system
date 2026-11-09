@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R268：生命周期同档重绑通过（27cefa0a）；另一存档自动化受阻如实记录
+
+Session A（27cefa0a…，52,197,771 B 安装=dist）：载入 autosave_exit 暂停→原版 UI 同档重载→`native pool recovered world=5/7 slots=241; old requests cleared`、2560×1440↔1920×1080 缩放往返与最小化/恢复零额外退休、退出 0、五输入一致——**同档重载/缩放/最小化子项在 27cefa0a 关闭**（R259 绑 0ea4caf3，其后仅加日志行，本轮补严格同构建）。Session B（另一存档 autosave.v3）：载入对话框自动化经三轮盲点击均不可靠（坐标映射与对话框时序错位、诊断点击误触返回游戏两次），止损关闭（退出 0、五输入一致）——**另一存档/返回菜单子项保留 R247 旧构建证据**，完成需控件名解析级精确点击（R247 私有桌面管线）或用户手动协助。mod 目录遗留测试夹具两枚（本轮+并行 R254）已带守卫清除，ironroad_arrow 目录非夹具未动。下一步：G2（待 Ghidra 桥重启）、G5 完整交互矩阵、G7/G8 冻结终验。证据 checkpoint2026-11-09-r254-lifecycle（lifecycle-run2.log、live/after.json、session-b.log、live-matrix 截图）。
+
 ### 2026-11-10 — R267：G4 在 27cefa0a 完整关闭——province/spline 单会话补齐
 
 按 ≤5 分钟单会话规则分两场补齐剩余两夹具（各场 content 暂存基线/恢复用户 Gora 状态，哈希核实）：province 探针 `id=140 geo=155 valid=1 vtable_ok=1`（省交换绑定正确）、面板 41 行 ironroad_logistics、完整批次 state=complete failed=0；spline 探针 `x=4082.966309 delta=0.000000`（同 key X+10 几何精确绑定）、41 行、完整批次；两场均退出 0、五输入一致、无残留进程、无自退——短会话策略下零中断。**G4 五夹具（replace/directory/zip/province/spline）在 27cefa0a 全部通过并关闭**。G4 备注：Gora UI + UI Mod 兼容问题（BLOCKERS R262）仍为独立待决项。下一步按目标顺序：G2（待 Ghidra 桥重启）或 G5 完整交互矩阵/G6 另一存档例。证据 checkpoint2026-11-10-r265-map-fixtures（province-run2.log、spline-run.log、province/validation.json、spline/validation.json、live-province/、live/）。
