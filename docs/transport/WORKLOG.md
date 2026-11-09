@@ -1,5 +1,9 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-09 — R259：0ea4caf3 生命周期重绑（重载池恢复/缩放/最小化）
+
+复用 r243 生命周期脚本＋r252_run 编排模式（wait_launch/wait_paused/after.json 守卫）。三次链启动：第一次 checkpoint audit 仍指 bc96745c 而安装已是并行会话部署的 0ea4caf3（断言失败）；第二次把 Get-FileHash 的大写哈希原样写入 audit，与 digest 小写不等（断言失败）——均留档修正，产品未触碰。第三次成功：pid 11484，initial-page→reload1（退休 88→89，`native pool recovered world=5 slots=241; old requests cleared`，随后 world=7 slots=241——241 槽反映并行海端工作后的路线数）→resize 1080/1440 往返→最小化/恢复，六步 paused=1/phase=4/date=59883360、退休数恒 89（无扰动）、批号随页面操作正常推进；close 后 after.json exit 0/设置恢复/五输入本会话一致/无残留进程。claim 轮号 R254 与并行会话撞号，记录取空闲号 R259。证据 checkpoint2026-11-09-r254-lifecycle（lifecycle-run.log、lifecycle-steps.json、live/after.json）。
+
 ### 2026-11-09 — R258：岸端来源与周更新只读核对，生产行为未改
 
 沿R257同一G2主题继续，已按当轮完整重读01/02/03；本轮重新预检、claim、源码/进程/新1.15输入核对，应用既有local-reverse-engineering流程。产品仍R257主体0ea4caf3…/引导71dae36d…，未重建/部署。本轮仓库源码只改两处注释：明确native_ports.h的DecodeNativePortHubs是未接1.15的1.13专用解码器，撤回snapshot注释“1.15已移除hub-locator eligibility”的错误说法；未启用新函数/地址/权限，也未改生产分配或绘制行为。

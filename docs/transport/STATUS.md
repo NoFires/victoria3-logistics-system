@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-09 — R259：当前构建 0ea4caf3 生命周期矩阵重绑通过
+
+自有会话 11484（载入 autosave_exit 暂停 date59883360，安装=dist=0ea4caf3…）：原版 UI 重载同档至 world5、再至 world7，`native pool recovered world=5/7 slots=241; old requests cleared`，无旧世界视图发布；客户端 2560×1440→1920×1080→2560×1440 与最小化/恢复全程零额外退休、保持暂停同日期；WM_CLOSE 退出 0、设置恢复、五输入本会话逐字节保持（并行会话的设置/内容基线变更随各自轮次记录）。本会话两次启动失败为 checkpoint audit 未随 0ea4caf3 部署更新、及 Get-FileHash 大写哈希写入 audit 导致断言不等——均留档修正，未触碰产品。至此前构建生命周期子项（重载/缩放/最小化）与官方入口/A25/改图（并行 R254 五夹具）同构建齐备；另一存档载入与返回菜单绑 R247 旧构建记录，A24 真实设备仍待。证据 checkpoint2026-11-09-r254-lifecycle（claim 轮号与并行会话撞号，记录取空闲号 R259）。
+
 ### 2026-11-09 — R258：岸端来源与周更新只读核对，生产行为未改
 
 沿R257同一G2主题继续，已按当轮完整重读01/02/03；本轮重新预检、claim、源码/进程/新1.15输入核对，应用既有local-reverse-engineering流程。产品仍R257主体0ea4caf3…/引导71dae36d…，未重建/部署。本轮仓库源码只改两处注释：明确native_ports.h的DecodeNativePortHubs是未接1.15的1.13专用解码器，撤回snapshot注释“1.15已移除hub-locator eligibility”的错误说法；未启用新函数/地址/权限，也未改生产分配或绘制行为。
