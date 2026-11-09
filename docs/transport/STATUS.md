@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R269：G5 完整交互矩阵在 27cefa0a 通过并关闭
+
+R256 坐标序列＋ordered_ui 逐步断言（私有桌面会话 3316，27cefa0a 安装=dist，content 临时基线并已恢复用户 Gora 状态）：基础 41 行→分类切换 41→9→41→中文搜索"谷物"1 行（grain）→空结果 0 行→清空恢复 41→hover 进出截图→面板 X 关闭（open=false）→F4 重开 41 行 ironroad_logistics——全部断言通过。截图 12-search-grain.png 底部账本 30021.15/10520.41/19500.74 与 R262 需求账日志行逐位互证。会话退出 0、设置恢复、五输入一致、content 恢复用户状态。**G5 关闭**（市场/州/商品交互在当前构建：R262 账本+R263 州/市场切换+本轮分类/搜索/空结果/hover/关闭重开）。剩余：G2（待 Ghidra 桥重启）、G6 另一存档/返回菜单（自动化受限，等用户）、G7/G8 冻结终验（部署矩阵已 R266）。证据 checkpoint2026-11-10-r269-g5-ui（shots/、ordered-ui.jsonl、driver-error 无、live/after.json）。
+
 ### 2026-11-10 — R268：生命周期同档重绑通过（27cefa0a）；另一存档自动化受阻如实记录
 
 Session A（27cefa0a…，52,197,771 B 安装=dist）：载入 autosave_exit 暂停→原版 UI 同档重载→`native pool recovered world=5/7 slots=241; old requests cleared`、2560×1440↔1920×1080 缩放往返与最小化/恢复零额外退休、退出 0、五输入一致——**同档重载/缩放/最小化子项在 27cefa0a 关闭**（R259 绑 0ea4caf3，其后仅加日志行，本轮补严格同构建）。Session B（另一存档 autosave.v3）：载入对话框自动化经三轮盲点击均不可靠（坐标映射与对话框时序错位、诊断点击误触返回游戏两次），止损关闭（退出 0、五输入一致）——**另一存档/返回菜单子项保留 R247 旧构建证据**，完成需控件名解析级精确点击（R247 私有桌面管线）或用户手动协助。mod 目录遗留测试夹具两枚（本轮+并行 R254）已带守卫清除，ironroad_arrow 目录非夹具未动。下一步：G2（待 Ghidra 桥重启）、G5 完整交互矩阵、G7/G8 冻结终验。证据 checkpoint2026-11-09-r254-lifecycle（lifecycle-run2.log、live/after.json、session-b.log、live-matrix 截图）。
