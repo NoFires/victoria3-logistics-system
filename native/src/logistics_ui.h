@@ -61,6 +61,7 @@ LogisticsDocument BuildLogisticsDocument(const EconomySnapshot&, const FreightRe
     std::optional<double> mapUnitsPerKilometre={});
 // Player-facing variable value. Missing, synthetic or invalid data stays --.
 std::string FormatFreightDemand(const LogisticsDocument*);
+std::string FormatFreightDemandLedger(const LogisticsDocument*);
 // Native card work for the current filters; hover does not change this total.
 std::string FormatFreightWork(const LogisticsDocument*);
 std::string FormatLaidTrack(const LogisticsDocument*);

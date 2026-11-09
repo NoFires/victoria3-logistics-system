@@ -866,6 +866,8 @@ int main(){
       auto filteredDoc=BuildLogisticsDocument(multiSnapshot,*filtered,selected);
       Check(FormatFreightGoods(&filteredDoc)==rows && FormatFreightDemand(&filteredDoc)==FormatFreightDemand(&doc),
           "search and hover never change per-good demand or its full-market total");
+      Check(FormatFreightDemandLedger(&doc)=="total=750.00/600.00/150.00 grain:500.00/500.00/0.00 iron:250.00/100.00/150.00",
+          "base-scope ledger payload lists the total and every nonzero per-good demand");
       auto scoped=filter;scoped.kind=FreightViewKind::State;scoped.state=100;
       auto stateView=BuildNativeTradeView(multiSnapshot,*facts,scoped);
       auto stateDoc=BuildLogisticsDocument(multiSnapshot,*stateView,scoped);

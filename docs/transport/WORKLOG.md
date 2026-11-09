@@ -1,5 +1,11 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-09 — R262：G1 真档逐商品需求账实机矩阵（27cefa0a…）
+
+截图通道失效过程如实记录：真档 41 行上滚轮（WM_MOUSEWHEEL 到私有桌面虚拟坐标）不滚动货物列表；部分悬停被解释为点击打开商品详情（织物/染料）；同一行位置 tooltip 数值先后为 2669.88/909.17/1760.71（谷物）与 993.60/619.51/374.09（衣物）——后被日志证明是不同商品行（悬停索引映射错位），像素取证废弃。改用日志级真值：`FormatFreightDemandLedger`（total＋逐商品非零行，坏 key 整行拒绝的 fail-closed）＋`BuildLogisticsDocument` 基础作用域（无 hover/search）发射；载荷断言接两商品夹具。官方入口 72 PASS/0 FAIL；构建 27cefa0a…（52,212,575 B）部署安装=dist。
+
+实机矩阵：私有桌面会话 38720（content 临时基线→恢复用户 Gora UI + 状态，两方向均哈希核实），F4→物流页签需 3 秒稳定否则点击落空（与 R256 15 秒捕获失败等效的时序问题）；`native freight demand ledger: world=1 market=0` 行覆盖 41/41 商品，外部求和 target/fulfilled/unmet 与 total 差 0.02/0.03/0.02（41 行×0.005 舍入内），逐行 满足+未满足=目标 全部成立；grain 与 r01 tooltip 互证、clothes 解释 r09。发现并记录 **Gora UI + UI Mod 使物流页签消失**（BLOCKERS R262）。会话退出 0、五输入一致。G1 剩余：州作用域实机一例、第二市场实机一例（离线断言已覆盖同构逻辑）。证据 checkpoint2026-11-09-r262-g1-matrix（NOTES.md、shots/、live/、build/tests/deploy 日志、ledger 日志行原文）。
+
 ### 2026-11-09 — R259：0ea4caf3 生命周期重绑（重载池恢复/缩放/最小化）
 
 复用 r243 生命周期脚本＋r252_run 编排模式（wait_launch/wait_paused/after.json 守卫）。三次链启动：第一次 checkpoint audit 仍指 bc96745c 而安装已是并行会话部署的 0ea4caf3（断言失败）；第二次把 Get-FileHash 的大写哈希原样写入 audit，与 digest 小写不等（断言失败）——均留档修正，产品未触碰。第三次成功：pid 11484，initial-page→reload1（退休 88→89，`native pool recovered world=5 slots=241; old requests cleared`，随后 world=7 slots=241——241 槽反映并行海端工作后的路线数）→resize 1080/1440 往返→最小化/恢复，六步 paused=1/phase=4/date=59883360、退休数恒 89（无扰动）、批号随页面操作正常推进；close 后 after.json exit 0/设置恢复/五输入本会话一致/无残留进程。claim 轮号 R254 与并行会话撞号，记录取空闲号 R259。证据 checkpoint2026-11-09-r254-lifecycle（lifecycle-run.log、lifecycle-steps.json、live/after.json）。

@@ -1,4 +1,5 @@
 #include "logistics_ui.h"
+#include "log.h"
 #include "native_trade_view.h"
 #include <algorithm>
 #include <cmath>
@@ -49,6 +50,33 @@ static std::string FormatDemand(const std::optional<FreightDemand>& demand) {
   char buffer[192];
   std::snprintf(buffer, sizeof(buffer), "%.2f / %.2f / %.2f", d.target, d.fulfilled, d.unmet);
   return buffer;
+}
+// One compact line for the base-scope demand ledger: the total plus every
+// good with a nonzero contribution, so live sessions can reconcile rows
+// against the ledger without pixel forensics. Empty when nothing to report.
+std::string FormatFreightDemandLedger(const LogisticsDocument* document) {
+  if (!document || !document->world || document->synthetic ||
+      document->freightDemandRevision != kFreightDemandRevision || !document->intermediaryDemand ||
+      document->goods.size() > 128) return {};
+  std::string goods;
+  char item[96];
+  for (const auto& good:document->goods) {
+    if (!good.intermediaryDemand) continue;
+    if (good.key.empty() || good.key.size() > 32 ||
+        std::any_of(good.key.begin(),good.key.end(),[](char c){
+            return !((c>='a'&&c<='z')||(c>='A'&&c<='Z')||(c>='0'&&c<='9')||c=='_');})) return {};
+    const auto& d = *good.intermediaryDemand;
+    if (!std::isfinite(d.target) || !std::isfinite(d.fulfilled) || !std::isfinite(d.unmet)) return {};
+    if (d.target == 0 && d.fulfilled == 0 && d.unmet == 0) continue;
+    std::snprintf(item, sizeof(item), "%s:%.2f/%.2f/%.2f", good.key.c_str(), d.target, d.fulfilled, d.unmet);
+    if (!goods.empty()) goods += ' ';
+    goods += item;
+  }
+  if (goods.empty()) return {};
+  const auto& t = *document->intermediaryDemand;
+  char ledger[96];
+  std::snprintf(ledger, sizeof(ledger), "total=%.2f/%.2f/%.2f ", t.target, t.fulfilled, t.unmet);
+  return ledger + goods;
 }
 std::string FormatFreightDemand(const LogisticsDocument* document) {
   if (!document || !document->world || document->synthetic ||
@@ -146,6 +174,13 @@ LogisticsDocument BuildLogisticsDocument(const EconomySnapshot& snapshot,const N
         row.intermediaryDemand=demand->second;
     }
     document.goods.push_back(std::move(row));
+  }
+  // Base scope only: hovers and searches republish constantly, and their
+  // demand payload is unchanged by construction (covered by tests).
+  if(filter.hoverGood<0 && filter.search.empty()){
+    if(const auto ledger=FormatFreightDemandLedger(&document);!ledger.empty())
+      V3_INFO("native freight demand ledger: world=%llu market=%u %s",
+              (unsigned long long)document.world,filter.market,ledger.c_str());
   }
   return document;
 }
