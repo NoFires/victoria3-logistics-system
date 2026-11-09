@@ -1,5 +1,25 @@
 # 工作日志（按日期追加，不覆盖失败历史）
 
+### 2026-11-09 — R257：分属州共享地区的海侧方向见证，2缺失→0缺失/38部分
+
+再次完整读取01/02/03，应用local-reverse-engineering技能，按当前1.15 EXE 473186e8…/image140000000核对。Ghidra初始无项目；加载已有项目后先识别/victoria3.exe是1.13.11，未用其地址推进；改为显式/victoria3-v115-473186e8.exe，Program Information hash/version与当前EXE一致。当前02884080反编译及精确PE/Capstone汇编复核地区海军节点与key编码；Ghidra汇编接口两次空结果未当证据，空文件和实际PE指令另存。没有新增原生调用、ABI或权限入口。
+
+自有隐藏38160/新1.15/paused/date59883360：外部PROCESS_VM_READ复制复现2 unavailable/36 partial。39个缺少本州type5/港内接入的端点州，均与另一运行州共享相同当前definition+geo，且该地区有唯一现存type5海侧关系；实际陆地港口归另一州（例如广东925/葡属926、棉兰老611/610、北婆罗洲608/607），不能直接借用其陆路或改港口所有权。全部地区key取当前运行对象，不存在ID→key表。
+
+最小产品改动仅native_trade_geometry.h：本州没有当前portTransfer时，在当前同definition+geo/type5记录中验证地区虚拟港口编码、完整key、真实样条成员和控制点端点顺序，只有唯一海侧端点才作为原版已选海段方向见证。只返回原来选中的海段，不把另一州的港口样条放入路线、也不添加外国陆路；结果仍complete=false，严格完整模式仍拒绝。冲突/未知地区/同geo不同定义/缺失或错配控制仍不取第一个；原版运河成员及方向校验保持。
+
+先新增共享地区反例，旧实现FAIL；首次修复后另加key存在但控制错配反例，再FAIL后补校验，最终定向PASS。统一入口已有native_trade_geometry_tests承载新用例，覆盖正反向、原曲线/海峡、无岸端标记、缺样条、定义冲突及歧义，未减弱旧校验。同一暂停世界用修复前/后独立外部探针重放：3499 shipment（含source/destination/market/good/quantity/distance/cost/freight/完整route方向）和26625余额/需求账逐行完全相同，SHA256均8cd09033…；2 unavailable/36 partial→0 unavailable/38 partial。原缺失50331740广东→西婆罗洲恢复1海段、50331743棉兰老→北婆罗洲恢复2海段，二者分配均0，不产生虚构可见货流。该外部顺序复制/自有重放不冒充原生原子访问窗口或新线路逐像素实机验收。
+
+私有首探针尾部旧式hub eligibility审计exit8：目标复制和模型重放已在前面完成，外部无getter无法满足尾审计；完整失败日志保留，第二私有版仅完成目标诊断后返回，正式探针/统一入口未放宽。首次私有节点普查误把未验证node+28字段标作connections，未被匹配/分配使用；原JSON保留，修正文件将其标为未解释，关系结论只用已验证字段。
+
+正式build.ps1 exit0/94.70s，完整build_tests.ps1 exit0/275.70s、71条含PASS输出/零FAIL前缀，embedded/selftest/default-debug exit0；deploy.ps1 exit0，安装=dist主体0ea4caf37f40fe410fb2b4c07b612f805e8e4855c971cb76693eac8d44b189f7/52,200,309B、引导71dae36d…/779,879B。49保留文件和五输入在部署阶段保持，冻结源码逐文件保持；回滚dc85e9e5双DLL/源码在本检查点before，未演练。
+
+候选自有隐藏28428/同新1.15/date59883360：实际DLL原生采集219ms、正式分配日志0 unavailable/38 partial、3499 shipment/26625余额，41行物流贸易量13648.29646/铁路510.99MU与基线一致；206条原生批次complete、failed/dropped0、峰16次/671us、pool206。GPU已查看确认数值可见；两条新恢复海段分配0，未声称新航线可见或完整岸端修复。仅加载早期interface identity unavailable告警；无新发布错误。
+
+两自有会话均WM_CLOSE正常退出0/settings恢复/五输入逐字节保持；各4次输入/截图及清理记录的Default/前台67978/指针1456,751保持，当前无游戏。完整goal ACTIVE；G2仍38部分岸端及真实完整端点/方向/许可/近远景像素待验，暂停静止编辑刷新、A27多场景、设备/生命周期/最终同构建A25与交付矩阵继续，不把旧构建性能/地图结论套到0ea4。
+
+证据：checkpoint2026-11-09-r257-sea-endpoints（before/PLAN/STATIC_NOTES、当前Ghidra metadata/反编译/Capstone、首失败probe.log/原及修正节点普查、两份失败用例/最终定向、修复前后replay与same-world-replay.json、pipeline/frozen-source/audit、runtime与runtime-candidate原生日志/GPU/退出、validation-final）。
+
 ### 2026-11-09 — R256：逐商品 Freight 需求接入原版市场/州行提示
 
 在R252已有逐商品字段上补正式消费：物流数值提示显示该商品国内Freight目标/满足/未满足，并说明默认系数1是模型需求账。复用原版GetVariableSystem、本地化、现有带代数/身份门控的变量发布与旧键清理；市场新增ironroad_good_demand_<key>，州新增ironroad_state_demand_<signed-id>_<key>。共享FormatDemand保留总账原校验，缺失/错误需求版本/无效数值保持未知；合规零显式0。不新增列/引擎入口/依赖，不改经济、分配或原版排序/搜索/分类。

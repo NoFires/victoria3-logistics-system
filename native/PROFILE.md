@@ -1,5 +1,9 @@
 # Native profile — Victoria 3 1.15.0（旧版本记录按轮次保留）
 
+### 2026-11-09 — R257：当前地区海侧方向关系，无新ABI
+
+EXE仍473186e8…/1.15.0/image140000000；显式Ghidra程序victoria3-v115-473186e8.exe已核对Program Information SHA256，旧victoria3.exe为1.13.11未用。当前02884080与精确PE指令确认既有geo*100/海军位/完整key编码。读取结果中39个缺本州岸端的州均与另一州共享当前地区，type5虚拟港口海侧关系仍存在；该关系只作已选海段方向见证，不能证明本州物理港口或外国陆路权限。新校验地区定义+geo、完整key/样条成员/控制端点/唯一性；缺岸端保持partial。实际DLL计数0缺失/38部分，同世界全部3499货流/26625账重放一致，无新增调用/地址启用。私有探针首尾审计exit8、空Ghidra汇编及未用字段标注纠正均保留，详见STATUS/checkpoint R257。
+
 ### 2026-11-07 — R235：真实BGRA格式读回
 
 没有新增游戏ABI/RVA。读回仅支持DXGI RGBA/BGRA UNORM/sRGB四字节布局，未知布局拒绝；不改gamma/实际render target，按RowPitch读行。真实硬件RGBA/BGRA晚红帧均140/10/13，实机PID47776确认Format87；69条统一PASS。原生门控/地图身份/经济保持，见STATUS R235。

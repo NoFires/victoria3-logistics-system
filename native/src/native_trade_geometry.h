@@ -34,7 +34,7 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
   // any transfer keep the original sea-geography port selection instead of
   // silently losing every international shape.
   const bool domesticPorts=trade.domestic && !trade.domestic->portTransfers.empty();
-  bool intraRegion=false;
+  bool intraRegion=false,regionalPort=false;
   if(domesticPorts){
     // 1.15.0: port access is a current type-5 spline between a port-side land
     // node and its sea-side anchor. The domestic model draws those access
@@ -66,6 +66,33 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
         if(region==regions.end() || region->second.geo==UINT32_MAX)
           return fail("native lane sea anchor unavailable");
         endpointAnchors[i]=((region->second.geo*100)&0x1fffffff)|0x800000;
+        // Split states share this regional naval node. Its current type-5
+        // sea end witnesses direction only; it grants no foreign land access.
+        std::optional<uint32_t> seaAnchor;bool ambiguous=false;
+        for(const auto& transfer:trade.domestic->portTransfers){
+          const auto peer=regions.find(transfer.state);
+          const auto key=transfer.spline;
+          const auto binding=trade.geometry->connections.find(key);
+          const uint32_t a=uint32_t(key>>6)&0x1fffffff,b=uint32_t(key>>35);
+          if(region->second.definition==UINT32_MAX || peer==regions.end() || peer->second.definition!=region->second.definition ||
+             peer->second.geo!=region->second.geo || transfer.anchors[0]!=endpointAnchors[i] ||
+             transfer.anchors[0]==transfer.anchors[1] || (key&63)!=3 ||
+             !((a==transfer.anchors[0] && b==transfer.anchors[1]) ||
+               (b==transfer.anchors[0] && a==transfer.anchors[1])) ||
+             binding==trade.geometry->connections.end() || binding->second.empty())continue;
+          uint32_t control=a;bool valid=true;
+          for(uint64_t id:binding->second){
+            const auto strip=trade.geometry->strips.find(id);
+            if(strip==trade.geometry->strips.end() || (id&63)!=3 || strip->second.size()<2){valid=false;break;}
+            if(control==strip->second.front())control=strip->second.back();
+            else if(control==strip->second.back())control=strip->second.front();
+            else{valid=false;break;}
+          }
+          if(!valid || control!=b)continue;
+          if(seaAnchor && *seaAnchor!=transfer.anchors[1]){ambiguous=true;break;}
+          seaAnchor=transfer.anchors[1];
+        }
+        if(seaAnchor && !ambiguous){endpointAnchors[i]=*seaAnchor;regionalPort=true;}
       }
     }
   }else{
@@ -80,7 +107,7 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
   // the legacy port selector must still report a missing endpoint as partial.
   const bool seaOnlyPorts=domesticPorts && seaOnly && !intraRegion;
   bool complete=seaOnlyPorts?true:(connections.ports[0] && connections.ports[1]);
-  if((!complete && !allowPartialPort) || (!seaOnlyPorts && !connections.ports[0] && !connections.ports[1]))
+  if(((!complete || regionalPort) && !allowPartialPort) || (!seaOnlyPorts && !connections.ports[0] && !connections.ports[1]))
     return fail("native endpoint port connection unavailable");
   const auto& network=*trade.geometry;
   if(!network.width || !network.height)return fail("current native map dimensions unavailable");
@@ -151,7 +178,7 @@ inline std::optional<NativeTradeGeometry> BuildNativeTradeGeometry(const NativeW
   if(start==end || !incident.count(start) || !incident.count(end))return fail("native route endpoints are not distinct current port anchors");
   for(const auto& [point,edges]:incident)if(edges.size()!=(point==start || point==end?1u:2u))
     return fail("native route geometry is not a unique endpoint chain");
-  NativeTradeGeometry result;result.connections=std::move(connections);result.complete=complete;
+  NativeTradeGeometry result;result.connections=std::move(connections);result.complete=complete && !regionalPort;
   result.startAnchor=start;result.endAnchor=end;
   std::set<uint64_t> visited;uint32_t current=start;
   while(current!=end){

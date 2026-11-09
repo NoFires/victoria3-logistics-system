@@ -92,6 +92,36 @@ int main(){
         backward->strips==std::vector<NativeDirectedStrip>{{value.shortCut,false}},
         "two witnessed sea endpoints retain complete geometry and reverse direction");
   }
+  {
+    Fixture value;
+    auto domestic=std::make_shared<NativeDomesticSources>();
+    domestic->portTransfers={{10,300,{value.from,value.a},value.sourceKey,true},
+                            {11,400,{value.to,value.b},value.destKey,true}};
+    value.sea.states[300]=value.sea.states.at(100);value.sea.states[400]=value.sea.states.at(200);
+    value.trade.domestic=domestic;
+    auto build=[&](uint32_t from,uint32_t to,bool partial=true){value.Build();auto route=value.route;route.state=to;
+      return BuildNativeTradeGeometry(value.trade,from,route,&error,{},partial,true);};
+    auto forward=build(100,200),backward=build(200,100);
+    Check(forward && backward && !forward->complete && !backward->complete &&
+        forward->strips==std::vector<NativeDirectedStrip>{{value.longA,true},{value.longB,false}} &&
+        backward->strips==std::vector<NativeDirectedStrip>{{value.longB,true},{value.longA,false}} &&
+        !forward->connections.ports[0] && !forward->connections.ports[1] &&
+        domestic->portTransfers[0].state==300 && domestic->portTransfers[1].state==400,
+        "shared region naval endpoints orient selected sea strips without borrowing another state's land port");
+    Check(!build(100,200,false),"regional geometry does not turn missing own port access into complete geometry");
+    value.network.connections[value.sourceKey]={value.dest};value.network.connections[value.destKey]={value.source};
+    Check(!build(100,200),"regional port keys with mismatched current controls cannot witness direction");
+    value.network=Fixture().network;
+    value.network.connections.erase(value.sourceKey);value.network.connections.erase(value.destKey);
+    Check(!build(100,200),"regional endpoint metadata without current native spline membership is not a witness");
+    value.network=Fixture().network;value.sea.states[300].definition=99;value.sea.states[400].definition=98;
+    Check(!build(100,200),"a reused geo ID cannot substitute different current region definitions");
+    value.sea.states[300]=value.sea.states.at(100);domestic->portTransfers.resize(1);
+    constexpr uint64_t key=(uint64_t(Fixture::c)<<35)|(uint64_t(Fixture::from)<<6)|3;
+    value.network.connections[key]={0x600000003};value.network.strips[0x600000003]={value.from,value.c};
+    domestic->portTransfers.push_back({12,300,{value.from,value.c},key,true});
+    Check(!build(100,200) && !build(200,100),"conflicting current regional sea endpoints cannot select the first port");
+  }
   auto bad=[](auto change,const char* why){Fixture value;change(value);Check(!value.Build(),why);};
   bad([](auto& v){v.route.selected.reset();},"unknown native selection does not default to first");
   bad([](auto& v){v.route.candidates.clear();v.route.selected.reset();},"no native candidate cannot fabricate a port route");
