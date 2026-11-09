@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R265 attempt 2：改图五夹具 3/5 通过后第三次游戏自退——长时无人会话停止
+
+attempt 2（同样机与包装）：**replace/directory/zip 三夹具完整通过**（各会话载入暂停、探针 geo=901 绑定正确、41 行物流页、206 完整批次、退出 0、受保护输入一致）；province 在探针运行期间游戏**第三次自退 0**（探针读到 matches=2 的退出期状态，不作产品结论）；spline 未轮到。按既定规则**停止一切长时无人会话**：三次自退（约 23:59/00:35/01:1x）均为干净 exit 0、无崩溃事件、无我方关闭动作、跨 DEFAULT 与私有桌面两种环境——外部关闭者不明。已向用户提出两项确认：机器是否有人/有无程序关闭 victoria3；Ghidra MCP 桥重启（G2 依赖，桥仍断连）。mod 目录清理：ironroad_r254_replace.zip（本轮）、ironroad_r254_province.zip（并行 R254 遗留）已带守卫移除；ironroad_arrow 目录非今晚夹具未动。content 全程保持用户 Gora 状态。证据 checkpoint2026-11-10-r265-map-fixtures（run-log2.txt、replace/directory/zip 各 case 的 probe.log/validation.json/live/、province 现场）。
+
 ### 2026-11-10 — R265 中断：改图夹具首轮 replace 探针通过后被游戏自退打断（待用户确认）
 
 管线复用并行 R254 全套（审计/探针/面板/守卫全改靶 27cefa0a，content 由包装暂存无 Mod 基线并恢复用户 Gora 状态）。replace 夹具：会话载入暂停、探针 `state=1025 key=STATE_BEKES definition=150 geo=901 valid=1`（绑定正确）、ready.json 已写（快照交接见证在）——随后游戏**再次自行干净退出 0**（无崩溃事件、无我方关闭动作；今晚第二次，第一次为 R264 的 closed3）。preserve-live 守卫按设计保留现场并中止（不盲目重启）；残留夹具 ironroad_r254_replace.zip 已带路径守卫清除；content 已恢复用户状态。两次自退已查 Application 事件日志：无 victoria3 崩溃/WER 记录——像是有外部正常关闭。已向用户提出两项确认：机器是否有人/有无计划任务关闭游戏；Ghidra MCP 桥需重启（G2 依赖）。证据 checkpoint2026-11-10-r265-map-fixtures（run-log.txt、replace/session.log、probe.log、ready.json、NOTES 待补）。
