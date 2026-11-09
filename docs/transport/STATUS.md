@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R266：部署矩阵在 27cefa0a 重绑通过（G8 预备项关闭）
+
+R237 脚本改靶 27cefa0a…（52,197,771 B）：四用例各 ~70 秒短会话（无世界载入，符合自退后 ≤5 分钟规则）——主体缺失→loader `error=126` 存活、损坏→`error=193` 存活、整套卸载→无新 loader 条目、官方重装→`loaded freight.dll (error=0)`；结束后安装=dist、五输入一致、无残留进程。注：用例运行使用用户当前 content 状态（Gora UI + 启用），loader 行为不受 UI Mod 影响。至此 G8 的部署矩阵预备项在当前构建关闭；G7/G8 其余项待冻结终验。证据 checkpoint2026-11-10-r266-deploy-matrix（matrix-run.log、live/audit.json、四用例 json）。
+
 ### 2026-11-10 — R265 attempt 2：改图五夹具 3/5 通过后第三次游戏自退——长时无人会话停止
 
 attempt 2（同样机与包装）：**replace/directory/zip 三夹具完整通过**（各会话载入暂停、探针 geo=901 绑定正确、41 行物流页、206 完整批次、退出 0、受保护输入一致）；province 在探针运行期间游戏**第三次自退 0**（探针读到 matches=2 的退出期状态，不作产品结论）；spline 未轮到。按既定规则**停止一切长时无人会话**：三次自退（约 23:59/00:35/01:1x）均为干净 exit 0、无崩溃事件、无我方关闭动作、跨 DEFAULT 与私有桌面两种环境——外部关闭者不明。已向用户提出两项确认：机器是否有人/有无程序关闭 victoria3；Ghidra MCP 桥重启（G2 依赖，桥仍断连）。mod 目录清理：ironroad_r254_replace.zip（本轮）、ironroad_r254_province.zip（并行 R254 遗留）已带守卫移除；ironroad_arrow 目录非今晚夹具未动。content 全程保持用户 Gora 状态。证据 checkpoint2026-11-10-r265-map-fixtures（run-log2.txt、replace/directory/zip 各 case 的 probe.log/validation.json/live/、province 现场）。
