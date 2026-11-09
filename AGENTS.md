@@ -216,6 +216,10 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-10 — R271：G2 链边界重建 9/12，反编译存档
+
+R258 已知 12 地址在当前库批量 create_function：9 成功（含 FUN_142883e70 429B 最大逻辑块），3 失败（中函数/跳板）。Ghidra 自动分析未达贸易子系统（12 地址全无函数无 xref），边界重建为溯源前置已完成；反编译全文存 chain-decomp.c。下一步追岸线选择逻辑＋解析 3 失败地址。证据 checkpoint2026-11-10-r270-g2-ghidra。
+
 ### 2026-11-10 — R270：Ghidra 桥直连助手建成，G2 解锁
 
 桥/后端/握手全链诊断健康（8089 监听、ensure_backend OK、101 tools 注册），失败为本会话启动时的一次性 MCP 连接且客户端不可重连——新建 `ghidra_call.py` 直连助手（子进程 stdio JSON-RPC 驱动 launcher_dsh.py），实测冻结库 program_info 正常。G2 溯源解锁；注意 R258 地址是 Capstone 回查地址非当前库函数起始。证据 checkpoint2026-11-10-r270-g2-ghidra。

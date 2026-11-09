@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R271：G2 链边界重建 9/12——当前库函数建立与反编译存档
+
+直连桥批量操作 R258 已知 12 地址：9 处 create_function 成功（FUN_140d57670 119B、FUN_140dcb860 343B、FUN_1418f6aa0 54B、FUN_140ed4c80 6B、FUN_140dc01c0 75B、FUN_1428fbc00 50B、FUN_142884250 51B、FUN_142884490 3B 跳板、FUN_142883e70 429B 最大真实逻辑块），反编译全文存 chain-decomp.c；3 处创建失败（140dcb6b0/148bdcaf0/149eb5400——中函数或跳板目标，需先定位所属函数起始）。Ghida 自动分析未到达贸易子系统代码区（12 地址全部无函数无交叉引用——PDX 间接调用密集形态），函数边界重建是 G2 溯源的必要前置，现已具备。下一步：读 chain-decomp.c 追岸线选择逻辑（R258 开放问题：地区图形枢纽≠本州拥有岸端/商业许可/实际通行），并解析 3 处失败地址的所属函数。工具注记：disassemble_bytes 用 start_address 非 address。证据 checkpoint2026-11-10-r270-g2-ghidra（chain-decomp.c、probe-addresses.json、tools_list_probe.py、chain_decompile.py）。
+
 ### 2026-11-10 — R270：Gh料桥直连助手建成，G2 解锁（不再依赖会话 MCP 客户端）
 
 用户授权自动重启桥。诊断：8089 端口监听中（Ghidra java 11-08 起）、`ensure_backend` 通过、launcher 手动 stdio 握手成功（"Auto-connected via TCP…registered 101 tools"）——桥本身健康，失败发生在本会话启动时的一次性 MCP 连接，且会话客户端不可重连（ToolSearch 永久无匹配）。解法：`ghidra_call.py` 直连助手——以子进程驱动 stdio JSON-RPC（initialize→initialized→tools/call），绕过会话客户端；实测 `get_current_program_info` 返回冻结库（victoria3.exe 1.15.0 image140000000、192,483 函数）。注记：R258 的 D57670 等地址是 Capstone 线性回查地址，非当前库函数起始（`get_function_by_address` 未命中）——后续 G2 溯源需按当前库重建函数边界。G2 研究正式解锁，38 条 partial 的逐端溯源按 R257/R258 已知链（D57670→DCB860→DCB6B0/18F6AA0、ED4C80、DC01C0、28FBC00、53E61B0、8BDCAF0、9EB5400）以当前库重建继续。证据 checkpoint2026-11-10-r270-g2-ghidra（ghidra_call.py、program_info 输出）。
