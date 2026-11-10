@@ -1,5 +1,17 @@
 # 当前状态
 
+### 2026-11-10 — R283：A17 三色模式在冻结构建实机通过（基线 content 会话，content 已按字节恢复）
+
+按 R262 做法临时把 `content_load.json` 切成基线（`f8c89f83…`，51 B）——**物流页签立刻恢复渲染**（41 行，反向印证 R262 的 Gora UI + 阻塞与 content 直接相关）。隔离桌面会话 pid 19912、私有桌面 `CodexFreightTest_GameR256_*`、暂停 date 59883360，逐项点击三个模式按钮：
+
+| 模式 | 行数 | 批次 | 结果 |
+|---|---|---|---|
+| 热度 Heat | 41 | `gen=2 paths=206 uploads=206 visible=206` | 卡片 13648.29646／510.99 MU |
+| 单商品 Single（未选商品） | 41 | `gen=3 paths=0 visible=0` | 空图，符合既有语义 |
+| 原生绿 Native | 41 | `gen=4 paths=206 visible=206`，池 206→412 | 卡片仍 13648.29646／510.99 MU，提示"颜色不表示流向或热度" |
+
+每次切换都推进 generation（无旧帧复用），池 412 远低于 8192；行数与卡片数值全程不变——切模式只改几何/配色，不动数据与统计。收工：`exit_code=0`、`settings_restored=true`、五项输入 `same=true`、无残留进程；**`content_load.json` 已按原字节恢复为 `70157004…`（Gora UI + 启用）**。证据 `2026-11-10-r283-a17-modes`（shots/00-logistics.png、01-native-mode.png、live/after.json）。A17 仅剩"逐色像素/线宽视觉矩阵"未做。
+
 ### 2026-11-10 — R282：A06 原版 UI 行为在冻结构建实机补齐（隔离桌面，退出 0）
 
 复用 R269 隔离桌面通道（`private_ui.py` PostMessage 点击/右键/文本，`ordered_ui.py` 读面板）。会话 pid 29220、私有桌面 `CodexFreightTest_GameR256_*`、暂停 date 59883360；结束时 `exit_code=0`、`settings_restored=true`、五项输入（save/settings/ini/content/continue）逐字节相同、无残留进程、`desktop_input_after.desktop=Default`、`pointer=[0,0]`（未动真实指针）。
