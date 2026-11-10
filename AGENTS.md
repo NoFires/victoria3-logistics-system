@@ -127,7 +127,7 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 ## 5. 当前状态与恢复入口
 
-当前产品主体`27cefa0a…`／52,197,771B（R262 构建，安装＝dist）＋引导`71dae36d…`／779,879B；R263–R269 只加日志行与测试，R271–R273 仅 Ghidra 研究、未改源码／未重建。G1／G4／G5／G8 部署矩阵与 G7 前置项已在当前构建关闭，G2 仍 open。海端：新档日更新 38 部分、周更新 39 部分（R258）；38 条 partial 的判据是端落到共享地区海军节点（`regional_trade_geometry.h` 的 `regionalPort`），非"无见证"；R275 实测 38/38 至少一端本州无 `portTransfers` 记录。**R273 已撤回 R272 全部静态锚点**（五字节表实为格式字符串、`FUN_1428fbc00` 为 libc++ string 元素循环的尾部、两个 map/getter 地址无函数边界），原版岸线选择仍未识别，剩余可行路线是实机只读探针。无游戏、goal ACTIVE，优先读 [STATUS.md](docs/transport/STATUS.md) R273。
+当前产品主体`27cefa0a…`／52,197,771B（R262 构建，安装＝dist）＋引导`71dae36d…`／779,879B；R263–R269 只加日志行与测试，R271–R273 仅 Ghidra 研究、未改源码／未重建。G1／G4／G5／G8 部署矩阵与 G7 前置项已在当前构建关闭，G2 仍 open。R276 冻结核验：`dist`＝安装（两份 DLL 哈希与长度逐项相同），且 `d0f1b6f..HEAD` 对 `native/src`／`native/test`／`native/assets`／`data`／`tools` 无差异——代码树就是产出该主体的树。海端：新档日更新 38 部分、周更新 39 部分（R258）；38 条 partial 的判据是端落到共享地区海军节点（`regional_trade_geometry.h` 的 `regionalPort`），非"无见证"；R275 实测 38/38 至少一端本州无 `portTransfers` 记录。**R273 已撤回 R272 全部静态锚点**（五字节表实为格式字符串、`FUN_1428fbc00` 为 libc++ string 元素循环的尾部、两个 map/getter 地址无函数边界），原版岸线选择仍未识别，剩余可行路线是实机只读探针。无游戏、goal ACTIVE，优先读 [STATUS.md](docs/transport/STATUS.md) R273。
 
 
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
@@ -140,6 +140,10 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 ### 2026-11-10 — R274：AGENTS.md 精简 326 KB → 21 KB，R83–R261 原样归档
 
 本文件 1739 行/326,647 B 每会话占约 97k tokens。§5 中截至 R224 的过期快照与 §6 中 R260 及更早逐轮记录整体搬到 `docs/transport/history/AGENTS-history-through-R261.md`（1558 行/306,676 B），按行数守恒校验（134+56+82+1467=1739）、UTF-8 无 BOM、CRLF 保持，未改写任何结论。本文件只留 §1–§4＋当前状态＋R263–R273。仅文档改动，未改源码／未重建／未部署，产品仍是 `27cefa0a…`。
+
+### 2026-11-10 — R276：G7/G8 冻结事实核实（未改源码／未重建／未部署）
+
+实测 `dist` 与游戏安装目录两份 DLL 哈希＋长度逐项相同（引导 `71dae36d…`／779,879 B、主体 `27cefa0a…`／52,197,771 B，安装＝dist）；`git diff d0f1b6f..HEAD -- native/src native/test native/assets data tools` 为空 → 当前树就是产出该主体的树，冻结可由 HEAD 复现。已具备证据：72 PASS（R262）、A25 三对＋20 轮（R264）、部署矩阵（R266）、改图五夹具（R267）、生命周期（R268）、G5（R269）、G1（R262/R263）。**不能并入"全绿"**：G2 38 partial（定性见 R275）、G6 另一存档（需人工）、A01–A27 同构建全矩阵（需实机）、A24 真设备、Gora UI + 兼容。故冻结候选确定，但 G7/G8 统一验收不宣称通过。
 
 ### 2026-11-10 — R275：38 条 partial 全部归入文档化 peer 回退类（日志复核，未改源码）
 

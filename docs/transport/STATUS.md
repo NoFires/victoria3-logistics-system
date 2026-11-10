@@ -1,5 +1,17 @@
 # 当前状态
 
+### 2026-11-10 — R276：G7/G8 冻结事实核实（未改源码、未重建、未部署）
+
+**冻结产物**：引导 `71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e`／779,879 B；主体 `27cefa0a5f601068360aa9be7d7fbadbeca5169b26a69d403a6b9372a1bdb7e0`／52,197,771 B。本轮实测 `dist` 与游戏安装目录（`Steam\steamapps\common\Victoria 3\binaries`）两份 DLL **哈希与长度逐项相同**（安装＝dist）。
+
+**树＝构建树**：`git diff --stat d0f1b6f..HEAD -- native/src native/test native/assets data tools` **为空**（`d0f1b6f`＝R262 构建提交）。即当前代码、测试、资源、派生数据与产出该主体的那一版逐字节一致，R263 起只改文档；冻结可由 HEAD 复现，不需重新构建。
+
+**该构建已具备的验收证据（不重复执行）**：官方入口 72 PASS＋embedded/selftest/默认 debug（R262）；A25 六臂三对 P95 +0.379/+0.430/+0.394 ms（≤2）、20 轮 u0/r206/p206 平台（R264）；部署矩阵四例 126/193/无条目/0（R266）；改图五夹具（R267）；生命周期同档重载＋缩放往返＋最小化（R268）；G5 完整交互矩阵（R269）；G1 三作用域逐商品需求账（R262/R263）。
+
+**未通过、不能并入"全绿"的项**：G2 的 38 条 partial（R275 已定性为 peer 回退类，原版实际岸线仍未识别，无新证据源）；G6 另一存档 `autosave.v3` 载入＋返回菜单（需人工，见 BLOCKERS）；A01–A27 同构建全矩阵（历史上一直 PARTIAL，需实机会话）；A24 真实设备丢失（需硬件事件）；Gora UI + 兼容（BLOCKERS R262）。
+
+**结论**：冻结候选已确定并可复现；但 G7/G8 的"统一验收"**不能宣称通过**——缺 A01–A27 实机矩阵与 G6，G2 以明确的 partial 标注而非伪造几何收尾。这条边界写进记录，避免下一轮把"冻结"误读成"全验收通过"。
+
 ### 2026-11-10 — R275：38 条 partial 全部归入文档化 peer 回退类（日志复核，未改源码）
 
 用已安装构建 `27cefa0a…` 的既有 `freight.log` 末条分配行复核 G2 的 38 条 partial（无需运行游戏）。规则对照 `native_trade_geometry.h:61-96,181`：seaOnly 且该端**本州无当前港口接入**时，锚点先用 `(geo*100)&0x1fffffff|0x800000`，再在 `portTransfers` 中找"同 region definition + 同 geo"的 peer 转移，校验 anchors[0] 等于该地区锚、anchors[1]≠anchors[0]、(key&63)==3、且几何链逐控制点从 a 续到 b；唯一则采用 peer 海锚并置 `regionalPort=true`，两值冲突则 `ambiguous` 保留地区锚；`complete = … && !regionalPort` 故必为 partial。日志 `P`/`-` 表示该州**是否存在 portTransfers 记录**。
