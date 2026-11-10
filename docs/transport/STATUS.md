@@ -1,5 +1,13 @@
 # 当前状态
 
+### 2026-11-10 — R287：A27 hover/过滤不改逐商品账（通过）；A08 用本构建实机解码链收口
+
+**A27**：基线 content 会话 pid 2412，物流页（41 行）。基础作用域需求账日志行在悬停进出与分类过滤前后**载荷逐字节相同**——600 行窗口内共 8 条 ledger 行、去掉时间戳后**只有 1 种载荷**（`total=30021.15/10520.41/19500.74`＋逐商品 `ammunition:104.23/101.23/3.00`、`small_arms:592.50/249.81/342.69`、`artillery:74.68/46.36/28.31` 等）。同时批次随视图变化：悬停 `paths=41 uploads=33 reused=8`，移出 `paths=206 uploads=0 reused=206`（缓存复用、零新上传），分类过滤 41→9→41 行、账本不变。**hover/过滤只改视图，不改逐商品数据**——A27 的核心不变量在本构建成立。
+
+**A08**：本构建的实机日志给出解码链证据：`native trade copied: world=1 revision=2 groups=66 destinations=4290 alternatives=5278 selected=4290 pairs=4162 straits=9`；每次隔离会话的 `ordered_ui` 都对活进程断言 vtable 与槽位（panel `0x485DB38`、row `0x480D108`、definition `0x475DB30`、goods registry `0x480C528`，`handler+0xfc==56`）；74 项离线夹具在同源树下 PASS（R276 已证树＝构建树）。未重跑历史静态探测套件，如实标注。
+
+收工：`exit_code=0`、五输入 `same=true`、无残留进程、content 恢复 `70157004…`。
+
 ### 2026-11-10 — R286：A15 双语来源标识在冻结构建通过；发现英文文案缺陷「Good」
 
 临时把 `pdx_settings.json` 的 `System.language` 由 `l_simp_chinese` 改为 `l_english`（其余字节不动），同时用基线 content 起会话。英文界面实测（pid 8784）：页签 **Logistics**，物流区标签 **"Original trade + domestic model allocation"**，卡片 **Trade qty 13648.29646／Laid track 510.99 MU**，41 行；中文侧 R283 已见「原版贸易＋国内模型分配」。两语标识与数据一致，**A15 在冻结构建通过**。
