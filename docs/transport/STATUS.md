@@ -1,5 +1,13 @@
 # 当前状态
 
+### 2026-11-10 — R275：38 条 partial 全部归入文档化 peer 回退类（日志复核，未改源码）
+
+用已安装构建 `27cefa0a…` 的既有 `freight.log` 末条分配行复核 G2 的 38 条 partial（无需运行游戏）。规则对照 `native_trade_geometry.h:61-96,181`：seaOnly 且该端**本州无当前港口接入**时，锚点先用 `(geo*100)&0x1fffffff|0x800000`，再在 `portTransfers` 中找"同 region definition + 同 geo"的 peer 转移，校验 anchors[0] 等于该地区锚、anchors[1]≠anchors[0]、(key&63)==3、且几何链逐控制点从 a 续到 b；唯一则采用 peer 海锚并置 `regionalPort=true`，两值冲突则 `ambiguous` 保留地区锚；`complete = … && !regionalPort` 故必为 partial。日志 `P`/`-` 表示该州**是否存在 portTransfers 记录**。
+
+统计（38 条、lane id 全唯一）：**两端都有记录 0 条**；起点有/终点无 35 条；起点无/终点有 1 条；两端都无 2 条 → **38/38 至少一端本州无记录**，即全部落在 :61 的 `!found` 回退分支，没有一条 partial 来自其它解码路径。附：`50331739:925->939P`、`50331740:925->590-`、`50331743:611->608-` 三条例外即为起点侧缺记录者。
+
+边界：这只核对"我们的 partial 判据与该回退分支一致"，**不提供原版实际选中的岸线**；`seaAnchor` 是否取到/是否 ambiguous 未进日志（如需需加字段重建）。G2 保持 open。命令：`Select-String freight.log -Pattern 'partialSeaIds=\['` 取末条后按 `srcP_dstDash / srcDash_dstP / bothDash` 分类。
+
 ### 2026-11-10 — R274：AGENTS.md 精简为当前状态（326 KB → 21 KB），历史归档（文档整理，未改源码）
 
 AGENTS.md 原 1739 行/326,647 B，占每次会话项目上下文约 97k tokens；§5 中截至 R224 的过期状态快照与 §6 中 R260 及更早的逐轮记录已**原样搬出**到 `docs/transport/history/AGENTS-history-through-R261.md`（1558 行/306,676 B），本文件只留 §1–§4、R273 起的当前状态与 R263–R273 各轮记录。搬迁由脚本完成并按行数守恒校验（134+56+82+1467=1739），两份文件均 UTF-8 无 BOM、CRLF 保持，未改写任何结论；两处指针行指向归档。效果：每会话加载量约 97k → 6k tokens。**无代码改动、无重建、无部署**，产品仍是 `27cefa0a…`。
