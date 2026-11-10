@@ -1,5 +1,9 @@
 # 当前状态
 
+### 2026-11-10 — R281：MASTER_PLAN §0 目标账本刷新（仅文档）
+
+用户指出 goal check 反复完不成。仓库内没有 goal 状态文件（`.claude/` 仅 `settings.local.json`），能修的是**下一轮会读的目标账本**——`MASTER_PLAN §0` 此前仍停在 R260 时点（基线 `0ea4caf3…`、G1/G6/G7/G8 全写"待办"）。本轮按事实更新：基线改为 `27cefa0a…`／52,197,771 B（R276 冻结事实：dist＝安装、树＝构建树）；G1 已完成（R262/R263 三作用域）；G2 注明无剩余静态证据路线与 38/38 peer 回退定性；G6 注明 R277 九场证明不可自动化、需人工；G7 已完成（R264 六臂＋20 轮）；G8 基本完成（R266＋R280＋R138＋R216＋R278 的 19/8）；并把优先级段重写为"余 8 项 PARTIAL、G2 以标注收尾、G6 需人工一次"。
+
 ### 2026-11-10 — R280：A26 升级／回滚换装演练通过（游戏目录两次换装，均经 deploy.ps1）
 
 用户授权后执行。把 `DELIVERY.md` 记录的**回滚副本** `2028e03b…`（50,025,206 B）＋加载器 `c8020412…` 暂放进 `dist`，经 `deploy.ps1` 安装 → 校验安装目录确为该旧对 → 再把冻结对 `27cefa0a…`／`71dae36d…` 放回 `dist` 并经 `deploy.ps1` 安装 → 校验恢复。两次 `deploy.ps1` 均 **exit 0**，安装目录哈希每一步逐项断言通过；六项受保护输入（autosave_exit、autosave、settings、ini、content、continue）前后逐字节相同；非主体运行资源原样保留（`freight` 目录 50 文件／22 子目录，`assets`／`data`／`native-gui`／`.defaults` 均在，`freight.ini` 哈希不变）；全程无游戏进程，finally 段保证 `dist` 与安装最终都停在冻结对（`result.json` 复核）。
