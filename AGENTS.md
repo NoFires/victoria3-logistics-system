@@ -141,6 +141,10 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 本文件 1739 行/326,647 B 每会话占约 97k tokens。§5 中截至 R224 的过期快照与 §6 中 R260 及更早逐轮记录整体搬到 `docs/transport/history/AGENTS-history-through-R261.md`（1558 行/306,676 B），按行数守恒校验（134+56+82+1467=1739）、UTF-8 无 BOM、CRLF 保持，未改写任何结论。本文件只留 §1–§4＋当前状态＋R263–R273。仅文档改动，未改源码／未重建／未部署，产品仍是 `27cefa0a…`。
 
+### 2026-11-10 — R277：另一存档载入自动化尝试（9 场实机，负结果，未改源码）
+
+冻结构建 `27cefa0a…` 上 9 场短会话全部 exit 0、五输入逐字节不变。结论：PostMessage 的 ESC 与真实 ESC 都无效（键盘通道不通）；地图拾取吃 PostMessage（州面板被点开）；前端**按钮**吃真实光标（载入游戏可点开对话框，坐标 (660,811)）；但**存档列表行**对 PostMessage 与真实光标单击/双击都零反应（截图逐像素相同、`phase` 恒 0、无 retirement、`continue_game.json` 仍 `autosave_exit`）。故 G6 的"另一存档载入／返回菜单"在本环境不可自动化，需人工或未验证 ABI 的控件级路径。证据 checkpoint2026-11-10-r277-g6-saves。
+
 ### 2026-11-10 — R276：G7/G8 冻结事实核实（未改源码／未重建／未部署）
 
 实测 `dist` 与游戏安装目录两份 DLL 哈希＋长度逐项相同（引导 `71dae36d…`／779,879 B、主体 `27cefa0a…`／52,197,771 B，安装＝dist）；`git diff d0f1b6f..HEAD -- native/src native/test native/assets data tools` 为空 → 当前树就是产出该主体的树，冻结可由 HEAD 复现。已具备证据：72 PASS（R262）、A25 三对＋20 轮（R264）、部署矩阵（R266）、改图五夹具（R267）、生命周期（R268）、G5（R269）、G1（R262/R263）。**不能并入"全绿"**：G2 38 partial（定性见 R275）、G6 另一存档（需人工）、A01–A27 同构建全矩阵（需实机）、A24 真设备、Gora UI + 兼容。故冻结候选确定，但 G7/G8 统一验收不宣称通过。

@@ -1,5 +1,22 @@
 # 当前状态
 
+### 2026-11-10 — R277：另一存档载入自动化实机尝试——列表控件对所有注入通道无反应（负结果，未改源码）
+
+在冻结构建 `27cefa0a…`（每场启动前断言 EXE／主体哈希）上共跑 9 次短会话，全部 `exit_code=0`、五输入（autosave_exit／autosave／settings／ini／content／continue）逐字节不变、无残留进程。逐项结果：
+
+| 尝试 | 通道 | 结果 |
+|---|---|---|
+| 暂停菜单 (2540,28)+载入项 | PostMessage 点击 | 菜单未开；点击落到地图上，州面板由"伦敦"变"中英格兰"（证明**地图拾取**接受 PostMessage） |
+| ESC | PostMessage WM_KEYDOWN | 无反应 |
+| ESC×3（先点海面拿焦点） | 真实 keybd_event | 无反应，三张截图仅海面微动（像素差 mean 3.6–5.1，无 UI 变化） |
+| 前端主菜单 | 截图定位 | 真实坐标读出：继续/新游戏/**载入游戏(660,811)**/主持/加入/退出 |
+| 载入对话框 | PostMessage 点击 | **成功打开**，列表两行：`autosave_exit`(y≈1037)、`autosave`(y≈1197)，x≈512 |
+| 选行＋载入 | PostMessage 点击（2 次） | 三张截图**逐像素相同**（diff bbox None），无选中效果 |
+| 选行＋载入 | 真实光标（SetCursorPos+mouse_event） | 对话框能打开（前端→对话框像素差 mean 75.6），但选行后仍**逐像素相同** |
+| 行双击（40 ms 间隔） | 真实光标 | `phase=0`、退休计数 22→22、`continue_game.json` title 仍 `autosave_exit` |
+
+**结论**：前端**按钮**接受真实光标，但**存档列表行**对 PostMessage 与真实光标单击/双击均无反应（帧无任何像素变化、无选中态）。这不是坐标误差（对话框内两行位置已从截图确认，x/y 落在行带内），而是该控件不吃注入输入。G6 的"另一存档载入"在本环境**不能自动化**；需人工操作一次，或先取得经验证的 GUI/控件级调用路径（属未验证 ABI，本轮不做）。"返回菜单"同样受阻（暂停菜单无法打开）。证据 `E:\Code\v3-analysis\checkpoints\2026-11-10-r277-g6-saves\`（r277*.py、live/*.png、stageB*.json）。
+
 ### 2026-11-10 — R276：G7/G8 冻结事实核实（未改源码、未重建、未部署）
 
 **冻结产物**：引导 `71dae36d7fd52cd9c6eb6de9b63317dd697ffacd80039c82023bf28c08b7962e`／779,879 B；主体 `27cefa0a5f601068360aa9be7d7fbadbeca5169b26a69d403a6b9372a1bdb7e0`／52,197,771 B。本轮实测 `dist` 与游戏安装目录（`Steam\steamapps\common\Victoria 3\binaries`）两份 DLL **哈希与长度逐项相同**（安装＝dist）。
