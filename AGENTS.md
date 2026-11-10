@@ -141,6 +141,10 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 本文件 1739 行/326,647 B 每会话占约 97k tokens。§5 中截至 R224 的过期快照与 §6 中 R260 及更早逐轮记录整体搬到 `docs/transport/history/AGENTS-history-through-R261.md`（1558 行/306,676 B），按行数守恒校验（134+56+82+1467=1739）、UTF-8 无 BOM、CRLF 保持，未改写任何结论。本文件只留 §1–§4＋当前状态＋R263–R273。仅文档改动，未改源码／未重建／未部署，产品仍是 `27cefa0a…`。
 
+### 2026-11-10 — R280：A26 升级／回滚换装演练通过（deploy.ps1 两次换装）
+
+旧对 `2028e03b…`/`c8020412…` 经 `deploy.ps1` 装入选装 → 再装回冻结对 `27cefa0a…`/`71dae36d…`；两次 exit 0、每步安装目录哈希断言通过、六项受保护输入逐字节不变、`freight` 运行资源（50 文件／22 目录、assets/data/native-gui/.defaults）原样、全程无游戏。A26 由 PARTIAL 升为 PASS（换装全链＋R266 部署矩阵＋R138 中文空格路径＋R216 只读降级）；不声称真实进程内换装与跨大版本升级。证据 checkpoint2026-11-10-r280-a26-upgrade。
+
 ### 2026-11-10 — R279：DELIVERY 按冻结构建刷新（仅文档）
 
 §5 旧文案（`404abb88` 当最新性能、称当前构建未复跑）更正为 R264 六臂＋20 轮、R276 冻结事实、52,197,771 B；A01–A27 指向本构建映射（PASS 18／PARTIAL 9）。§6 增补：38 partial 是标注缺几何不是已修；另一存档/返回菜单不可自动化（R277）。

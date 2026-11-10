@@ -1,5 +1,11 @@
 # 当前状态
 
+### 2026-11-10 — R280：A26 升级／回滚换装演练通过（游戏目录两次换装，均经 deploy.ps1）
+
+用户授权后执行。把 `DELIVERY.md` 记录的**回滚副本** `2028e03b…`（50,025,206 B）＋加载器 `c8020412…` 暂放进 `dist`，经 `deploy.ps1` 安装 → 校验安装目录确为该旧对 → 再把冻结对 `27cefa0a…`／`71dae36d…` 放回 `dist` 并经 `deploy.ps1` 安装 → 校验恢复。两次 `deploy.ps1` 均 **exit 0**，安装目录哈希每一步逐项断言通过；六项受保护输入（autosave_exit、autosave、settings、ini、content、continue）前后逐字节相同；非主体运行资源原样保留（`freight` 目录 50 文件／22 子目录，`assets`／`data`／`native-gui`／`.defaults` 均在，`freight.ini` 哈希不变）；全程无游戏进程，finally 段保证 `dist` 与安装最终都停在冻结对（`result.json` 复核）。
+
+**A26 收口口径**：升级／回滚（本项）＋ 主体缺失 126／损坏 193／整套卸载无 loader／重装 0（R266）＋ 中文空格路径与缺失/损坏隔离加载（R138）＋ 只读目录静默降级（R216）。仍不声称：真实游戏进程内换装、跨大版本（非 1.15）升级。证据 `E:\Code\v3-analysis\checkpoints\2026-11-10-r280-a26-upgrade\`（a26.ps1、result.json、deploy-rollback.log、deploy-upgrade.log、dist-backup/）。
+
 ### 2026-11-10 — R279：DELIVERY 按冻结构建刷新（仅文档）
 
 §5 仍写 `404abb88…` 为最新性能、并称当前构建"未复跑"，与 R264 事实不符。改为：A01–A27 指向本构建映射（PASS 18／PARTIAL 9）、R276 冻结事实与更正后的 52,197,771 B、R264 六臂 P95 +0.379/+0.430/+0.394 ms＋20 轮 u0/r206/p206、R266 部署矩阵。§6 新增两条限制：38 条 partial 是"有标注的不完整"而非已修；另一存档/返回菜单不可自动化（R277）。
