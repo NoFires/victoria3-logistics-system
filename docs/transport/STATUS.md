@@ -1,5 +1,13 @@
 # 当前状态
 
+### 2026-11-10 — R282：A06 原版 UI 行为在冻结构建实机补齐（隔离桌面，退出 0）
+
+复用 R269 隔离桌面通道（`private_ui.py` PostMessage 点击/右键/文本，`ordered_ui.py` 读面板）。会话 pid 29220、私有桌面 `CodexFreightTest_GameR256_*`、暂停 date 59883360；结束时 `exit_code=0`、`settings_restored=true`、五项输入（save/settings/ini/content/continue）逐字节相同、无残留进程、`desktop_input_after.desktop=Default`、`pointer=[0,0]`（未动真实指针）。
+
+**已验证**：①原版"商品"页 41 行；②首行（衣物）右键弹出**原版上下文菜单**：信息／钉选到概览窗口／大不列颠的衣物／添加消费税／关税（5 档按钮）／生产于-扩建纺织厂；③点"信息"打开**商品详情面板**（国际市场／不列颠市场／本地价格／用途 四页签、价格 £21.2、销售订单 6.61K／购买订单 4.74K、消费税与关税、生产方列表）。证据 `shots/01-rightclick.png`、`shots/02-goods-detail.png`。
+
+**同时复现 BLOCKERS R262**：该会话使用用户当前 content（`70157004…`，Gora UI + 启用），市场面板只有原版四页签、铁道路物流页签**不渲染**——与 R262 记录一致。因此 A17（Heat/Single/Native 三模式）在本 content 下无法测，需先按 R262 做法临时切基线 content（`F8C89F83`）再验；本轮未做。
+
 ### 2026-11-10 — R281：MASTER_PLAN §0 目标账本刷新（仅文档）
 
 用户指出 goal check 反复完不成。仓库内没有 goal 状态文件（`.claude/` 仅 `settings.local.json`），能修的是**下一轮会读的目标账本**——`MASTER_PLAN §0` 此前仍停在 R260 时点（基线 `0ea4caf3…`、G1/G6/G7/G8 全写"待办"）。本轮按事实更新：基线改为 `27cefa0a…`／52,197,771 B（R276 冻结事实：dist＝安装、树＝构建树）；G1 已完成（R262/R263 三作用域）；G2 注明无剩余静态证据路线与 38/38 peer 回退定性；G6 注明 R277 九场证明不可自动化、需人工；G7 已完成（R264 六臂＋20 轮）；G8 基本完成（R266＋R280＋R138＋R216＋R278 的 19/8）；并把优先级段重写为"余 8 项 PARTIAL、G2 以标注收尾、G6 需人工一次"。
