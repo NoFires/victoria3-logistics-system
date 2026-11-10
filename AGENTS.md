@@ -127,7 +127,7 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 ## 5. 当前状态与恢复入口
 
-当前产品主体`27cefa0a…`／52,212,575B（R262 构建，安装＝dist）＋引导`71dae36d…`／779,879B；R263–R269 只加日志行与测试，R271–R273 仅 Ghidra 研究、未改源码／未重建。G1／G4／G5／G8 部署矩阵与 G7 前置项已在当前构建关闭，G2 仍 open。海端：新档日更新 38 部分、周更新 39 部分（R258）；38 条 partial 的判据是端落到共享地区海军节点（`regional_trade_geometry.h` 的 `regionalPort`），非"无见证"。**R273 已撤回 R272 全部静态锚点**（五字节表实为格式字符串、`FUN_1428fbc00` 为 libc++ string 元素循环的尾部、两个 map/getter 地址无函数边界），原版岸线选择仍未识别，剩余可行路线是实机只读探针。无游戏、goal ACTIVE，优先读 [STATUS.md](docs/transport/STATUS.md) R273。
+当前产品主体`27cefa0a…`／52,197,771B（R262 构建，安装＝dist）＋引导`71dae36d…`／779,879B；R263–R269 只加日志行与测试，R271–R273 仅 Ghidra 研究、未改源码／未重建。G1／G4／G5／G8 部署矩阵与 G7 前置项已在当前构建关闭，G2 仍 open。海端：新档日更新 38 部分、周更新 39 部分（R258）；38 条 partial 的判据是端落到共享地区海军节点（`regional_trade_geometry.h` 的 `regionalPort`），非"无见证"。**R273 已撤回 R272 全部静态锚点**（五字节表实为格式字符串、`FUN_1428fbc00` 为 libc++ string 元素循环的尾部、两个 map/getter 地址无函数边界），原版岸线选择仍未识别，剩余可行路线是实机只读探针。无游戏、goal ACTIVE，优先读 [STATUS.md](docs/transport/STATUS.md) R273。
 
 
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
@@ -193,7 +193,7 @@ R262 日志行机制补两例：州 5（伦敦周边）作用域 29 商品 total
 
 ### 2026-11-09 — R262：G1 真档逐商品需求账矩阵通过（27cefa0a…），发现 Gora UI + 兼容问题
 
-截图通道在真档 41 行不可靠后改为日志级对账：发布路径新增基础作用域需求账日志行（FormatFreightDemandLedger 纯函数＋发射＋载荷断言先 PASS）。官方 72 PASS，构建 27cefa0a…（52,212,575 B）部署安装=dist。实机会话：market 0 需求账 41/41 商品、逐行求和与总账差 ≤0.03、逐行守恒全成立、grain 与截图 tooltip 互证；会话退出 0、五输入一致、content 恢复用户 Gora UI + 状态。**新发现**：Gora UI + UI Mod 使铁道路物流页签消失（owner 不激活），已记 BLOCKERS（R262）。G1 剩余：州作用域与第二市场实机例。证据 checkpoint2026-11-09-r262-g1-matrix。
+截图通道在真档 41 行不可靠后改为日志级对账：发布路径新增基础作用域需求账日志行（FormatFreightDemandLedger 纯函数＋发射＋载荷断言先 PASS）。官方 72 PASS，构建 27cefa0a…（52,197,771 B）部署安装=dist。实机会话：market 0 需求账 41/41 商品、逐行求和与总账差 ≤0.03、逐行守恒全成立、grain 与截图 tooltip 互证；会话退出 0、五输入一致、content 恢复用户 Gora UI + 状态。**新发现**：Gora UI + UI Mod 使铁道路物流页签消失（owner 不激活），已记 BLOCKERS（R262）。G1 剩余：州作用域与第二市场实机例。证据 checkpoint2026-11-09-r262-g1-matrix。
 
 
 R261 及更早的逐轮记录已归档（原样搬运、未改写）：[AGENTS-history-through-R261.md](docs/transport/history/AGENTS-history-through-R261.md)。
