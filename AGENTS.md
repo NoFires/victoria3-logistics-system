@@ -141,6 +141,10 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 本文件 1739 行/326,647 B 每会话占约 97k tokens。§5 中截至 R224 的过期快照与 §6 中 R260 及更早逐轮记录整体搬到 `docs/transport/history/AGENTS-history-through-R261.md`（1558 行/306,676 B），按行数守恒校验（134+56+82+1467=1739）、UTF-8 无 BOM、CRLF 保持，未改写任何结论。本文件只留 §1–§4＋当前状态＋R263–R273。仅文档改动，未改源码／未重建／未部署，产品仍是 `27cefa0a…`。
 
+### 2026-11-10 — R285：A06 排序在冻结构建通过（表头扫描）
+
+R284 失败原因＝没点中控件；改用 `ordered_ui` 暴露的**排序键**（`sorter+8`）判定。物流页表头 y=900 扫描命中五列：x=120 `name`、160 `price`、360 `balance`、480 `ironroad_work`、560 `ironroad_share`；`price` 两次点击行序不同（`11,39,37,42,…`→`22,40,19,41,…`）、行数恒 41。**A06 升 PASS**（矩阵 20/7）。退出 0、五输入 `same=true`、content 恢复 `70157004…`；注意 x≥680 会点到页签关闭面板。
+
 ### 2026-11-10 — R284：A06 排序项未能触发（负结果；content 已恢复）
 
 基线 content 会话：新钉准 tab 坐标（商品 x≈116、**物流 x≈560**、y=237）。试 5 个表头/图标坐标点排序，日志**无 `descending=` 事件**（只有启动行 `native logistics sorting enabled`），`ordered_ui` 只返回规范序列、观测不到行序，像素差仅 2.0。排序机制在但点击未命中，A06 排序仍未在本构建验证；下一轮需读行序或用截图精确定位排序按钮。退出 0、五输入 `same=true`、content 恢复 `70157004…`。
