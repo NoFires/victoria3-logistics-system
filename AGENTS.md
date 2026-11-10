@@ -127,7 +127,7 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 ## 5. 当前状态与恢复入口
 
-当前产品仍R257主体0ea4caf3…/引导71dae36d…；R258仅岸端发现/实验解码器与两处注释纠正，未重建部署。新档日更新仍38部分、周更新39部分，194主枢纽候选海端无地图key；原地区显示判定仍存在，但不等于本州岸端通行。自有会话退出0/五输入和存档文件保持，无游戏，goal ACTIVE，优先读STATUS R258。
+当前产品主体`27cefa0a…`／52,212,575B（R262 构建，安装＝dist）＋引导`71dae36d…`／779,879B；R263–R269 只加日志行与测试，R271–R273 仅 Ghidra 研究、未改源码／未重建。G1／G4／G5／G8 部署矩阵与 G7 前置项已在当前构建关闭，G2 仍 open。海端：新档日更新 38 部分、周更新 39 部分（R258）；38 条 partial 的判据是端落到共享地区海军节点（`regional_trade_geometry.h` 的 `regionalPort`），非"无见证"。**R273 已撤回 R272 全部静态锚点**（五字节表实为格式字符串、`FUN_1428fbc00` 为 libc++ string 元素循环的尾部、两个 map/getter 地址无函数边界），原版岸线选择仍未识别，剩余可行路线是实机只读探针。无游戏、goal ACTIVE，优先读 [STATUS.md](docs/transport/STATUS.md) R273。
 
 
 交付说明（文件哈希、构建/部署、界面操作、模型口径、限制、回滚）见 [docs/DELIVERY.md](docs/DELIVERY.md)；回滚副本与最终日志在 `E:\Code\v3-analysis\checkpoints\2026-11-06-final-delivery`。
@@ -216,11 +216,17 @@ R119同一构建同进程UK重载world2→菜单／法国新游戏world3→UK wo
 
 ## 6. 进度日志（简要记录，最新在上）
 
+### 2026-11-10 — R273：R272 岸线选择算法全部撤回，G2 仍 open（仅研究，未改源码）
+
+逐项复核 R272 的五个静态锚点，全部不成立并撤回：①`UNK_14464f590` 32 字节实为 ASCII 格式串`" '{}' is already used. Consider "`，不是五字节表；②`FUN_1428fbc00` 只是 `FUN_1428fba80` 的尾部（`1428fbc31 ADD RSP,0xa8/RET`），后者反编译为 libc++ `std::string` 元素区间赋值/析构循环（`*puVar15=0xf` 为 SSO 容量、`FUN_14417d850` 为 operator delete、`FUN_1441a267c` 为 noreturn throw），所谓"0x38 步长见证 map"即 STL 元素尺寸＝2×0x18 string+8B；③`FUN_140df87b0` 无函数边界；④`FUN_142883cf0` 无函数边界（"状态记录 getter"不成立）；⑤我自己对日志 `P`/`-` 的解读也错——它是"该州有 `portTransfers` 记录"（`freight_engine.cpp:338-341`），不是"有无见证"。另更正 R258 地址表：`148bdcaf0`/`149eb5400` 超出镜像最大地址 `145dc57ff`，`140dcb6b0` 为中函数内地址，故"3 失败"实为 1 中函数+2 越界。
+
+仍成立的事实：`FUN_142883e70` 是 4 叉堆 sift-up（节点 0x20B、子 `i*4+1..4`、父 `(i+(sign&3))>>2`）＋`vector<uint32_t>` 约1.5×扩容，属开放表/寻路优先队列，**不是岸线选择**；岸锚派生 `((geo*100)&0x1fffffff)|0x800000` 与 `regionalPort`/`unavailable` 语义由本方源码确认（`native_trade_geometry.h:68,103-104,95,181,178`），不依赖 Ghidra。结论：原版岸线选择代码仍未识别，38 条 partial 仍只是"端落到共享地区海军节点"的模型判据。剩余可行路线是实机只读探针（38 条 lane 逐端对 `portTransfers`/地区配置），需游戏运行；当晚已有三次未定因自退，未在无人值守下启动。G2 保持 open，不报通过。Ghidra 库仅删除了 R271 自建的伪片段，可用 `create_function` 复现。证据 checkpoint2026-11-10-r270-g2-ghidra（r273b.txt/r273c.py/r273c.txt）。
+
 ### 2026-11-10 — R271：G2 链边界重建 9/12，反编译存档
 
 R258 已知 12 地址在当前库批量 create_function：9 成功（含 FUN_142883e70 429B 最大逻辑块），3 失败（中函数/跳板）。Ghidra 自动分析未达贸易子系统（12 地址全无函数无 xref），边界重建为溯源前置已完成；反编译全文存 chain-decomp.c。下一步追岸线选择逻辑＋解析 3 失败地址。证据 checkpoint2026-11-10-r270-g2-ghidra。
 
-### 2026-11-10 — R272：G2 岸线选择算法识别——锚点按州×100 算法派生＋见证 map 查找
+### 2026-11-10 — R272：G2 岸线选择算法识别——锚点按州×100 算法派生＋见证 map 查找【R273 已全部撤回】
 
 结合并行 R258 优质反编译与我重建的 FUN_142883e70 验证：状态记录经 machine+0x120+0x2db8 容器按 id 提取；遍历 UNK_14464f590 五字节表谓词；**岸锚=state×100&掩码|0x800000 算法派生**；双端排序打包 64 位 key 查 0x38 步长见证 map 取最优。partial=map 无对应 (州×100) 对见证——38 条逐端判定路径明确（无硬编码 ID 表，符合约束）。下一步：重建 FUN_1428fbc00 边界、dump 五字节表与 map 内容对照 partial。证据 checkpoint2026-11-10-r270-g2-ghidra。
 
