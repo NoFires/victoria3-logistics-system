@@ -141,6 +141,10 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 本文件 1739 行/326,647 B 每会话占约 97k tokens。§5 中截至 R224 的过期快照与 §6 中 R260 及更早逐轮记录整体搬到 `docs/transport/history/AGENTS-history-through-R261.md`（1558 行/306,676 B），按行数守恒校验（134+56+82+1467=1739）、UTF-8 无 BOM、CRLF 保持，未改写任何结论。本文件只留 §1–§4＋当前状态＋R263–R273。仅文档改动，未改源码／未重建／未部署，产品仍是 `27cefa0a…`。
 
+### 2026-11-10 — R279：DELIVERY 按冻结构建刷新（仅文档）
+
+§5 旧文案（`404abb88` 当最新性能、称当前构建未复跑）更正为 R264 六臂＋20 轮、R276 冻结事实、52,197,771 B；A01–A27 指向本构建映射（PASS 18／PARTIAL 9）。§6 增补：38 partial 是标注缺几何不是已修；另一存档/返回菜单不可自动化（R277）。
+
 ### 2026-11-10 — R278：A01–A27 绑定冻结构建（仅文档）
 
 `ACCEPTANCE.md` 旧矩阵都绑旧产物；新增当前构建映射：PASS 18／PARTIAL 9（A06/A08/A10/A12/A15/A17/A24/A26/A27），逐条写边界，不因冻结升级为 PASS。
