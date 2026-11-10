@@ -141,6 +141,10 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 本文件 1739 行/326,647 B 每会话占约 97k tokens。§5 中截至 R224 的过期快照与 §6 中 R260 及更早逐轮记录整体搬到 `docs/transport/history/AGENTS-history-through-R261.md`（1558 行/306,676 B），按行数守恒校验（134+56+82+1467=1739）、UTF-8 无 BOM、CRLF 保持，未改写任何结论。本文件只留 §1–§4＋当前状态＋R263–R273。仅文档改动，未改源码／未重建／未部署，产品仍是 `27cefa0a…`。
 
+### 2026-11-10 — R289：A10 相机矩阵在现有工具下不可达（负结果）
+
+滚轮 ±3 缩放后画面漂到雪原（无平移通道），但 `paths=206 uploads=206 failed=0` 前后一致——**几何与相机无关、缩放不触发重传**是正向证据；多相机逐像素矩阵做不到，A10 维持 PARTIAL。退出 0、content 恢复 `70157004…`。
+
 ### 2026-11-10 — R288：A17 逐色由 GPU 着色器测试收口（矩阵 24/3）
 
 `python -B tools\test_flow_gpu.py`（需带 Pillow 的解释器；**前置 MSYS2 PATH 会切到无 Pillow 的 python**）全绿：九套常规＋七套平衡调色板、八档宽度、正反箭头、64 组水位，三条负对照被拒——渲染真实 shader 输出并逐像素采样，故 A17 升 PASS。A10 仍 PARTIAL（几何/水位已覆盖，缺多相机逐像素矩阵）。剩 A10／A12／A24。

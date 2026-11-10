@@ -15,7 +15,7 @@
 | A07 | GUI 生效 | PASS | R262 会话无 GUI 报错；R269 UI 矩阵全部通过 |
 | A08 | ABI 与对象 | PASS（本构建实机解码链） | R287：`native trade copied … destinations=4290 alternatives=5278 selected=4290 pairs=4162 straits=9`；各会话 `ordered_ui` 对活进程断言 panel `0x485DB38`／row `0x480D108`／definition `0x475DB30`／registry `0x480C528`、`handler+0xfc=56`；74 项离线夹具同源树 PASS。未重跑历史静态探测套件 |
 | A09 | 单线与 pass | PASS | R262 本构建 selftest（D3D11 读回亮像素）＋默认隐藏 vtx=0 |
-| A10 | 几何贴合 | PARTIAL（仅缺多相机矩阵） | R288 `test_flow_gpu.py`：八档宽度、正反箭头比例、顶点着色器 64 组水位/平面（海/岸/陆之上）全部 PASS，近景沉海与截断箭头两条负对照被拒绝；实机海路接缝数据 breaks=0；**多相机位置逐像素矩阵未做** |
+| A10 | 几何贴合 | PARTIAL（缺多相机矩阵，工具不可达） | R288 `test_flow_gpu.py`：八档宽度、正反箭头、顶点着色器 64 组水位/平面全部 PASS，两条负对照被拒；R289 实机滚轮缩放前后 `paths=206 uploads=206 failed=0` 不变（几何与相机无关）；**驱动无平移通道**，相机无法稳定停在目标区域，多相机逐像素矩阵在现有工具下不可达 |
 | A11 | 河流与海岸 | PASS（离线） | 72 PASS 含 spline 套件（1.15 源 hash 与计数断言）；实机逐段未重复 |
 | A12 | 铁路与断路 | PARTIAL | 铁路 MU 510.99、本构建 38 条 partial（R275 已定性）；完整端点矩阵未做 |
 | A13 | 快照安全 | PASS（读取窗口） | 72 PASS 含复制期变化/退休拒绝；本构建实机快照交接正常 |
