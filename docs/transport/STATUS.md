@@ -1,5 +1,13 @@
 # 当前状态
 
+### 2026-11-10 — R286：A15 双语来源标识在冻结构建通过；发现英文文案缺陷「Good」
+
+临时把 `pdx_settings.json` 的 `System.language` 由 `l_simp_chinese` 改为 `l_english`（其余字节不动），同时用基线 content 起会话。英文界面实测（pid 8784）：页签 **Logistics**，物流区标签 **"Original trade + domestic model allocation"**，卡片 **Trade qty 13648.29646／Laid track 510.99 MU**，41 行；中文侧 R283 已见「原版贸易＋国内模型分配」。两语标识与数据一致，**A15 在冻结构建通过**。
+
+**新发现（真实缺陷，非测试缺口）**：颜色模式按钮英文显示为 **`Heat` / `Good` / `Native`**——"单商品"被译成 `Good`（应为 `Single good`），语义歧义。中文侧「热度/单商品/原生绿」正常。已记 BLOCKERS。
+
+收工核对：`exit_code=0`、无残留进程；会话自带 `settings_restored=false`（它拒绝把被我改过的 settings 视作可恢复），随后**按备份逐字节恢复**：settings 回到 `930669fa…`、content 回到 `70157004…`，与测试前完全一致。
+
 ### 2026-11-10 — R285：A06 排序在冻结构建通过（表头扫描定位五个排序键）
 
 上一轮失败原因查明：`ordered_ui` 读的确实是面板行数组（`obj+0x60`），并且**额外暴露排序键**（`sorter+8`）——所以判定排序不必靠像素。基线 content 会话（pid 38420）在物流页表头行 y=900 上扫描 x，命中五个可排序列头：

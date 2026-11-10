@@ -141,6 +141,10 @@ native\build\tests\live_shipping_probe.exe <Victoria3进程ID> --world-trade <�
 
 本文件 1739 行/326,647 B 每会话占约 97k tokens。§5 中截至 R224 的过期快照与 §6 中 R260 及更早逐轮记录整体搬到 `docs/transport/history/AGENTS-history-through-R261.md`（1558 行/306,676 B），按行数守恒校验（134+56+82+1467=1739）、UTF-8 无 BOM、CRLF 保持，未改写任何结论。本文件只留 §1–§4＋当前状态＋R263–R273。仅文档改动，未改源码／未重建／未部署，产品仍是 `27cefa0a…`。
 
+### 2026-11-10 — R286：A15 双语来源标识通过；发现英文「Good」文案缺陷
+
+临时改 `System.language` 为 `l_english` 起会话：页签 Logistics、标签 "Original trade + domestic model allocation"、Trade qty 13648.29646／Laid track 510.99 MU，与中文侧一致 → **A15 升 PASS（矩阵 21/6）**。**新缺陷**：单商品模式英文显示 `Good`（应为 Single good），已记 BLOCKERS，本轮不改代码（冻结期改动会作废门槛证据）。收工 exit 0；会话自带 `settings_restored=false`，随后按备份逐字节恢复 settings `930669fa…`、content `70157004…`。
+
 ### 2026-11-10 — R285：A06 排序在冻结构建通过（表头扫描）
 
 R284 失败原因＝没点中控件；改用 `ordered_ui` 暴露的**排序键**（`sorter+8`）判定。物流页表头 y=900 扫描命中五列：x=120 `name`、160 `price`、360 `balance`、480 `ironroad_work`、560 `ironroad_share`；`price` 两次点击行序不同（`11,39,37,42,…`→`22,40,19,41,…`）、行数恒 41。**A06 升 PASS**（矩阵 20/7）。退出 0、五输入 `same=true`、content 恢复 `70157004…`；注意 x≥680 会点到页签关闭面板。
