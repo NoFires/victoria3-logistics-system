@@ -8,6 +8,8 @@
 
 当前构建 `27cefa0a…` 上未重绑。测试通道只有**绝对坐标 PostMessage 点击**（`checkpoints/2026-11-09-r254-lifecycle/pm_ui.py:38-44`：WM_MOUSEMOVE/LBUTTONDOWN/UP，`xy=(y<<16)|x`），全仓库**没有**按控件名/tooltip 命中的能力（无 `LoadSaveDialog`/`FindWidget` 路径；`ProbeGuiVariables` 只读 `ironroad_*` 变量表）。坐标钉死 2560×1440，且要求游戏持有前台焦点；R240 记录跨存档对话框"对所有注入通道无响应"（通道相关、不稳定），R268 盲点击三轮误触返回游戏而止损。**继续条件**：人工操作一次（进入存档→载入 autosave.v3→返回菜单），或先评估"GUI 控件名解析"这一未验证 ABI 能力——不建议仅为自动化一个测试加原生代码。返回菜单一半仅有 R247 旧构建证据。
 
+**R292 更新（2026-11-11，基线 content）**：R277 的"输入通道全废"只对改版界面成立——基线界面下 **ESC 能开暂停菜单**、**菜单按钮吃 PostMessage 点击**（「载入游戏」成功弹出对话框）。卡点缩小到**载入对话框内部的存档列表行与「载入」按钮**：点击、方向键、回车均无响应（`retirements` 不变、`continue_game.json` 仍为 `autosave_exit`）。**所需人工动作已缩小为：在对话框里点一下 `autosave` 行再点「载入」。**
+
 **R277 实机补充（2026-11-10）**：9 场短会话（每场 exit 0、五输入不变）证明问题不在坐标——前端"载入游戏"按钮用真实光标可点开对话框，但**存档列表行对 PostMessage 与真实光标单击/双击均无任何反应**（截图逐像素相同、`phase` 恒 0、无 world retirement、`continue_game.json` title 不变）；PostMessage 的 ESC 与真实 ESC 也都无反应（键盘通道整体无效），而地图拾取接受 PostMessage。故该列表控件在注入输入下不可用，自动化路线到此为止。
 
 ### R262 新增：第三方 UI Mod（Gora UI +）使铁道路物流页签消失（2026-11-09）
